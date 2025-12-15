@@ -191,8 +191,8 @@ export default function TransactionsPage() {
         {/* Header with Stats */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-h1 lg:text-2xl lg:font-bold">Transactions</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">
+            <h1 className="text-xl font-bold lg:text-2xl">Transactions</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm mt-0.5">
               {format(new Date(), 'MMMM yyyy')}
             </p>
           </div>
@@ -220,7 +220,7 @@ export default function TransactionsPage() {
                     </div>
                     <span className="text-xs text-muted-foreground font-medium">This Month</span>
                   </div>
-                  <p className="text-lg font-bold">{formatCurrency(currentMonthTotal)}</p>
+                  <p className="text-base sm:text-lg font-bold">{formatCurrency(currentMonthTotal)}</p>
                   <div className="flex items-center mt-1 text-xs">
                     {monthChange > 0 ? (
                       <span className="text-destructive flex items-center">

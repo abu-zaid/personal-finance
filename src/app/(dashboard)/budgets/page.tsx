@@ -185,8 +185,8 @@ export default function BudgetsPage() {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-h1 lg:text-2xl lg:font-bold">Budgets</h1>
-            <p className="text-muted-foreground text-sm">
+            <h1 className="text-xl font-bold lg:text-2xl">Budgets</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm">
               {format(selectedDate, 'MMMM yyyy')}
             </p>
           </div>
@@ -272,7 +272,7 @@ export default function BudgetsPage() {
                       )}
                     </div>
                     <span className={cn(
-                      "text-2xl font-bold",
+                      "text-xl sm:text-2xl font-bold",
                       overallPercentage >= 100 ? "text-white" : "text-[#101010]"
                     )}>
                       {Math.round(overallPercentage)}%
@@ -287,7 +287,7 @@ export default function BudgetsPage() {
                       {overallRemaining >= 0 ? 'Remaining' : 'Over Budget'}
                     </p>
                     <p className={cn(
-                      "text-3xl font-bold tracking-tight",
+                      "text-2xl sm:text-3xl font-bold tracking-tight",
                       overallPercentage >= 100 ? "text-white" : "text-[#101010]"
                     )}>
                       {overallRemaining < 0 && '-'}{symbol}{Math.abs(overallRemaining).toLocaleString()}
@@ -323,8 +323,8 @@ export default function BudgetsPage() {
                           <Target className="h-4 w-4 text-primary" />
                         </div>
                       </div>
-                      <p className="text-lg font-bold">{allocationsWithSpending.length}</p>
-                      <p className="text-[10px] text-muted-foreground">Categories</p>
+                      <p className="text-base sm:text-lg font-bold">{allocationsWithSpending.length}</p>
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">Categories</p>
                     </CardContent>
                   </Card>
                 </StaggerItem>
@@ -336,8 +336,8 @@ export default function BudgetsPage() {
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
                         </div>
                       </div>
-                      <p className="text-lg font-bold">{categoriesOnTrack}</p>
-                      <p className="text-[10px] text-muted-foreground">On Track</p>
+                      <p className="text-base sm:text-lg font-bold">{categoriesOnTrack}</p>
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">On Track</p>
                     </CardContent>
                   </Card>
                 </StaggerItem>
@@ -349,8 +349,8 @@ export default function BudgetsPage() {
                           <AlertTriangle className="h-4 w-4 text-destructive" />
                         </div>
                       </div>
-                      <p className="text-lg font-bold">{categoriesOverBudget}</p>
-                      <p className="text-[10px] text-muted-foreground">Over Budget</p>
+                      <p className="text-base sm:text-lg font-bold">{categoriesOverBudget}</p>
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">Over Budget</p>
                     </CardContent>
                   </Card>
                 </StaggerItem>
@@ -490,7 +490,7 @@ export default function BudgetsPage() {
                   Total Monthly Budget
                 </Label>
                 <div className="relative">
-                  <span className="text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium">
+                  <span className="text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2 text-base sm:text-lg font-medium">
                     {symbol}
                   </span>
                   <Input
@@ -500,7 +500,7 @@ export default function BudgetsPage() {
                     min="0"
                     step="0.01"
                     placeholder="0.00"
-                    className="pl-9 text-2xl font-bold h-14 rounded-xl"
+                    className="pl-9 text-xl sm:text-2xl font-bold h-12 sm:h-14 rounded-xl"
                     value={totalBudget || ''}
                     onChange={(e) => setTotalBudget(parseFloat(e.target.value) || 0)}
                   />

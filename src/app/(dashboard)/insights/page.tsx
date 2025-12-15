@@ -185,8 +185,8 @@ export default function InsightsPage() {
       <PageTransition>
         <div className="space-y-4">
           <div>
-            <h1 className="text-h1 lg:text-2xl lg:font-bold">Insights</h1>
-            <p className="text-muted-foreground text-sm">Understand your spending patterns</p>
+            <h1 className="text-xl font-bold lg:text-2xl">Insights</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm">Understand your spending patterns</p>
           </div>
           <Card>
             <EmptyState
@@ -204,8 +204,8 @@ export default function InsightsPage() {
     <PageTransition>
       <div className="space-y-4">
         <div>
-          <h1 className="text-h1 lg:text-2xl lg:font-bold">Insights</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-xl font-bold lg:text-2xl">Insights</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm">
             {format(new Date(), 'MMMM yyyy')} spending analysis
           </p>
         </div>
@@ -232,7 +232,7 @@ export default function InsightsPage() {
                         </div>
                         <span className="text-xs text-muted-foreground">This Month</span>
                       </div>
-                      <div className="text-xl font-bold">
+                      <div className="text-lg sm:text-xl font-bold">
                         <AnimatedNumber value={currentMonthTotal} format="currency" />
                       </div>
                       <div className="mt-1 flex items-center text-xs">
@@ -267,7 +267,7 @@ export default function InsightsPage() {
                         </div>
                         <span className="text-xs text-muted-foreground">Daily Avg</span>
                       </div>
-                      <div className="text-xl font-bold">
+                      <div className="text-lg sm:text-xl font-bold">
                         <AnimatedNumber value={dailyAverage} format="currency" />
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -286,7 +286,7 @@ export default function InsightsPage() {
                         </div>
                         <span className="text-xs text-muted-foreground">Avg Transaction</span>
                       </div>
-                      <div className="text-xl font-bold">
+                      <div className="text-lg sm:text-xl font-bold">
                         <AnimatedNumber value={avgTransactionAmount} format="currency" />
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -305,7 +305,7 @@ export default function InsightsPage() {
                         </div>
                         <span className="text-xs text-muted-foreground">Streak</span>
                       </div>
-                      <div className="text-xl font-bold">
+                      <div className="text-lg sm:text-xl font-bold">
                         {spendingStreak} days
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -426,7 +426,7 @@ export default function InsightsPage() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-lg">{formatCurrency(topCategory.total)}</p>
+                        <p className="font-bold text-base sm:text-lg">{formatCurrency(topCategory.total)}</p>
                         <p className="text-xs text-muted-foreground">
                           {((topCategory.total / totalCurrentMonth) * 100).toFixed(0)}% of total
                         </p>

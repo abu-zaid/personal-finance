@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CalendarIcon, Loader2 } from 'lucide-react';
@@ -29,6 +29,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useCategories } from '@/context/categories-context';
 import { useTransactions } from '@/context/transactions-context';
 import { useCurrency } from '@/hooks/use-currency';
+import { useHaptics } from '@/hooks/use-haptics';
 import { transactionSchema, TransactionFormData } from '@/lib/validations';
 import { cn } from '@/lib/utils';
 import { CategoryIcon } from '@/components/features/categories/category-icon';
@@ -38,10 +39,11 @@ interface AddTransactionModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalProps) {
+export const AddTransactionModal = memo(function AddTransactionModal({ open, onOpenChange }: AddTransactionModalProps) {
   const { categories } = useCategories();
   const { createTransaction } = useTransactions();
   const { symbol } = useCurrency();
+  const haptics = useHaptics();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -61,24 +63,27 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
   const selectedDate = watch('date');
   const selectedCategoryId = watch('categoryId');
 
-  const onSubmit = async (data: TransactionFormData) => {
+  const onSubmit = useCallback(async (data: TransactionFormData) => {
     setIsLoading(true);
     try {
       await createTransaction(data);
+      haptics.success();
       toast.success('Transaction added successfully');
       reset({ date: new Date() });
       onOpenChange(false);
     } catch {
+      haptics.error();
       toast.error('Failed to add transaction');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [createTransaction, haptics, onOpenChange, reset]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
+    haptics.light();
     reset({ date: new Date() });
     onOpenChange(false);
-  };
+  }, [haptics, onOpenChange, reset]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -189,4 +194,4 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
       </DialogContent>
     </Dialog>
   );
-}
+});

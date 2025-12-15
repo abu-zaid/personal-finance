@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { TrendingUp, TrendingDown, Wallet, PieChart, Target, AlertTriangle } from 'lucide-react';
@@ -15,7 +16,7 @@ interface BalanceCardProps {
   budgetUsage?: number;
 }
 
-export function BalanceCard({ 
+export const BalanceCard = memo(function BalanceCard({ 
   balance, 
   income, 
   expenses,
@@ -178,4 +179,4 @@ export function BalanceCard({
       </div>
     </motion.div>
   );
-}
+});

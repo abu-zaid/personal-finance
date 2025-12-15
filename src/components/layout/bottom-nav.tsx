@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { useHaptics } from '@/hooks/use-haptics';
 
 const navItems = [
   { href: '/dashboard', label: 'Home', icon: Home, id: 'home' },
@@ -46,8 +48,18 @@ interface BottomNavProps {
   onAddExpense?: () => void;
 }
 
-export function BottomNav({ onAddExpense }: BottomNavProps) {
+export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProps) {
   const pathname = usePathname();
+  const haptics = useHaptics();
+
+  const handleAddClick = useCallback(() => {
+    haptics.medium();
+    onAddExpense?.();
+  }, [haptics, onAddExpense]);
+
+  const handleNavClick = useCallback(() => {
+    haptics.light();
+  }, [haptics]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
@@ -69,7 +81,7 @@ export function BottomNav({ onAddExpense }: BottomNavProps) {
               return (
                 <motion.button
                   key={item.id}
-                  onClick={onAddExpense}
+                  onClick={handleAddClick}
                   variants={navItemVariants}
                   initial="inactive"
                   whileTap="tap"
@@ -94,6 +106,7 @@ export function BottomNav({ onAddExpense }: BottomNavProps) {
               <Link
                 key={item.id}
                 href={item.href!}
+                onClick={handleNavClick}
                 className="relative flex flex-col items-center justify-center gap-1 tap-target"
               >
                 <motion.div
@@ -149,4 +162,4 @@ export function BottomNav({ onAddExpense }: BottomNavProps) {
       </div>
     </nav>
   );
-}
+});
