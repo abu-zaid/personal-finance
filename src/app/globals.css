@@ -208,12 +208,12 @@
   
   /* Bottom nav height including safe area */
   .h-bottom-nav {
-    height: calc(72px + env(safe-area-inset-bottom, 0));
+    height: calc(76px + env(safe-area-inset-bottom, 0));
   }
   
-  /* Content padding for bottom nav - increased to prevent content from being hidden */
+  /* Content padding for bottom nav - must be larger than nav height */
   .pb-bottom-nav {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0));
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0));
   }
 }
 

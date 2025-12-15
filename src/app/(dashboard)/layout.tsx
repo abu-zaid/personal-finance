@@ -45,7 +45,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="bg-muted h-10 w-10 animate-pulse rounded-full" />
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-4 pb-bottom-nav lg:p-6 lg:pb-6">
+          <main className="flex-1 overflow-auto p-4 pb-[100px] md:pb-6 lg:p-6">
             <DashboardSkeleton />
           </main>
         </div>
@@ -71,7 +71,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <Sidebar onAddExpense={() => setAddExpenseOpen(true)} />
         <div className="flex flex-1 flex-col min-h-0">
           <Header title={getPageTitle()} />
-          <main className="flex-1 overflow-auto p-4 pb-bottom-nav lg:p-6 lg:pb-6 scrollbar-hide">{children}</main>
+          <main className="flex-1 overflow-auto p-4 pb-[100px] md:pb-6 lg:p-6 scrollbar-hide">{children}</main>
         </div>
         {/* Mobile Bottom Navigation */}
         <BottomNav onAddExpense={() => setAddExpenseOpen(true)} />

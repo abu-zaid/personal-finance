@@ -52,8 +52,8 @@ export function BottomNav({ onAddExpense }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
       {/* Translucent glass background */}
-      <div className="bg-[#101010]/80 backdrop-blur-2xl border-t border-white/10">
-        <div className="flex items-center justify-around h-[72px] pb-safe px-4">
+      <div className="bg-[#101010]/80 backdrop-blur-2xl border-t border-white/10 pb-safe">
+        <div className="flex items-center justify-around h-[76px] px-4">
           {navItems.map((item, index) => {
             const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
             const Icon = item.icon;
