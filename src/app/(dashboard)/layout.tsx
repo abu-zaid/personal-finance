@@ -30,15 +30,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="bg-background flex min-h-screen">
-        <aside className="bg-sidebar border-sidebar-border hidden h-screen w-64 border-r lg:block">
+      <div className="bg-background flex h-screen overflow-hidden">
+        <aside className="bg-sidebar border-sidebar-border hidden h-full w-64 border-r lg:block">
           <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
             <div className="bg-muted h-10 w-10 animate-pulse rounded-xl" />
             <div className="bg-muted h-5 w-24 animate-pulse rounded" />
           </div>
         </aside>
-        <div className="flex flex-1 flex-col">
-          <header className="bg-background flex h-16 items-center justify-between border-b border-border px-4 lg:px-6">
+        <div className="flex flex-1 flex-col min-h-0">
+          <header className="bg-background flex h-16 flex-shrink-0 items-center justify-between border-b border-border px-4 lg:px-6">
             <div className="bg-muted h-6 w-32 animate-pulse rounded" />
             <div className="flex gap-2">
               <div className="bg-muted h-10 w-10 animate-pulse rounded-full" />
@@ -67,9 +67,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <DataProviders>
-      <div className="bg-background flex min-h-screen">
+      <div className="bg-background flex h-screen overflow-hidden">
         <Sidebar onAddExpense={() => setAddExpenseOpen(true)} />
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col min-h-0">
           <Header title={getPageTitle()} />
           <main className="flex-1 overflow-auto p-4 pb-bottom-nav lg:p-6 lg:pb-6 scrollbar-hide">{children}</main>
         </div>

@@ -34,7 +34,7 @@ export function Header({ title }: HeaderProps) {
   };
 
   return (
-    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border px-4 backdrop-blur lg:px-6">
+    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 z-40 flex h-16 flex-shrink-0 items-center justify-between border-b border-border px-4 backdrop-blur lg:px-6">
       <div className="flex items-center gap-3">
         {/* Mobile Logo */}
         <div className="flex items-center gap-2 lg:hidden">
