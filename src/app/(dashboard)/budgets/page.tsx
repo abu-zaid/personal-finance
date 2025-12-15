@@ -2,12 +2,14 @@
 
 import { useState, useMemo } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
-import { PageTransition, FadeIn } from '@/components/animations';
+import { motion } from 'framer-motion';
+import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '@/components/animations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -23,14 +25,28 @@ import { useCategories } from '@/context/categories-context';
 import { useTransactions } from '@/context/transactions-context';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn, getMonthString } from '@/lib/utils';
-import { Wallet, ChevronLeft, ChevronRight, Plus, Pencil, Loader2 } from 'lucide-react';
+import { 
+  Wallet, 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Pencil, 
+  Loader2,
+  Target,
+  TrendingDown,
+  PiggyBank,
+  Sparkles,
+  AlertTriangle,
+  CheckCircle2,
+  Minus
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAllocation } from '@/types';
 
 export default function BudgetsPage() {
   const { categories } = useCategories();
   const { createBudget, updateBudget, getBudgetByMonth } = useBudgets();
-  const { getCategoryTotal } = useTransactions();
+  const { getCategoryTotal, getMonthlyTotal } = useTransactions();
   const { formatCurrency, symbol } = useCurrency();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -41,6 +57,7 @@ export default function BudgetsPage() {
 
   const currentMonth = getMonthString(selectedDate);
   const currentBudget = getBudgetByMonth(currentMonth);
+  const isCurrentMonth = getMonthString(new Date()) === currentMonth;
 
   const handlePrevMonth = () => setSelectedDate(subMonths(selectedDate, 1));
   const handleNextMonth = () => setSelectedDate(addMonths(selectedDate, 1));
@@ -71,6 +88,23 @@ export default function BudgetsPage() {
     return Object.values(allocations).reduce((sum, amount) => sum + amount, 0);
   }, [allocations]);
 
+  const unallocatedAmount = totalBudget - totalAllocated;
+
+  // Quick allocation helpers
+  const distributeEvenly = () => {
+    if (totalBudget <= 0 || categories.length === 0) return;
+    const amountPerCategory = Math.floor(totalBudget / categories.length);
+    const newAllocations: Record<string, number> = {};
+    categories.forEach((cat) => {
+      newAllocations[cat.id] = amountPerCategory;
+    });
+    setAllocations(newAllocations);
+  };
+
+  const clearAllocations = () => {
+    setAllocations({});
+  };
+
   const handleSaveBudget = async () => {
     if (totalBudget <= 0) {
       toast.error('Please enter a total budget amount');
@@ -80,7 +114,7 @@ export default function BudgetsPage() {
     setIsSaving(true);
     try {
       const budgetAllocations: BudgetAllocation[] = Object.entries(allocations)
-        .filter(([_, amount]) => amount > 0)
+        .filter(([, amount]) => amount > 0)
         .map(([categoryId, amount]) => ({ categoryId, amount }));
 
       if (currentBudget) {
@@ -106,178 +140,325 @@ export default function BudgetsPage() {
   };
 
   // Calculate spending data
+  const totalMonthSpent = getMonthlyTotal(currentMonth);
+  
   const allocationsWithSpending = useMemo(() => {
     if (!currentBudget) return [];
-    return currentBudget.allocations.map((allocation) => {
-      const spent = getCategoryTotal(allocation.categoryId, currentMonth);
-      const remaining = allocation.amount - spent;
-      const percentage = allocation.amount > 0 ? Math.min(100, (spent / allocation.amount) * 100) : 0;
-      return {
-        ...allocation,
-        spent,
-        remaining,
-        percentage,
-        category: categories.find((c) => c.id === allocation.categoryId),
-      };
-    });
+    return currentBudget.allocations
+      .map((allocation) => {
+        const spent = getCategoryTotal(allocation.categoryId, currentMonth);
+        const remaining = allocation.amount - spent;
+        const percentage = allocation.amount > 0 ? (spent / allocation.amount) * 100 : 0;
+        return {
+          ...allocation,
+          spent,
+          remaining,
+          percentage,
+          category: categories.find((c) => c.id === allocation.categoryId),
+        };
+      })
+      .sort((a, b) => b.percentage - a.percentage); // Sort by usage percentage
   }, [currentBudget, categories, getCategoryTotal, currentMonth]);
 
-  const totalSpent = allocationsWithSpending.reduce((sum, a) => sum + a.spent, 0);
+  const overallRemaining = currentBudget ? currentBudget.totalAmount - totalMonthSpent : 0;
   const overallPercentage = currentBudget?.totalAmount
-    ? Math.min(100, (totalSpent / currentBudget.totalAmount) * 100)
+    ? (totalMonthSpent / currentBudget.totalAmount) * 100
     : 0;
+
+  // Stats
+  const categoriesOverBudget = allocationsWithSpending.filter(a => a.percentage >= 100).length;
+  const categoriesOnTrack = allocationsWithSpending.filter(a => a.percentage < 75).length;
+
+  // Status helpers
+  const getBudgetStatus = () => {
+    if (!currentBudget) return null;
+    if (overallPercentage >= 100) return { label: 'Over Budget', color: 'destructive', icon: AlertTriangle };
+    if (overallPercentage >= 80) return { label: 'Almost There', color: 'warning', icon: AlertTriangle };
+    return { label: 'On Track', color: 'success', icon: CheckCircle2 };
+  };
+
+  const budgetStatus = getBudgetStatus();
 
   return (
     <PageTransition>
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-4 pb-20 lg:pb-4">
+        {/* Header */}
+        <div className="flex items-start justify-between">
           <div>
             <h1 className="text-h1 lg:text-2xl lg:font-bold">Budgets</h1>
-            <p className="text-muted-foreground text-sm">Manage your monthly spending</p>
+            <p className="text-muted-foreground text-sm">
+              {format(selectedDate, 'MMMM yyyy')}
+            </p>
           </div>
-          <Button onClick={openCreateDialog} className="w-full sm:w-auto">
+          <button
+            onClick={openCreateDialog}
+            className="flex h-9 w-9 lg:w-auto lg:h-auto lg:px-4 lg:py-2.5 items-center justify-center lg:gap-2 rounded-xl font-medium text-[#101010] shadow-lg"
+            style={{
+              background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
+              boxShadow: '0 0 12px rgba(152, 239, 90, 0.25)',
+            }}
+          >
             {currentBudget ? (
               <>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Budget
+                <Pencil className="h-4 w-4" />
+                <span className="hidden lg:inline">Edit Budget</span>
               </>
             ) : (
               <>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Budget
+                <Plus className="h-4 w-4" />
+                <span className="hidden lg:inline">Create Budget</span>
               </>
             )}
-          </Button>
+          </button>
         </div>
 
         {/* Month Navigator */}
         <Card>
           <CardContent className="flex items-center justify-between py-3 px-4">
-            <Button variant="ghost" size="icon-sm" onClick={handlePrevMonth}>
-              <ChevronLeft className="h-4 w-4" />
+            <Button variant="ghost" size="icon" onClick={handlePrevMonth} className="h-9 w-9">
+              <ChevronLeft className="h-5 w-5" />
             </Button>
-            <h3 className="text-base font-semibold">
-              {format(selectedDate, 'MMMM yyyy')}
-            </h3>
-            <Button variant="ghost" size="icon-sm" onClick={handleNextMonth}>
-              <ChevronRight className="h-4 w-4" />
+            <div className="text-center">
+              <h3 className="text-base font-semibold">
+                {format(selectedDate, 'MMMM yyyy')}
+              </h3>
+              {isCurrentMonth && (
+                <Badge variant="outline" className="text-[10px] mt-1">Current Month</Badge>
+              )}
+            </div>
+            <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-9 w-9">
+              <ChevronRight className="h-5 w-5" />
             </Button>
           </CardContent>
         </Card>
 
-        {/* Budget Overview */}
         {currentBudget ? (
-          <FadeIn>
-            <Card>
-              <CardHeader>
-                <CardTitle>Budget Overview</CardTitle>
-                <CardDescription>
-                  {formatCurrency(totalSpent)} of {formatCurrency(currentBudget.totalAmount)} spent
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Progress
-                  value={overallPercentage}
-                  className={cn('h-3', {
-                    '[&>div]:bg-green-500': overallPercentage < 75,
-                    '[&>div]:bg-yellow-500': overallPercentage >= 75 && overallPercentage < 100,
-                    '[&>div]:bg-red-500': overallPercentage >= 100,
-                  })}
-                />
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{overallPercentage.toFixed(0)}% used</span>
-                  <span
-                    className={cn({
-                      'text-green-600 dark:text-green-400': currentBudget.totalAmount - totalSpent > 0,
-                      'text-red-600 dark:text-red-400': currentBudget.totalAmount - totalSpent < 0,
-                    })}
-                  >
-                    {formatCurrency(Math.abs(currentBudget.totalAmount - totalSpent))}{' '}
-                    {currentBudget.totalAmount - totalSpent >= 0 ? 'remaining' : 'over'}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </FadeIn>
-        ) : (
-          <Card>
-            <EmptyState
-              icon={<Wallet className="h-10 w-10" />}
-              title="No budget set"
-              description={`Create a budget for ${format(selectedDate, 'MMMM yyyy')} to start tracking your spending.`}
-              action={{
-                label: 'Create Budget',
-                onClick: openCreateDialog,
-              }}
-            />
-          </Card>
-        )}
-
-        {/* Category Allocations */}
-        {currentBudget && allocationsWithSpending.length > 0 && (
-          <FadeIn>
-            <Card>
-              <CardHeader>
-                <CardTitle>Category Budgets</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {allocationsWithSpending.map((allocation) => (
-                  <div key={allocation.categoryId} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {allocation.category && (
-                          <CategoryIcon
-                            icon={allocation.category.icon}
-                            color={allocation.category.color}
-                            size="sm"
-                          />
-                        )}
-                        <span className="font-medium">
-                          {allocation.category?.name || 'Unknown'}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span
-                          className={cn('font-medium', {
-                            'text-destructive': allocation.spent > allocation.amount,
-                          })}
-                        >
-                          {formatCurrency(allocation.spent)}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {' '}
-                          / {formatCurrency(allocation.amount)}
-                        </span>
-                      </div>
+          <>
+            {/* Budget Summary Card */}
+            <FadeIn>
+              <motion.div
+                className="relative overflow-hidden rounded-2xl p-5"
+                style={{
+                  background: overallPercentage >= 100 
+                    ? 'linear-gradient(145deg, #f87171 0%, #ef4444 100%)'
+                    : overallPercentage >= 80
+                      ? 'linear-gradient(145deg, #fbbf24 0%, #f59e0b 100%)'
+                      : 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
+                  boxShadow: overallPercentage >= 100
+                    ? '0 0 40px rgba(248, 113, 113, 0.25)'
+                    : overallPercentage >= 80
+                      ? '0 0 40px rgba(251, 191, 36, 0.25)'
+                      : '0 0 40px rgba(152, 239, 90, 0.25)',
+                }}
+              >
+                <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+                
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      {budgetStatus && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm">
+                          <budgetStatus.icon className={cn(
+                            "h-3.5 w-3.5",
+                            overallPercentage >= 100 ? "text-white" : "text-[#101010]"
+                          )} />
+                          <span className={cn(
+                            "text-xs font-semibold",
+                            overallPercentage >= 100 ? "text-white" : "text-[#101010]"
+                          )}>
+                            {budgetStatus.label}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <Progress
-                      value={allocation.percentage}
-                      className={cn('h-2', {
-                        '[&>div]:bg-green-500': allocation.percentage < 75,
-                        '[&>div]:bg-yellow-500':
-                          allocation.percentage >= 75 && allocation.percentage < 100,
-                        '[&>div]:bg-red-500': allocation.percentage >= 100,
-                      })}
-                    />
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        {allocation.percentage.toFixed(0)}% used
-                      </span>
-                      <span
-                        className={cn({
-                          'text-green-600 dark:text-green-400': allocation.remaining > 0,
-                          'text-red-600 dark:text-red-400': allocation.remaining < 0,
-                          'text-muted-foreground': allocation.remaining === 0,
-                        })}
-                      >
-                        {allocation.remaining >= 0
-                          ? `${formatCurrency(allocation.remaining)} left`
-                          : `${formatCurrency(Math.abs(allocation.remaining))} over`}
-                      </span>
-                    </div>
+                    <span className={cn(
+                      "text-2xl font-bold",
+                      overallPercentage >= 100 ? "text-white" : "text-[#101010]"
+                    )}>
+                      {Math.round(overallPercentage)}%
+                    </span>
                   </div>
-                ))}
-              </CardContent>
+
+                  <div className="mb-4">
+                    <p className={cn(
+                      "text-[11px] font-semibold tracking-wide uppercase mb-1",
+                      overallPercentage >= 100 ? "text-white/60" : "text-[#101010]/50"
+                    )}>
+                      {overallRemaining >= 0 ? 'Remaining' : 'Over Budget'}
+                    </p>
+                    <p className={cn(
+                      "text-3xl font-bold tracking-tight",
+                      overallPercentage >= 100 ? "text-white" : "text-[#101010]"
+                    )}>
+                      {overallRemaining < 0 && '-'}{symbol}{Math.abs(overallRemaining).toLocaleString()}
+                    </p>
+                    <p className={cn(
+                      "text-sm mt-1",
+                      overallPercentage >= 100 ? "text-white/70" : "text-[#101010]/60"
+                    )}>
+                      {formatCurrency(totalMonthSpent)} of {formatCurrency(currentBudget.totalAmount)} spent
+                    </p>
+                  </div>
+
+                  <div className="h-3 rounded-full bg-white/30 overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(overallPercentage, 100)}%` }}
+                      transition={{ duration: 0.8, ease: "easeOut" }}
+                      className="h-full rounded-full bg-white/80"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            </FadeIn>
+
+            {/* Quick Stats */}
+            <StaggerContainer>
+              <div className="grid grid-cols-3 gap-3">
+                <StaggerItem>
+                  <Card>
+                    <CardContent className="p-3 text-center">
+                      <div className="flex justify-center mb-1.5">
+                        <div className="p-1.5 rounded-lg bg-primary/10">
+                          <Target className="h-4 w-4 text-primary" />
+                        </div>
+                      </div>
+                      <p className="text-lg font-bold">{allocationsWithSpending.length}</p>
+                      <p className="text-[10px] text-muted-foreground">Categories</p>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+                <StaggerItem>
+                  <Card>
+                    <CardContent className="p-3 text-center">
+                      <div className="flex justify-center mb-1.5">
+                        <div className="p-1.5 rounded-lg bg-green-500/10">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        </div>
+                      </div>
+                      <p className="text-lg font-bold">{categoriesOnTrack}</p>
+                      <p className="text-[10px] text-muted-foreground">On Track</p>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+                <StaggerItem>
+                  <Card>
+                    <CardContent className="p-3 text-center">
+                      <div className="flex justify-center mb-1.5">
+                        <div className="p-1.5 rounded-lg bg-destructive/10">
+                          <AlertTriangle className="h-4 w-4 text-destructive" />
+                        </div>
+                      </div>
+                      <p className="text-lg font-bold">{categoriesOverBudget}</p>
+                      <p className="text-[10px] text-muted-foreground">Over Budget</p>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+              </div>
+            </StaggerContainer>
+
+            {/* Category Allocations */}
+            {allocationsWithSpending.length > 0 && (
+              <FadeIn>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-semibold">Category Budgets</CardTitle>
+                    <CardDescription>Sorted by usage</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {allocationsWithSpending.map((allocation, index) => (
+                      <motion.div 
+                        key={allocation.categoryId} 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            {allocation.category && (
+                              <CategoryIcon
+                                icon={allocation.category.icon}
+                                color={allocation.category.color}
+                                size="md"
+                              />
+                            )}
+                            <div>
+                              <span className="font-medium text-sm">
+                                {allocation.category?.name || 'Unknown'}
+                              </span>
+                              <p className="text-[10px] text-muted-foreground">
+                                {allocation.percentage >= 100 ? (
+                                  <span className="text-destructive">Over by {formatCurrency(Math.abs(allocation.remaining))}</span>
+                                ) : (
+                                  <span>{formatCurrency(allocation.remaining)} left</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={cn(
+                              'text-sm font-semibold',
+                              allocation.percentage >= 100 && 'text-destructive'
+                            )}>
+                              {formatCurrency(allocation.spent)}
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              {' '}/ {formatCurrency(allocation.amount)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <Progress
+                            value={Math.min(allocation.percentage, 100)}
+                            className={cn('h-2', {
+                              '[&>div]:bg-primary': allocation.percentage < 75,
+                              '[&>div]:bg-yellow-500': allocation.percentage >= 75 && allocation.percentage < 100,
+                              '[&>div]:bg-destructive': allocation.percentage >= 100,
+                            })}
+                          />
+                          {allocation.percentage > 100 && (
+                            <div 
+                              className="absolute top-0 right-0 h-2 rounded-r-full bg-destructive/30"
+                              style={{ width: `${Math.min((allocation.percentage - 100) / 2, 20)}%` }}
+                            />
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            )}
+
+            {allocationsWithSpending.length === 0 && (
+              <FadeIn>
+                <Card className="py-8">
+                  <EmptyState
+                    icon={<PiggyBank className="h-10 w-10" />}
+                    title="No category allocations"
+                    description="Edit your budget to allocate amounts to specific categories for detailed tracking."
+                    action={{
+                      label: 'Edit Budget',
+                      onClick: openCreateDialog,
+                    }}
+                  />
+                </Card>
+              </FadeIn>
+            )}
+          </>
+        ) : (
+          <FadeIn>
+            <Card className="py-12">
+              <EmptyState
+                icon={<Wallet className="h-10 w-10" />}
+                title="No budget set"
+                description={`Create a budget for ${format(selectedDate, 'MMMM yyyy')} to start tracking your spending goals.`}
+                action={{
+                  label: 'Create Budget',
+                  onClick: openCreateDialog,
+                }}
+              />
             </Card>
           </FadeIn>
         )}
@@ -286,20 +467,30 @@ export default function BudgetsPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-h-[90vh] flex flex-col sm:max-w-lg">
             <DialogHeader className="flex-shrink-0">
-              <DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <div 
+                  className="p-2 rounded-xl"
+                  style={{
+                    background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
+                  }}
+                >
+                  <Target className="h-4 w-4 text-[#101010]" />
+                </div>
                 {currentBudget ? 'Edit' : 'Create'} Budget
               </DialogTitle>
               <DialogDescription>
-                {format(selectedDate, 'MMMM yyyy')} - Set your budget and allocate to categories.
+                Set your budget for {format(selectedDate, 'MMMM yyyy')}
               </DialogDescription>
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto space-y-5 py-2 -mx-6 px-6">
-              {/* Total Budget */}
+              {/* Total Budget Input */}
               <div className="space-y-2">
-                <Label htmlFor="totalBudget">Total Monthly Budget</Label>
+                <Label htmlFor="totalBudget" className="text-sm font-medium">
+                  Total Monthly Budget
+                </Label>
                 <div className="relative">
-                  <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2">
+                  <span className="text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium">
                     {symbol}
                   </span>
                   <Input
@@ -309,59 +500,176 @@ export default function BudgetsPage() {
                     min="0"
                     step="0.01"
                     placeholder="0.00"
-                    className="pl-7 text-lg h-12"
+                    className="pl-9 text-2xl font-bold h-14 rounded-xl"
                     value={totalBudget || ''}
                     onChange={(e) => setTotalBudget(parseFloat(e.target.value) || 0)}
                   />
                 </div>
+                {totalBudget > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Daily budget: ~{formatCurrency(totalBudget / 30)}
+                  </p>
+                )}
               </div>
+
+              {/* Allocation Summary Bar */}
+              {totalBudget > 0 && (
+                <div className="p-4 rounded-xl bg-muted/50 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Allocated</span>
+                    <span className={cn(
+                      "font-semibold",
+                      totalAllocated > totalBudget ? "text-destructive" : "text-foreground"
+                    )}>
+                      {formatCurrency(totalAllocated)} / {formatCurrency(totalBudget)}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={totalBudget > 0 ? Math.min((totalAllocated / totalBudget) * 100, 100) : 0}
+                    className={cn("h-2", {
+                      "[&>div]:bg-primary": totalAllocated <= totalBudget,
+                      "[&>div]:bg-destructive": totalAllocated > totalBudget,
+                    })}
+                  />
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={cn(
+                      unallocatedAmount >= 0 ? "text-muted-foreground" : "text-destructive"
+                    )}>
+                      {unallocatedAmount >= 0 
+                        ? `${formatCurrency(unallocatedAmount)} unallocated`
+                        : `${formatCurrency(Math.abs(unallocatedAmount))} over-allocated`
+                      }
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={distributeEvenly}
+                        className="flex items-center gap-1 text-primary hover:underline"
+                      >
+                        <Sparkles className="h-3 w-3" />
+                        Distribute evenly
+                      </button>
+                      {Object.keys(allocations).length > 0 && (
+                        <button
+                          type="button"
+                          onClick={clearAllocations}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Category Allocations */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Category Allocations</Label>
-                  <span
-                    className={cn('text-sm', {
-                      'text-green-600 dark:text-green-400': totalAllocated <= totalBudget,
-                      'text-red-600 dark:text-red-400': totalAllocated > totalBudget,
-                    })}
-                  >
-                    {formatCurrency(totalAllocated)} / {formatCurrency(totalBudget)}
-                  </span>
-                </div>
+                <Label className="text-sm font-medium">Category Allocations</Label>
+                <p className="text-xs text-muted-foreground -mt-1">
+                  Optional: Set limits for individual categories
+                </p>
 
                 <div className="space-y-2">
-                  {categories.map((category) => (
-                    <div key={category.id} className="flex items-center gap-2">
-                      <CategoryIcon icon={category.icon} color={category.color} size="sm" />
-                      <span className="flex-1 text-sm font-medium truncate">{category.name}</span>
-                      <div className="relative w-28">
-                        <span className="text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2 text-sm">
-                          {symbol}
-                        </span>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          min="0"
-                          step="0.01"
-                          placeholder="0"
-                          className="pl-6 h-10 text-right pr-3"
-                          value={allocations[category.id] || ''}
-                          onChange={(e) => handleAllocationChange(category.id, e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                  {categories.map((category, index) => {
+                    const allocation = allocations[category.id] || 0;
+                    const percentage = totalBudget > 0 ? (allocation / totalBudget) * 100 : 0;
+                    
+                    return (
+                      <motion.div 
+                        key={category.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-xl transition-colors",
+                          allocation > 0 ? "bg-muted/50" : "bg-transparent hover:bg-muted/30"
+                        )}
+                      >
+                        <div 
+                          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
+                          style={{
+                            background: `${category.color}15`,
+                          }}
+                        >
+                          <CategoryIcon icon={category.icon} color={category.color} size="sm" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{category.name}</p>
+                          {allocation > 0 && totalBudget > 0 && (
+                            <p className="text-[10px] text-muted-foreground">
+                              {percentage.toFixed(0)}% of budget
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const newAmount = Math.max(0, (allocations[category.id] || 0) - 50);
+                              handleAllocationChange(category.id, newAmount.toString());
+                            }}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <div className="relative w-24">
+                            <span className="text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2 text-sm">
+                              {symbol}
+                            </span>
+                            <Input
+                              type="number"
+                              inputMode="decimal"
+                              min="0"
+                              step="0.01"
+                              placeholder="0"
+                              className="pl-6 h-9 text-right pr-2 text-sm font-medium"
+                              value={allocations[category.id] || ''}
+                              onChange={(e) => handleAllocationChange(category.id, e.target.value)}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const newAmount = (allocations[category.id] || 0) + 50;
+                              handleAllocationChange(category.id, newAmount.toString());
+                            }}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
-            <DialogFooter className="flex-shrink-0 gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1 sm:flex-none">
+            <DialogFooter className="flex-shrink-0 gap-2 sm:gap-0 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setDialogOpen(false)} 
+                className="flex-1 sm:flex-none"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleSaveBudget} disabled={isSaving} className="flex-1 sm:flex-none">
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button 
+                onClick={handleSaveBudget} 
+                disabled={isSaving || totalBudget <= 0}
+                className="flex-1 sm:flex-none gap-2"
+                style={{
+                  background: totalBudget > 0 
+                    ? 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)' 
+                    : undefined,
+                  color: totalBudget > 0 ? '#101010' : undefined,
+                }}
+              >
+                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {currentBudget ? 'Update' : 'Create'} Budget
               </Button>
             </DialogFooter>
