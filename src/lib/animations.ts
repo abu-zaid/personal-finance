@@ -1,8 +1,8 @@
-import { Variants } from 'framer-motion';
+import { Variants, Easing } from 'framer-motion';
 import { ANIMATION_DURATION } from '@/lib/constants';
 
 // Common easing functions
-export const easing = {
+export const easing: Record<string, Easing> = {
   smooth: [0.4, 0, 0.2, 1],
   bounce: [0.68, -0.55, 0.265, 1.55],
   snappy: [0.25, 0.1, 0.25, 1],

@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
+import { DataProviders } from '@/components/providers/data-providers';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { DashboardSkeleton } from '@/components/shared';
+import { AddTransactionModal } from '@/components/features/transactions/add-transaction-modal';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -63,14 +65,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="bg-background flex min-h-screen">
-      <Sidebar onAddExpense={() => setAddExpenseOpen(true)} />
-      <div className="flex flex-1 flex-col">
-        <Header title={getPageTitle()} onAddExpense={() => setAddExpenseOpen(true)} />
-        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+    <DataProviders>
+      <div className="bg-background flex min-h-screen">
+        <Sidebar onAddExpense={() => setAddExpenseOpen(true)} />
+        <div className="flex flex-1 flex-col">
+          <Header title={getPageTitle()} onAddExpense={() => setAddExpenseOpen(true)} />
+          <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+        </div>
+        <AddTransactionModal open={addExpenseOpen} onOpenChange={setAddExpenseOpen} />
       </div>
-
-      {/* Add Expense Modal will be added here later */}
-    </div>
+    </DataProviders>
   );
 }

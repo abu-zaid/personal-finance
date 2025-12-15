@@ -1,6 +1,7 @@
 'use client';
 
-import { Bell, User } from 'lucide-react';
+import Link from 'next/link';
+import { Bell, LogOut, Settings, User } from 'lucide-react';
 
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { MobileSidebar } from '@/components/layout/sidebar';
@@ -14,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/context/auth-context';
 
 interface HeaderProps {
   title?: string;
@@ -21,6 +23,17 @@ interface HeaderProps {
 }
 
 export function Header({ title, onAddExpense }: HeaderProps) {
+  const { user, logout } = useAuth();
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 flex h-16 items-center justify-between border-b px-4 backdrop-blur md:px-6">
       <div className="flex items-center gap-4">
@@ -40,9 +53,9 @@ export function Header({ title, onAddExpense }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
               <Avatar className="h-9 w-9">
-                <AvatarImage src="/avatar.png" alt="User" />
+                <AvatarImage src="/avatar.png" alt={user?.name || 'User'} />
                 <AvatarFallback>
-                  <User className="h-4 w-4" />
+                  {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -50,15 +63,24 @@ export function Header({ title, onAddExpense }: HeaderProps) {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">User Name</p>
-                <p className="text-muted-foreground text-xs leading-none">user@example.com</p>
+                <p className="text-sm font-medium leading-none">{user?.name || 'Guest'}</p>
+                <p className="text-muted-foreground text-xs leading-none">
+                  {user?.email || 'guest@example.com'}
+                </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Log out</DropdownMenuItem>
+            <DropdownMenuItem onClick={logout} className="text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              Log out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

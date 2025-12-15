@@ -31,7 +31,7 @@ export type SignupFormData = z.infer<typeof signupSchema>;
 // Transaction schema
 export const transactionSchema = z.object({
   amount: z
-    .number({ invalid_type_error: 'Please enter a valid amount' })
+    .number({ error: 'Please enter a valid amount' })
     .positive('Amount must be greater than 0'),
   categoryId: z.string().min(1, 'Please select a category'),
   date: z.date(),

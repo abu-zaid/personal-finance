@@ -15,6 +15,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/auth-context';
 import { CURRENCY_OPTIONS, DATE_FORMAT_OPTIONS } from '@/lib/constants';
+import { Currency, DateFormat } from '@/types';
 import { User, Settings, Bell, Shield, LogOut } from 'lucide-react';
 import Link from 'next/link';
 
@@ -72,7 +73,7 @@ export default function SettingsPage() {
                 <Select
                   value={user?.preferences.currency}
                   onValueChange={(value) =>
-                    updatePreferences({ currency: value as typeof user.preferences.currency })
+                    updatePreferences({ currency: value as Currency })
                   }
                 >
                   <SelectTrigger className="w-[180px]">
@@ -98,7 +99,7 @@ export default function SettingsPage() {
                 <Select
                   value={user?.preferences.dateFormat}
                   onValueChange={(value) =>
-                    updatePreferences({ dateFormat: value as typeof user.preferences.dateFormat })
+                    updatePreferences({ dateFormat: value as DateFormat })
                   }
                 >
                   <SelectTrigger className="w-[180px]">
