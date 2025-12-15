@@ -69,8 +69,9 @@ export default function DashboardPage() {
   const totalBudget = currentMonthBudget?.totalAmount ?? 0;
   const totalSpent = getMonthlyTotal(currentMonth);
   const previousMonthSpent = getMonthlyTotal(previousMonth);
-  const budgetRemaining = Math.max(0, totalBudget - totalSpent);
+  const budgetRemaining = totalBudget - totalSpent; // Allow negative values
   const budgetUsage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+  const hasBudget = totalBudget > 0;
 
   // Month-over-month change
   const monthChange = previousMonthSpent > 0
