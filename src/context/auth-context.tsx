@@ -1,9 +1,9 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { User as SupabaseUser, SupabaseClient } from '@supabase/supabase-js';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
-import { UserPreferences } from '@/types';
+import { UserPreferences, Currency, DateFormat, Theme } from '@/types';
 
 interface User {
   id: string;
@@ -23,13 +23,11 @@ interface AuthContextType {
   isConfigured: boolean;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  updatePreferences: (preferences: Partial<UserPreferences>) => void;
+  updatePreferences: (preferences: Partial<UserPreferences>) => Promise<void>;
   updateProfile: (name: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const PREFERENCES_KEY = 'financeflow_preferences';
 
 const defaultPreferences: UserPreferences = {
   currency: 'USD',
@@ -38,17 +36,20 @@ const defaultPreferences: UserPreferences = {
   firstDayOfWeek: 0,
 };
 
-function getStoredPreferences(userId: string): UserPreferences {
-  try {
-    const stored = localStorage.getItem(`${PREFERENCES_KEY}_${userId}`);
-    return stored ? { ...defaultPreferences, ...JSON.parse(stored) } : defaultPreferences;
-  } catch {
-    return defaultPreferences;
-  }
-}
-
-function savePreferences(userId: string, preferences: UserPreferences) {
-  localStorage.setItem(`${PREFERENCES_KEY}_${userId}`, JSON.stringify(preferences));
+// Map database row to UserPreferences
+function mapDbToPreferences(row: {
+  currency: string;
+  date_format: string;
+  theme: string;
+  first_day_of_week: number;
+} | null): UserPreferences {
+  if (!row) return defaultPreferences;
+  return {
+    currency: row.currency as Currency,
+    dateFormat: row.date_format as DateFormat,
+    theme: row.theme as Theme,
+    firstDayOfWeek: row.first_day_of_week as 0 | 1,
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -59,9 +60,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createClient();
   const isConfigured = supabase !== null;
 
+  // Fetch user preferences from Supabase
+  const fetchPreferences = useCallback(async (userId: string): Promise<UserPreferences> => {
+    if (!supabase) return defaultPreferences;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        // If no preferences exist, they'll be created by the database trigger
+        console.log('No preferences found, using defaults');
+        return defaultPreferences;
+      }
+
+      return mapDbToPreferences(data);
+    } catch {
+      return defaultPreferences;
+    }
+  }, [supabase]);
+
   // Convert Supabase user to our User type
-  const mapSupabaseUser = useCallback((supaUser: SupabaseUser): User => {
-    const preferences = getStoredPreferences(supaUser.id);
+  const mapSupabaseUser = useCallback(async (supaUser: SupabaseUser): Promise<User> => {
+    const preferences = await fetchPreferences(supaUser.id);
     return {
       id: supaUser.id,
       email: supaUser.email || '',
@@ -71,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createdAt: new Date(supaUser.created_at),
       updatedAt: new Date(supaUser.updated_at || supaUser.created_at),
     };
-  }, []);
+  }, [fetchPreferences]);
 
   // Initialize auth state
   useEffect(() => {
@@ -86,7 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (session?.user) {
           setSupabaseUser(session.user);
-          setUser(mapSupabaseUser(session.user));
+          const mappedUser = await mapSupabaseUser(session.user);
+          setUser(mappedUser);
         }
       } catch (error) {
         console.error('Error loading auth:', error);
@@ -102,7 +127,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         if (session?.user) {
           setSupabaseUser(session.user);
-          setUser(mapSupabaseUser(session.user));
+          const mappedUser = await mapSupabaseUser(session.user);
+          setUser(mappedUser);
         } else {
           setSupabaseUser(null);
           setUser(null);
@@ -138,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { success: true };
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Failed to sign in with Google' };
     }
   }, [supabase]);
@@ -152,20 +178,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   const updatePreferences = useCallback(
-    (preferences: Partial<UserPreferences>) => {
-      if (!user) return;
+    async (preferences: Partial<UserPreferences>) => {
+      if (!user || !supabase) return;
 
       const updatedPreferences = { ...user.preferences, ...preferences };
-      const updatedUser: User = {
-        ...user,
-        preferences: updatedPreferences,
-        updatedAt: new Date(),
-      };
 
-      setUser(updatedUser);
-      savePreferences(user.id, updatedPreferences);
+      // Update in database
+      try {
+        const { error } = await supabase
+          .from('user_preferences')
+          .upsert({
+            user_id: user.id,
+            currency: updatedPreferences.currency,
+            date_format: updatedPreferences.dateFormat,
+            theme: updatedPreferences.theme,
+            first_day_of_week: updatedPreferences.firstDayOfWeek,
+          }, {
+            onConflict: 'user_id',
+          });
+
+        if (error) {
+          console.error('Error updating preferences:', error);
+          return;
+        }
+
+        // Update local state
+        const updatedUser: User = {
+          ...user,
+          preferences: updatedPreferences,
+          updatedAt: new Date(),
+        };
+        setUser(updatedUser);
+      } catch (err) {
+        console.error('Error updating preferences:', err);
+      }
     },
-    [user]
+    [user, supabase]
   );
 
   const updateProfile = useCallback(

@@ -1,14 +1,16 @@
 'use client';
 
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
-import { Budget, BudgetWithSpending, CreateBudgetInput, UpdateBudgetInput } from '@/types';
+import { Budget, BudgetAllocation, BudgetWithSpending, CreateBudgetInput, UpdateBudgetInput } from '@/types';
 import { useAuth } from '@/context/auth-context';
 import { useTransactions } from '@/context/transactions-context';
-import { generateId, getMonthString, calculatePercentage } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import { getMonthString, calculatePercentage } from '@/lib/utils';
 
 interface BudgetsContextType {
   budgets: Budget[];
   isLoading: boolean;
+  error: string | null;
   createBudget: (input: CreateBudgetInput) => Promise<Budget>;
   updateBudget: (id: string, input: UpdateBudgetInput) => Promise<Budget>;
   deleteBudget: (id: string) => Promise<void>;
@@ -16,56 +18,169 @@ interface BudgetsContextType {
   getBudgetByMonth: (month: string) => Budget | undefined;
   getBudgetWithSpending: (month: string) => BudgetWithSpending | undefined;
   getCurrentMonthBudget: () => BudgetWithSpending | undefined;
+  refetch: () => Promise<void>;
 }
 
 const BudgetsContext = createContext<BudgetsContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'financeflow_budgets';
+// Map database rows to Budget type
+interface BudgetRow {
+  id: string;
+  user_id: string;
+  month: string;
+  total_amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AllocationRow {
+  id: string;
+  budget_id: string;
+  category_id: string;
+  amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapDbToBudget(
+  budgetRow: BudgetRow,
+  allocations: AllocationRow[]
+): Budget {
+  return {
+    id: budgetRow.id,
+    userId: budgetRow.user_id,
+    month: budgetRow.month,
+    totalAmount: Number(budgetRow.total_amount),
+    allocations: allocations.map((a) => ({
+      categoryId: a.category_id,
+      amount: Number(a.amount),
+    })),
+    createdAt: new Date(budgetRow.created_at),
+    updatedAt: new Date(budgetRow.updated_at),
+  };
+}
 
 export function BudgetsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { getCategoryTotal } = useTransactions();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const supabase = createClient();
 
-  // Load budgets from localStorage
-  useEffect(() => {
-    if (!user) {
+  // Fetch budgets from Supabase
+  const fetchBudgets = useCallback(async () => {
+    if (!user || !supabase) {
       setBudgets([]);
       setIsLoading(false);
       return;
     }
 
-    const loadBudgets = () => {
-      try {
-        const stored = localStorage.getItem(`${STORAGE_KEY}_${user.id}`);
-        if (stored) {
-          const parsed = JSON.parse(stored) as Budget[];
-          // Convert date strings back to Date objects
-          const budgetsWithDates = parsed.map((b) => ({
-            ...b,
-            createdAt: new Date(b.createdAt),
-            updatedAt: new Date(b.updatedAt),
-          }));
-          setBudgets(budgetsWithDates);
-        }
-      } catch {
-        setBudgets([]);
-      } finally {
-        setIsLoading(false);
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch budgets
+      const { data: budgetsData, error: budgetsError } = await supabase
+        .from('budgets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('month', { ascending: false });
+
+      if (budgetsError) {
+        throw budgetsError;
       }
+
+      if (!budgetsData || budgetsData.length === 0) {
+        setBudgets([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch all allocations for these budgets
+      const budgetIds = budgetsData.map((b) => b.id);
+      const { data: allocationsData, error: allocationsError } = await supabase
+        .from('budget_allocations')
+        .select('*')
+        .in('budget_id', budgetIds);
+
+      if (allocationsError) {
+        throw allocationsError;
+      }
+
+      // Map to Budget type
+      const mappedBudgets = budgetsData.map((budgetRow) => {
+        const budgetAllocations = (allocationsData || []).filter(
+          (a) => a.budget_id === budgetRow.id
+        );
+        return mapDbToBudget(budgetRow, budgetAllocations);
+      });
+
+      setBudgets(mappedBudgets);
+    } catch (err) {
+      console.error('Error fetching budgets:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch budgets');
+      setBudgets([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, supabase]);
+
+  // Load budgets when user changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchBudgets();
+    } else {
+      setBudgets([]);
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, user, fetchBudgets]);
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    if (!user || !supabase) return;
+
+    const budgetsChannel = supabase
+      .channel('budgets-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'budgets',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchBudgets();
+        }
+      )
+      .subscribe();
+
+    const allocationsChannel = supabase
+      .channel('allocations-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'budget_allocations',
+        },
+        () => {
+          fetchBudgets();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(budgetsChannel);
+      supabase.removeChannel(allocationsChannel);
     };
-
-    loadBudgets();
-  }, [user]);
-
-  const saveToStorage = (b: Budget[], userId: string) => {
-    localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(b));
-  };
+  }, [user, supabase, fetchBudgets]);
 
   const createBudget = useCallback(
     async (input: CreateBudgetInput): Promise<Budget> => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user || !supabase) throw new Error('User not authenticated');
 
       // Check if budget already exists for this month
       const existingBudget = budgets.find((b) => b.month === input.month);
@@ -73,59 +188,135 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
         throw new Error('A budget already exists for this month');
       }
 
-      const now = new Date();
+      // Create budget
+      const { data: budgetData, error: budgetError } = await supabase
+        .from('budgets')
+        .insert({
+          user_id: user.id,
+          month: input.month,
+          total_amount: input.totalAmount,
+        })
+        .select()
+        .single();
+
+      if (budgetError) {
+        throw new Error(budgetError.message);
+      }
+
+      // Create allocations
+      if (input.allocations.length > 0) {
+        const allocationsToInsert = input.allocations.map((a) => ({
+          budget_id: budgetData.id,
+          category_id: a.categoryId,
+          amount: a.amount,
+        }));
+
+        const { error: allocationsError } = await supabase
+          .from('budget_allocations')
+          .insert(allocationsToInsert);
+
+        if (allocationsError) {
+          // Rollback budget creation
+          await supabase.from('budgets').delete().eq('id', budgetData.id);
+          throw new Error(allocationsError.message);
+        }
+      }
+
       const newBudget: Budget = {
-        id: generateId(),
-        userId: user.id,
-        month: input.month,
-        totalAmount: input.totalAmount,
+        id: budgetData.id,
+        userId: budgetData.user_id,
+        month: budgetData.month,
+        totalAmount: Number(budgetData.total_amount),
         allocations: input.allocations,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: new Date(budgetData.created_at),
+        updatedAt: new Date(budgetData.updated_at),
       };
 
-      const updatedBudgets = [...budgets, newBudget];
-      setBudgets(updatedBudgets);
-      saveToStorage(updatedBudgets, user.id);
-
+      setBudgets((prev) => [newBudget, ...prev]);
       return newBudget;
     },
-    [user, budgets]
+    [user, supabase, budgets]
   );
 
   const updateBudget = useCallback(
     async (id: string, input: UpdateBudgetInput): Promise<Budget> => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user || !supabase) throw new Error('User not authenticated');
 
-      const budgetIndex = budgets.findIndex((b) => b.id === id);
-      if (budgetIndex === -1) throw new Error('Budget not found');
+      const existingBudget = budgets.find((b) => b.id === id);
+      if (!existingBudget) throw new Error('Budget not found');
+
+      // Update budget if totalAmount changed
+      if (input.totalAmount !== undefined) {
+        const { error: updateError } = await supabase
+          .from('budgets')
+          .update({ total_amount: input.totalAmount })
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
+      }
+
+      // Update allocations if provided
+      if (input.allocations !== undefined) {
+        // Delete existing allocations
+        await supabase
+          .from('budget_allocations')
+          .delete()
+          .eq('budget_id', id);
+
+        // Insert new allocations
+        if (input.allocations.length > 0) {
+          const allocationsToInsert = input.allocations.map((a) => ({
+            budget_id: id,
+            category_id: a.categoryId,
+            amount: a.amount,
+          }));
+
+          const { error: allocationsError } = await supabase
+            .from('budget_allocations')
+            .insert(allocationsToInsert);
+
+          if (allocationsError) {
+            throw new Error(allocationsError.message);
+          }
+        }
+      }
 
       const updatedBudget: Budget = {
-        ...budgets[budgetIndex],
-        ...input,
+        ...existingBudget,
+        totalAmount: input.totalAmount ?? existingBudget.totalAmount,
+        allocations: input.allocations ?? existingBudget.allocations,
         updatedAt: new Date(),
       };
 
-      const updatedBudgets = [...budgets];
-      updatedBudgets[budgetIndex] = updatedBudget;
-
-      setBudgets(updatedBudgets);
-      saveToStorage(updatedBudgets, user.id);
-
+      setBudgets((prev) =>
+        prev.map((b) => (b.id === id ? updatedBudget : b))
+      );
       return updatedBudget;
     },
-    [user, budgets]
+    [user, supabase, budgets]
   );
 
   const deleteBudget = useCallback(
     async (id: string): Promise<void> => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user || !supabase) throw new Error('User not authenticated');
 
-      const updatedBudgets = budgets.filter((b) => b.id !== id);
-      setBudgets(updatedBudgets);
-      saveToStorage(updatedBudgets, user.id);
+      // Allocations will be deleted automatically due to CASCADE
+      const { error: deleteError } = await supabase
+        .from('budgets')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (deleteError) {
+        throw new Error(deleteError.message);
+      }
+
+      setBudgets((prev) => prev.filter((b) => b.id !== id));
     },
-    [user, budgets]
+    [user, supabase]
   );
 
   const getBudgetById = useCallback(
@@ -184,6 +375,7 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
       value={{
         budgets,
         isLoading,
+        error,
         createBudget,
         updateBudget,
         deleteBudget,
@@ -191,6 +383,7 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
         getBudgetByMonth,
         getBudgetWithSpending,
         getCurrentMonthBudget,
+        refetch: fetchBudgets,
       }}
     >
       {children}

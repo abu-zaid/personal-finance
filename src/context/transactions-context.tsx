@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, useMemo, ReactNode } from 'react';
 import {
   Transaction,
   TransactionWithCategory,
@@ -11,11 +11,13 @@ import {
 } from '@/types';
 import { useAuth } from '@/context/auth-context';
 import { useCategories } from '@/context/categories-context';
-import { generateId, getMonthString } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import { getMonthString } from '@/lib/utils';
 
 interface TransactionsContextType {
   transactions: TransactionWithCategory[];
   isLoading: boolean;
+  error: string | null;
   createTransaction: (input: CreateTransactionInput) => Promise<Transaction>;
   updateTransaction: (id: string, input: UpdateTransactionInput) => Promise<Transaction>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -27,133 +29,209 @@ interface TransactionsContextType {
   getTransactionsByMonth: (month: string) => TransactionWithCategory[];
   getMonthlyTotal: (month: string) => number;
   getCategoryTotal: (categoryId: string, month?: string) => number;
+  refetch: () => Promise<void>;
 }
 
 const TransactionsContext = createContext<TransactionsContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'financeflow_transactions';
+// Map database row to Transaction type
+function mapDbToTransaction(row: {
+  id: string;
+  user_id: string;
+  amount: number;
+  category_id: string;
+  date: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}): Transaction {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    amount: Number(row.amount),
+    categoryId: row.category_id,
+    date: new Date(row.date),
+    notes: row.notes || undefined,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  };
+}
 
 export function TransactionsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { getCategoryById } = useCategories();
   const [rawTransactions, setRawTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const supabase = createClient();
 
-  // Load transactions from localStorage
-  useEffect(() => {
-    if (!user) {
+  // Fetch transactions from Supabase
+  const fetchTransactions = useCallback(async () => {
+    if (!user || !supabase) {
       setRawTransactions([]);
       setIsLoading(false);
       return;
     }
 
-    const loadTransactions = () => {
-      try {
-        const stored = localStorage.getItem(`${STORAGE_KEY}_${user.id}`);
-        if (stored) {
-          const parsed = JSON.parse(stored) as Transaction[];
-          // Convert date strings back to Date objects
-          const transactionsWithDates = parsed.map((t) => ({
-            ...t,
-            date: new Date(t.date),
-            createdAt: new Date(t.createdAt),
-            updatedAt: new Date(t.updatedAt),
-          }));
-          setRawTransactions(transactionsWithDates);
-        }
-      } catch {
-        setRawTransactions([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    try {
+      setIsLoading(true);
+      setError(null);
 
-    loadTransactions();
-  }, [user]);
+      const { data, error: fetchError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      const mappedTransactions = (data || []).map(mapDbToTransaction);
+      setRawTransactions(mappedTransactions);
+    } catch (err) {
+      console.error('Error fetching transactions:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch transactions');
+      setRawTransactions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, supabase]);
+
+  // Load transactions when user changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchTransactions();
+    } else {
+      setRawTransactions([]);
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, user, fetchTransactions]);
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    if (!user || !supabase) return;
+
+    const channel = supabase
+      .channel('transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchTransactions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, supabase, fetchTransactions]);
 
   // Enrich transactions with category data
-  const transactions: TransactionWithCategory[] = rawTransactions.map((t) => {
-    const category = getCategoryById(t.categoryId);
-    return {
-      ...t,
-      category: category
-        ? {
-            id: category.id,
-            name: category.name,
-            icon: category.icon,
-            color: category.color,
-          }
-        : {
-            id: t.categoryId,
-            name: 'Unknown',
-            icon: 'more-horizontal',
-            color: 'slate',
-          },
-    };
-  });
-
-  const saveToStorage = (trans: Transaction[], userId: string) => {
-    localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(trans));
-  };
+  const transactions: TransactionWithCategory[] = useMemo(() => {
+    return rawTransactions.map((t) => {
+      const category = getCategoryById(t.categoryId);
+      return {
+        ...t,
+        category: category
+          ? {
+              id: category.id,
+              name: category.name,
+              icon: category.icon,
+              color: category.color,
+            }
+          : {
+              id: t.categoryId,
+              name: 'Unknown',
+              icon: 'more-horizontal',
+              color: '#6b7280',
+            },
+      };
+    });
+  }, [rawTransactions, getCategoryById]);
 
   const createTransaction = useCallback(
     async (input: CreateTransactionInput): Promise<Transaction> => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user || !supabase) throw new Error('User not authenticated');
 
-      const now = new Date();
-      const newTransaction: Transaction = {
-        id: generateId(),
-        userId: user.id,
-        amount: input.amount,
-        categoryId: input.categoryId,
-        date: input.date,
-        notes: input.notes,
-        createdAt: now,
-        updatedAt: now,
-      };
+      const { data, error: insertError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          amount: input.amount,
+          category_id: input.categoryId,
+          date: input.date.toISOString().split('T')[0],
+          notes: input.notes || null,
+        })
+        .select()
+        .single();
 
-      const updatedTransactions = [...rawTransactions, newTransaction];
-      setRawTransactions(updatedTransactions);
-      saveToStorage(updatedTransactions, user.id);
+      if (insertError) {
+        throw new Error(insertError.message);
+      }
 
+      const newTransaction = mapDbToTransaction(data);
+      setRawTransactions((prev) => [newTransaction, ...prev]);
       return newTransaction;
     },
-    [user, rawTransactions]
+    [user, supabase]
   );
 
   const updateTransaction = useCallback(
     async (id: string, input: UpdateTransactionInput): Promise<Transaction> => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user || !supabase) throw new Error('User not authenticated');
 
-      const transactionIndex = rawTransactions.findIndex((t) => t.id === id);
-      if (transactionIndex === -1) throw new Error('Transaction not found');
+      const updateData: Record<string, unknown> = {};
+      if (input.amount !== undefined) updateData.amount = input.amount;
+      if (input.categoryId !== undefined) updateData.category_id = input.categoryId;
+      if (input.date !== undefined) updateData.date = input.date.toISOString().split('T')[0];
+      if (input.notes !== undefined) updateData.notes = input.notes || null;
 
-      const updatedTransaction: Transaction = {
-        ...rawTransactions[transactionIndex],
-        ...input,
-        updatedAt: new Date(),
-      };
+      const { data, error: updateError } = await supabase
+        .from('transactions')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
 
-      const updatedTransactions = [...rawTransactions];
-      updatedTransactions[transactionIndex] = updatedTransaction;
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
 
-      setRawTransactions(updatedTransactions);
-      saveToStorage(updatedTransactions, user.id);
-
+      const updatedTransaction = mapDbToTransaction(data);
+      setRawTransactions((prev) =>
+        prev.map((t) => (t.id === id ? updatedTransaction : t))
+      );
       return updatedTransaction;
     },
-    [user, rawTransactions]
+    [user, supabase]
   );
 
   const deleteTransaction = useCallback(
     async (id: string): Promise<void> => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user || !supabase) throw new Error('User not authenticated');
 
-      const updatedTransactions = rawTransactions.filter((t) => t.id !== id);
-      setRawTransactions(updatedTransactions);
-      saveToStorage(updatedTransactions, user.id);
+      const { error: deleteError } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (deleteError) {
+        throw new Error(deleteError.message);
+      }
+
+      setRawTransactions((prev) => prev.filter((t) => t.id !== id));
     },
-    [user, rawTransactions]
+    [user, supabase]
   );
 
   const getTransactionById = useCallback(
@@ -248,6 +326,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       value={{
         transactions,
         isLoading,
+        error,
         createTransaction,
         updateTransaction,
         deleteTransaction,
@@ -256,6 +335,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         getTransactionsByMonth,
         getMonthlyTotal,
         getCategoryTotal,
+        refetch: fetchTransactions,
       }}
     >
       {children}

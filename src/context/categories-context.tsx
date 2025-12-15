@@ -3,137 +3,199 @@
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { Category, CreateCategoryInput, UpdateCategoryInput } from '@/types';
 import { useAuth } from '@/context/auth-context';
-import { generateId } from '@/lib/utils';
-import { DEFAULT_CATEGORIES } from '@/lib/constants';
+import { createClient } from '@/lib/supabase/client';
 
 interface CategoriesContextType {
   categories: Category[];
   isLoading: boolean;
+  error: string | null;
   createCategory: (input: CreateCategoryInput) => Promise<Category>;
   updateCategory: (id: string, input: UpdateCategoryInput) => Promise<Category>;
   deleteCategory: (id: string) => Promise<void>;
   getCategoryById: (id: string) => Category | undefined;
+  refetch: () => Promise<void>;
 }
 
 const CategoriesContext = createContext<CategoriesContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'financeflow_categories';
+// Map database row to Category type
+function mapDbToCategory(row: {
+  id: string;
+  user_id: string;
+  name: string;
+  icon: string;
+  color: string;
+  is_default: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}): Category {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    icon: row.icon,
+    color: row.color,
+    isDefault: row.is_default,
+    order: row.sort_order,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  };
+}
 
 export function CategoriesProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const supabase = createClient();
 
-  // Load categories from localStorage
-  useEffect(() => {
-    if (!user) {
+  // Fetch categories from Supabase
+  const fetchCategories = useCallback(async () => {
+    if (!user || !supabase) {
       setCategories([]);
       setIsLoading(false);
       return;
     }
 
-    const loadCategories = () => {
-      try {
-        const stored = localStorage.getItem(`${STORAGE_KEY}_${user.id}`);
-        if (stored) {
-          const parsed = JSON.parse(stored) as Category[];
-          // Convert date strings back to Date objects
-          const categoriesWithDates = parsed.map((cat) => ({
-            ...cat,
-            createdAt: new Date(cat.createdAt),
-            updatedAt: new Date(cat.updatedAt),
-          }));
-          setCategories(categoriesWithDates);
-        } else {
-          // Initialize with default categories for new users
-          const now = new Date();
-          const defaultCategories: Category[] = DEFAULT_CATEGORIES.map((cat, index) => ({
-            id: generateId(),
-            userId: user.id,
-            name: cat.name,
-            icon: cat.icon as Category['icon'],
-            color: cat.color as Category['color'],
-            isDefault: true,
-            order: index,
-            createdAt: now,
-            updatedAt: now,
-          }));
-          setCategories(defaultCategories);
-          saveToStorage(defaultCategories, user.id);
-        }
-      } catch {
-        setCategories([]);
-      } finally {
-        setIsLoading(false);
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('sort_order', { ascending: true });
+
+      if (fetchError) {
+        throw fetchError;
       }
+
+      const mappedCategories = (data || []).map(mapDbToCategory);
+      setCategories(mappedCategories);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch categories');
+      setCategories([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, supabase]);
+
+  // Load categories when user changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchCategories();
+    } else {
+      setCategories([]);
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, user, fetchCategories]);
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    if (!user || !supabase) return;
+
+    const channel = supabase
+      .channel('categories-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'categories',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          // Refetch on any change
+          fetchCategories();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-
-    loadCategories();
-  }, [user]);
-
-  const saveToStorage = (cats: Category[], userId: string) => {
-    localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(cats));
-  };
+  }, [user, supabase, fetchCategories]);
 
   const createCategory = useCallback(
     async (input: CreateCategoryInput): Promise<Category> => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user || !supabase) throw new Error('User not authenticated');
 
-      const now = new Date();
-      const newCategory: Category = {
-        id: generateId(),
-        userId: user.id,
-        name: input.name,
-        icon: input.icon,
-        color: input.color,
-        isDefault: false,
-        order: categories.length,
-        createdAt: now,
-        updatedAt: now,
-      };
+      const { data, error: insertError } = await supabase
+        .from('categories')
+        .insert({
+          user_id: user.id,
+          name: input.name,
+          icon: input.icon,
+          color: input.color,
+          is_default: false,
+          sort_order: categories.length,
+        })
+        .select()
+        .single();
 
-      const updatedCategories = [...categories, newCategory];
-      setCategories(updatedCategories);
-      saveToStorage(updatedCategories, user.id);
+      if (insertError) {
+        throw new Error(insertError.message);
+      }
 
+      const newCategory = mapDbToCategory(data);
+      setCategories((prev) => [...prev, newCategory]);
       return newCategory;
     },
-    [user, categories]
+    [user, supabase, categories.length]
   );
 
   const updateCategory = useCallback(
     async (id: string, input: UpdateCategoryInput): Promise<Category> => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user || !supabase) throw new Error('User not authenticated');
 
-      const categoryIndex = categories.findIndex((cat) => cat.id === id);
-      if (categoryIndex === -1) throw new Error('Category not found');
+      const updateData: Record<string, unknown> = {};
+      if (input.name !== undefined) updateData.name = input.name;
+      if (input.icon !== undefined) updateData.icon = input.icon;
+      if (input.color !== undefined) updateData.color = input.color;
+      if (input.order !== undefined) updateData.sort_order = input.order;
 
-      const updatedCategory: Category = {
-        ...categories[categoryIndex],
-        ...input,
-        updatedAt: new Date(),
-      };
+      const { data, error: updateError } = await supabase
+        .from('categories')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
 
-      const updatedCategories = [...categories];
-      updatedCategories[categoryIndex] = updatedCategory;
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
 
-      setCategories(updatedCategories);
-      saveToStorage(updatedCategories, user.id);
-
+      const updatedCategory = mapDbToCategory(data);
+      setCategories((prev) =>
+        prev.map((cat) => (cat.id === id ? updatedCategory : cat))
+      );
       return updatedCategory;
     },
-    [user, categories]
+    [user, supabase]
   );
 
   const deleteCategory = useCallback(
     async (id: string): Promise<void> => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user || !supabase) throw new Error('User not authenticated');
 
-      const updatedCategories = categories.filter((cat) => cat.id !== id);
-      setCategories(updatedCategories);
-      saveToStorage(updatedCategories, user.id);
+      const { error: deleteError } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (deleteError) {
+        throw new Error(deleteError.message);
+      }
+
+      setCategories((prev) => prev.filter((cat) => cat.id !== id));
     },
-    [user, categories]
+    [user, supabase]
   );
 
   const getCategoryById = useCallback(
@@ -148,10 +210,12 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       value={{
         categories,
         isLoading,
+        error,
         createCategory,
         updateCategory,
         deleteCategory,
         getCategoryById,
+        refetch: fetchCategories,
       }}
     >
       {children}
