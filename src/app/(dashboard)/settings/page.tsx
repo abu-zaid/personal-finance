@@ -173,7 +173,7 @@ export default function SettingsPage() {
           <p className="text-muted-foreground text-xs sm:text-sm">Manage your account and preferences</p>
         </div>
 
-        <StaggerContainer>
+        <StaggerContainer className="space-y-4">
           {/* Profile Card */}
           <StaggerItem>
             <motion.div
