@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, LogOut, Settings, User, Wallet } from 'lucide-react';
+import { LogOut, Settings, User, Wallet } from 'lucide-react';
 
-import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -56,13 +55,6 @@ export function Header({ title }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1.5">
-        <ThemeToggle />
-
-        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl">
-          <Bell className="h-5 w-5" />
-          <span className="sr-only">Notifications</span>
-        </Button>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-xl p-0">
