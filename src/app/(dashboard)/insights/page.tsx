@@ -16,12 +16,14 @@ import { EmptyState } from '@/components/shared';
 import { CategoryIcon } from '@/components/features/categories';
 import { useTransactions } from '@/context/transactions-context';
 import { useCategories } from '@/context/categories-context';
-import { cn, formatCurrency, getMonthString } from '@/lib/utils';
+import { cn, getMonthString } from '@/lib/utils';
+import { useCurrency } from '@/hooks/use-currency';
 import { BarChart3, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 export default function InsightsPage() {
   const { transactions, getMonthlyTotal } = useTransactions();
   const { categories } = useCategories();
+  const { formatCurrency } = useCurrency();
 
   const [timeRange, setTimeRange] = useState<'3' | '6' | '12'>('6');
 

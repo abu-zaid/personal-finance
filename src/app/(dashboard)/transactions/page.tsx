@@ -33,7 +33,8 @@ import { EmptyState } from '@/components/shared';
 import { CategoryIcon } from '@/components/features/categories';
 import { useTransactions } from '@/context/transactions-context';
 import { useCategories } from '@/context/categories-context';
-import { formatCurrency, getMonthString } from '@/lib/utils';
+import { useCurrency } from '@/hooks/use-currency';
+import { getMonthString } from '@/lib/utils';
 import {
   ListOrdered,
   Search,
@@ -48,6 +49,7 @@ import { TransactionWithCategory } from '@/types';
 export default function TransactionsPage() {
   const { transactions, deleteTransaction } = useTransactions();
   const { categories } = useCategories();
+  const { formatCurrency } = useCurrency();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');

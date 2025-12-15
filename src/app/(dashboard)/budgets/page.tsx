@@ -21,7 +21,8 @@ import { CategoryIcon } from '@/components/features/categories';
 import { useBudgets } from '@/context/budgets-context';
 import { useCategories } from '@/context/categories-context';
 import { useTransactions } from '@/context/transactions-context';
-import { cn, formatCurrency, getMonthString } from '@/lib/utils';
+import { useCurrency } from '@/hooks/use-currency';
+import { cn, getMonthString } from '@/lib/utils';
 import { Wallet, ChevronLeft, ChevronRight, Plus, Pencil, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAllocation } from '@/types';
@@ -30,6 +31,7 @@ export default function BudgetsPage() {
   const { categories } = useCategories();
   const { createBudget, updateBudget, getBudgetByMonth } = useBudgets();
   const { getCategoryTotal } = useTransactions();
+  const { formatCurrency, symbol } = useCurrency();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);

@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { AnimatedNumber } from '@/components/animations';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface BalanceCardProps {
   balance: number;
@@ -19,6 +20,8 @@ export function BalanceCard({
   transactionCount = 0,
   budgetUsage = 0,
 }: BalanceCardProps) {
+  const { symbol } = useCurrency();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -31,7 +34,7 @@ export function BalanceCard({
         <p className="text-xs font-medium text-[#101010]/60 mb-1">Available Balance</p>
         <div className="flex items-baseline gap-1">
           <span className="text-[28px] leading-tight font-bold text-[#101010]">
-            ₹<AnimatedNumber value={balance} format="number" />
+            {symbol}<AnimatedNumber value={balance} format="number" />
           </span>
         </div>
       </div>
@@ -47,7 +50,7 @@ export function BalanceCard({
             <span className="text-[10px] font-medium text-[#101010]/60">Budget</span>
           </div>
           <p className="text-base font-bold text-[#101010]">
-            ₹<AnimatedNumber value={income} format="number" />
+            {symbol}<AnimatedNumber value={income} format="number" />
           </p>
         </div>
 
@@ -60,7 +63,7 @@ export function BalanceCard({
             <span className="text-[10px] font-medium text-[#101010]/60">Spent</span>
           </div>
           <p className="text-base font-bold text-[#101010]">
-            ₹<AnimatedNumber value={expenses} format="number" />
+            {symbol}<AnimatedNumber value={expenses} format="number" />
           </p>
         </div>
 

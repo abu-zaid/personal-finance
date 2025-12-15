@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CategoryIcon } from '@/components/features/categories/category-icon';
-import { formatCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/use-currency';
 import { Category } from '@/types';
 
 interface SpendingItem {
@@ -21,6 +21,7 @@ export function SpendingByCategory({
   categories,
   totalSpent,
 }: SpendingByCategoryProps) {
+  const { formatCurrency } = useCurrency();
   const getCategoryById = (id: string) => categories.find((c) => c.id === id);
 
   // Sort by amount (highest first)

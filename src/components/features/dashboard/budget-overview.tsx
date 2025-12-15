@@ -3,15 +3,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { CategoryIcon } from '@/components/features/categories/category-icon';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/use-currency';
 import { Budget, BudgetAllocation, Category } from '@/types';
 
 interface AllocationItemProps {
   allocation: BudgetAllocation & { spent: number };
   category: Category | undefined;
+  formatCurrency: (amount: number) => string;
+  symbol: string;
 }
 
-function AllocationItem({ allocation, category }: AllocationItemProps) {
+function AllocationItem({ allocation, category, formatCurrency, symbol }: AllocationItemProps) {
   const percentage = Math.min(100, (allocation.spent / allocation.amount) * 100);
   const isOverBudget = allocation.spent > allocation.amount;
   const remaining = allocation.amount - allocation.spent;
@@ -56,8 +59,8 @@ function AllocationItem({ allocation, category }: AllocationItemProps) {
           })}
         >
           {remaining >= 0
-            ? `₹${Math.round(remaining)} left`
-            : `₹${Math.round(Math.abs(remaining))} over`}
+            ? `${symbol}${Math.round(remaining)} left`
+            : `${symbol}${Math.round(Math.abs(remaining))} over`}
         </span>
       </div>
     </div>
@@ -71,6 +74,7 @@ interface BudgetOverviewProps {
 }
 
 export function BudgetOverview({ budget, categories, spendingByCategory }: BudgetOverviewProps) {
+  const { formatCurrency, symbol } = useCurrency();
   const getCategoryById = (id: string) => categories.find((c) => c.id === id);
   const getSpentForCategory = (id: string) =>
     spendingByCategory.find((s) => s.categoryId === id)?.amount ?? 0;
@@ -116,6 +120,8 @@ export function BudgetOverview({ budget, categories, spendingByCategory }: Budge
             key={allocation.categoryId}
             allocation={allocation}
             category={getCategoryById(allocation.categoryId)}
+            formatCurrency={formatCurrency}
+            symbol={symbol}
           />
         ))}
       </CardContent>

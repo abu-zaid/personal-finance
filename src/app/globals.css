@@ -221,7 +221,7 @@
   
   /* Content padding for bottom nav */
   .pb-bottom-nav {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0) + 16px);
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0));
   }
 }
 

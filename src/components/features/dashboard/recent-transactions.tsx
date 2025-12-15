@@ -5,16 +5,18 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CategoryIcon } from '@/components/features/categories/category-icon';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
+import { useCurrency } from '@/hooks/use-currency';
 import { Transaction, Category } from '@/types';
 
 interface TransactionItemProps {
   transaction: Transaction;
   category: Category | undefined;
   index: number;
+  formatCurrency: (amount: number) => string;
 }
 
-function TransactionItem({ transaction, category, index }: TransactionItemProps) {
+function TransactionItem({ transaction, category, index, formatCurrency }: TransactionItemProps) {
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
@@ -55,6 +57,7 @@ export function RecentTransactions({
   categories,
   limit = 5,
 }: RecentTransactionsProps) {
+  const { formatCurrency } = useCurrency();
   const getCategoryById = (id: string) => categories.find((c) => c.id === id);
 
   // Sort by date (most recent first) and limit
@@ -83,6 +86,7 @@ export function RecentTransactions({
                 transaction={transaction}
                 category={getCategoryById(transaction.categoryId)}
                 index={index}
+                formatCurrency={formatCurrency}
               />
             ))}
           </div>

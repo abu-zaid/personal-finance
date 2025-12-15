@@ -3,12 +3,11 @@
 import { useEffect, useRef } from 'react';
 import { motion, useMotionValue, useSpring, useInView } from 'framer-motion';
 import { numberSpringConfig } from '@/lib/animations';
-import { formatCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface AnimatedNumberProps {
   value: number;
   format?: 'number' | 'currency' | 'percentage';
-  currency?: string;
   className?: string;
   duration?: number;
 }
@@ -16,7 +15,6 @@ interface AnimatedNumberProps {
 export function AnimatedNumber({
   value,
   format = 'number',
-  currency = 'USD',
   className,
   duration = 0.8,
 }: AnimatedNumberProps) {
@@ -27,6 +25,7 @@ export function AnimatedNumber({
     ...numberSpringConfig,
     duration: duration * 1000,
   });
+  const { formatCurrency } = useCurrency();
 
   useEffect(() => {
     if (isInView) {
@@ -41,7 +40,7 @@ export function AnimatedNumber({
 
         switch (format) {
           case 'currency':
-            displayValue = formatCurrency(latest, currency);
+            displayValue = formatCurrency(latest);
             break;
           case 'percentage':
             displayValue = `${Math.round(latest)}%`;
@@ -55,7 +54,7 @@ export function AnimatedNumber({
     });
 
     return unsubscribe;
-  }, [springValue, format, currency]);
+  }, [springValue, format, formatCurrency]);
 
   return <span ref={ref} className={className} />;
 }
