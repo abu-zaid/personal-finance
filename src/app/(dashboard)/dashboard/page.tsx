@@ -16,8 +16,8 @@ import { getMonthString } from '@/lib/utils';
 export default function DashboardPage() {
   const { user } = useAuth();
   const { categories } = useCategories();
-  const { transactions, getMonthlyTotal, isLoading: transactionsLoading } = useTransactions();
-  const { budgets, isLoading: budgetsLoading } = useBudgets();
+  const { transactions, getMonthlyTotal } = useTransactions();
+  const { budgets } = useBudgets();
 
   const currentMonth = getMonthString(new Date());
 
@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const budgetRemaining = Math.max(0, totalBudget - totalSpent);
   const budgetUsagePercent = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0;
 
-  const isLoading = transactionsLoading || budgetsLoading;
+  // Loading state available if needed: transactionsLoading, budgetsLoading
 
   return (
     <PageTransition>

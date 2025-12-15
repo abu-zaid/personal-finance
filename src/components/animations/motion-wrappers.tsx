@@ -6,7 +6,6 @@ import {
   pageVariants,
   fadeVariants,
   slideUpVariants,
-  staggerContainerVariants,
   staggerItemVariants,
 } from '@/lib/animations';
 

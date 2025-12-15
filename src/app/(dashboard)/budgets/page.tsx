@@ -21,14 +21,14 @@ import { CategoryIcon } from '@/components/features/categories';
 import { useBudgets } from '@/context/budgets-context';
 import { useCategories } from '@/context/categories-context';
 import { useTransactions } from '@/context/transactions-context';
-import { cn, formatCurrency, getMonthString, getMonthDisplayName } from '@/lib/utils';
+import { cn, formatCurrency, getMonthString } from '@/lib/utils';
 import { Wallet, ChevronLeft, ChevronRight, Plus, Pencil, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAllocation } from '@/types';
 
 export default function BudgetsPage() {
   const { categories } = useCategories();
-  const { budgets, createBudget, updateBudget, getBudgetByMonth, isLoading } = useBudgets();
+  const { createBudget, updateBudget, getBudgetByMonth } = useBudgets();
   const { getCategoryTotal } = useTransactions();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -96,7 +96,7 @@ export default function BudgetsPage() {
         toast.success('Budget created successfully');
       }
       setDialogOpen(false);
-    } catch (error) {
+    } catch {
       toast.error('Failed to save budget');
     } finally {
       setIsSaving(false);

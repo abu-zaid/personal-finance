@@ -35,7 +35,7 @@ const STORAGE_KEY = 'financeflow_transactions';
 
 export function TransactionsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const { categories, getCategoryById } = useCategories();
+  const { getCategoryById } = useCategories();
   const [rawTransactions, setRawTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

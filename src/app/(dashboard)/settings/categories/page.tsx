@@ -54,7 +54,7 @@ const COLORS = [
 ];
 
 export default function CategoriesPage() {
-  const { categories, createCategory, updateCategory, deleteCategory, isLoading } = useCategories();
+  const { categories, createCategory, updateCategory, deleteCategory } = useCategories();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -103,7 +103,7 @@ export default function CategoriesPage() {
         toast.success('Category created');
       }
       setDialogOpen(false);
-    } catch (error) {
+    } catch {
       toast.error('Failed to save category');
     } finally {
       setIsSaving(false);
@@ -120,7 +120,7 @@ export default function CategoriesPage() {
       try {
         await deleteCategory(categoryToDelete);
         toast.success('Category deleted');
-      } catch (error) {
+      } catch {
         toast.error('Failed to delete category');
       }
     }
@@ -240,7 +240,7 @@ export default function CategoriesPage() {
               <div className="space-y-2">
                 <Label>Icon</Label>
                 <div className="grid grid-cols-5 gap-2">
-                  {Object.entries(CATEGORY_ICONS).map(([iconName, iconLabel]) => (
+                  {Object.entries(CATEGORY_ICONS).map(([iconName, _iconLabel]) => (
                     <button
                       key={iconName}
                       type="button"

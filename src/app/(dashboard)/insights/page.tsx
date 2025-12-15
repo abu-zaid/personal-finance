@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { format, subMonths } from 'date-fns';
 import { PageTransition, FadeIn, AnimatedNumber } from '@/components/animations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+
 import {
   Select,
   SelectContent,
@@ -16,8 +16,8 @@ import { EmptyState } from '@/components/shared';
 import { CategoryIcon } from '@/components/features/categories';
 import { useTransactions } from '@/context/transactions-context';
 import { useCategories } from '@/context/categories-context';
-import { cn, formatCurrency, getMonthString, getMonthDisplayName } from '@/lib/utils';
-import { BarChart3, TrendingUp, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { cn, formatCurrency, getMonthString } from '@/lib/utils';
+import { BarChart3, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 export default function InsightsPage() {
   const { transactions, getMonthlyTotal } = useTransactions();

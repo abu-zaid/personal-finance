@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedNumber } from '@/components/animations';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, Wallet, Target } from 'lucide-react';
 
 interface StatCardProps {
@@ -24,8 +24,6 @@ function StatCard({
   icon,
   className,
 }: StatCardProps) {
-  const formattedValue = format === 'currency' ? formatCurrency(value) : value.toLocaleString();
-
   return (
     <Card className={cn('overflow-hidden', className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

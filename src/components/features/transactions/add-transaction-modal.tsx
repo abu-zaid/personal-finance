@@ -66,7 +66,7 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
       toast.success('Transaction added successfully');
       reset({ date: new Date() });
       onOpenChange(false);
-    } catch (error) {
+    } catch {
       toast.error('Failed to add transaction');
     } finally {
       setIsLoading(false);

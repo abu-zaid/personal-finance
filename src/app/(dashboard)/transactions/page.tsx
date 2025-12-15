@@ -33,12 +33,11 @@ import { EmptyState } from '@/components/shared';
 import { CategoryIcon } from '@/components/features/categories';
 import { useTransactions } from '@/context/transactions-context';
 import { useCategories } from '@/context/categories-context';
-import { formatCurrency, formatDate, getMonthString } from '@/lib/utils';
+import { formatCurrency, getMonthString } from '@/lib/utils';
 import {
   ListOrdered,
   Search,
   MoreVertical,
-  Pencil,
   Trash2,
   Calendar,
   Filter,
@@ -47,7 +46,7 @@ import { toast } from 'sonner';
 import { TransactionWithCategory } from '@/types';
 
 export default function TransactionsPage() {
-  const { transactions, deleteTransaction, isLoading } = useTransactions();
+  const { transactions, deleteTransaction } = useTransactions();
   const { categories } = useCategories();
 
   const [searchQuery, setSearchQuery] = useState('');
