@@ -28,6 +28,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useCategories } from '@/context/categories-context';
 import { useTransactions } from '@/context/transactions-context';
+import { useCurrency } from '@/hooks/use-currency';
 import { transactionSchema, TransactionFormData } from '@/lib/validations';
 import { cn } from '@/lib/utils';
 import { CategoryIcon } from '@/components/features/categories/category-icon';
@@ -40,6 +41,7 @@ interface AddTransactionModalProps {
 export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalProps) {
   const { categories } = useCategories();
   const { createTransaction } = useTransactions();
+  const { symbol } = useCurrency();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -92,11 +94,12 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
             <Label htmlFor="amount">Amount</Label>
             <div className="relative">
               <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2">
-                $
+                {symbol}
               </span>
               <Input
                 id="amount"
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 min="0"
                 placeholder="0.00"

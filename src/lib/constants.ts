@@ -3,18 +3,18 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'FinanceFlow';
 export const APP_DESCRIPTION = 'Your money, beautifully simple.';
 
-// Default categories for new users
+// Default categories for new users (using hex colors)
 export const DEFAULT_CATEGORIES = [
-  { name: 'Groceries', icon: 'shopping-cart', color: 'green' },
-  { name: 'Transportation', icon: 'car', color: 'blue' },
-  { name: 'Dining', icon: 'utensils', color: 'orange' },
-  { name: 'Entertainment', icon: 'film', color: 'purple' },
-  { name: 'Shopping', icon: 'shirt', color: 'pink' },
-  { name: 'Utilities', icon: 'zap', color: 'yellow' },
-  { name: 'Health', icon: 'heart', color: 'red' },
-  { name: 'Education', icon: 'book', color: 'indigo' },
-  { name: 'Travel', icon: 'plane', color: 'sky' },
-  { name: 'Other', icon: 'more-horizontal', color: 'slate' },
+  { name: 'Groceries', icon: 'shopping-bag', color: '#22c55e' },      // green
+  { name: 'Transportation', icon: 'car', color: '#3b82f6' },          // blue
+  { name: 'Dining', icon: 'utensils-crossed', color: '#f97316' },     // orange
+  { name: 'Entertainment', icon: 'film', color: '#a855f7' },          // purple
+  { name: 'Shopping', icon: 'shirt', color: '#ec4899' },              // pink
+  { name: 'Utilities', icon: 'zap', color: '#eab308' },               // yellow
+  { name: 'Health', icon: 'heart', color: '#ef4444' },                // red
+  { name: 'Education', icon: 'graduation-cap', color: '#6366f1' },    // indigo
+  { name: 'Travel', icon: 'plane', color: '#06b6d4' },                // cyan
+  { name: 'Other', icon: 'more-horizontal', color: '#64748b' },       // slate
 ] as const;
 
 // Currency options

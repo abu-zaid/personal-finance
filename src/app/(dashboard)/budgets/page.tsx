@@ -129,13 +129,13 @@ export default function BudgetsPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Budgets</h2>
-            <p className="text-muted-foreground">Manage your monthly spending limits</p>
+            <h1 className="text-h1 lg:text-2xl lg:font-bold">Budgets</h1>
+            <p className="text-muted-foreground text-sm">Manage your monthly spending</p>
           </div>
-          <Button onClick={openCreateDialog}>
+          <Button onClick={openCreateDialog} className="w-full sm:w-auto">
             {currentBudget ? (
               <>
                 <Pencil className="mr-2 h-4 w-4" />
@@ -152,14 +152,14 @@ export default function BudgetsPage() {
 
         {/* Month Navigator */}
         <Card>
-          <CardContent className="flex items-center justify-between py-4">
-            <Button variant="outline" size="icon" onClick={handlePrevMonth}>
+          <CardContent className="flex items-center justify-between py-3 px-4">
+            <Button variant="ghost" size="icon-sm" onClick={handlePrevMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h3 className="text-lg font-semibold">
+            <h3 className="text-base font-semibold">
               {format(selectedDate, 'MMMM yyyy')}
             </h3>
-            <Button variant="outline" size="icon" onClick={handleNextMonth}>
+            <Button variant="ghost" size="icon-sm" onClick={handleNextMonth}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </CardContent>
@@ -201,17 +201,15 @@ export default function BudgetsPage() {
           </FadeIn>
         ) : (
           <Card>
-            <CardContent className="py-6">
-              <EmptyState
-                icon={<Wallet className="h-12 w-12" />}
-                title="No budget set"
-                description={`Create a budget for ${format(selectedDate, 'MMMM yyyy')} to start tracking your spending.`}
-                action={{
-                  label: 'Create Budget',
-                  onClick: openCreateDialog,
-                }}
-              />
-            </CardContent>
+            <EmptyState
+              icon={<Wallet className="h-10 w-10" />}
+              title="No budget set"
+              description={`Create a budget for ${format(selectedDate, 'MMMM yyyy')} to start tracking your spending.`}
+              action={{
+                label: 'Create Budget',
+                onClick: openCreateDialog,
+              }}
+            />
           </Card>
         )}
 
@@ -286,31 +284,32 @@ export default function BudgetsPage() {
 
         {/* Create/Edit Budget Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-            <DialogHeader>
+          <DialogContent className="max-h-[90vh] flex flex-col sm:max-w-lg">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>
-                {currentBudget ? 'Edit' : 'Create'} Budget for {format(selectedDate, 'MMMM yyyy')}
+                {currentBudget ? 'Edit' : 'Create'} Budget
               </DialogTitle>
               <DialogDescription>
-                Set your total budget and allocate amounts to categories.
+                {format(selectedDate, 'MMMM yyyy')} - Set your budget and allocate to categories.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6 py-4">
+            <div className="flex-1 overflow-y-auto space-y-5 py-2 -mx-6 px-6">
               {/* Total Budget */}
               <div className="space-y-2">
                 <Label htmlFor="totalBudget">Total Monthly Budget</Label>
                 <div className="relative">
                   <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2">
-                    $
+                    {symbol}
                   </span>
                   <Input
                     id="totalBudget"
                     type="number"
+                    inputMode="decimal"
                     min="0"
                     step="0.01"
                     placeholder="0.00"
-                    className="pl-7 text-lg"
+                    className="pl-7 text-lg h-12"
                     value={totalBudget || ''}
                     onChange={(e) => setTotalBudget(parseFloat(e.target.value) || 0)}
                   />
@@ -318,7 +317,7 @@ export default function BudgetsPage() {
               </div>
 
               {/* Category Allocations */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Category Allocations</Label>
                   <span
@@ -331,21 +330,22 @@ export default function BudgetsPage() {
                   </span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {categories.map((category) => (
-                    <div key={category.id} className="flex items-center gap-3">
+                    <div key={category.id} className="flex items-center gap-2">
                       <CategoryIcon icon={category.icon} color={category.color} size="sm" />
-                      <span className="min-w-[100px] text-sm font-medium">{category.name}</span>
-                      <div className="relative flex-1">
-                        <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 text-sm">
-                          $
+                      <span className="flex-1 text-sm font-medium truncate">{category.name}</span>
+                      <div className="relative w-28">
+                        <span className="text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2 text-sm">
+                          {symbol}
                         </span>
                         <Input
                           type="number"
+                          inputMode="decimal"
                           min="0"
                           step="0.01"
-                          placeholder="0.00"
-                          className="pl-7"
+                          placeholder="0"
+                          className="pl-6 h-10 text-right pr-3"
                           value={allocations[category.id] || ''}
                           onChange={(e) => handleAllocationChange(category.id, e.target.value)}
                         />
@@ -356,11 +356,11 @@ export default function BudgetsPage() {
               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <DialogFooter className="flex-shrink-0 gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1 sm:flex-none">
                 Cancel
               </Button>
-              <Button onClick={handleSaveBudget} disabled={isSaving}>
+              <Button onClick={handleSaveBudget} disabled={isSaving} className="flex-1 sm:flex-none">
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {currentBudget ? 'Update' : 'Create'} Budget
               </Button>

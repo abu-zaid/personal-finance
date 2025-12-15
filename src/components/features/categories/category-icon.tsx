@@ -43,34 +43,39 @@ interface CategoryIconProps {
   color: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  showGlow?: boolean;
 }
 
 const sizeClasses = {
-  sm: 'h-6 w-6',
-  md: 'h-8 w-8',
-  lg: 'h-10 w-10',
+  sm: 'h-7 w-7',
+  md: 'h-9 w-9',
+  lg: 'h-11 w-11',
 };
 
 const iconSizeClasses = {
-  sm: 'h-3 w-3',
-  md: 'h-4 w-4',
-  lg: 'h-5 w-5',
+  sm: 'h-4 w-4',
+  md: 'h-5 w-5',
+  lg: 'h-6 w-6',
 };
 
-export function CategoryIcon({ icon, color, size = 'md', className }: CategoryIconProps) {
+export function CategoryIcon({ icon, color, size = 'md', className, showGlow = false }: CategoryIconProps) {
   const Icon = iconMap[icon] || MoreHorizontal;
 
   return (
     <div
       className={cn(
-        'flex items-center justify-center rounded-lg',
+        'flex items-center justify-center rounded-xl transition-all duration-200',
         sizeClasses[size],
         className
       )}
-      style={{ backgroundColor: `${color}20` }}
+      style={{ 
+        backgroundColor: `${color}15`,
+        border: `1.5px solid ${color}30`,
+        boxShadow: showGlow ? `0 0 12px ${color}20` : undefined,
+      }}
     >
       <Icon
-        className={cn(iconSizeClasses[size])}
+        className={cn(iconSizeClasses[size], 'transition-transform duration-200')}
         style={{ color }}
       />
     </div>

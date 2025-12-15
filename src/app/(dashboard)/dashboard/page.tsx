@@ -17,9 +17,12 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { categories } = useCategories();
   const { transactions, getMonthlyTotal } = useTransactions();
-  const { budgets } = useBudgets();
+  const { getBudgetByMonth } = useBudgets();
 
   const currentMonth = getMonthString(new Date());
+
+  // Get current month budget
+  const currentMonthBudget = getBudgetByMonth(currentMonth);
 
   // Calculate spending by category for current month
   const currentMonthTransactions = transactions.filter((t) => {
@@ -38,9 +41,6 @@ export default function DashboardPage() {
   // Filter for display (only categories with spending)
   const spendingByCategoryFiltered = spendingByCategory.filter((item) => item.amount > 0);
 
-  // Calculate current month budgets
-  const currentMonthBudget = budgets.find((b) => b.month === currentMonth);
-
   // Calculate total budget and spent
   const totalBudget = currentMonthBudget?.totalAmount ?? 0;
   const totalSpent = getMonthlyTotal(currentMonth);
@@ -49,11 +49,11 @@ export default function DashboardPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-4">
-        {/* Welcome Message */}
+      <div className="space-y-5">
+        {/* Welcome Message - Mobile */}
         <div className="lg:hidden">
-          <p className="text-muted-foreground text-xs">Good morning,</p>
-          <h1 className="text-xl font-semibold text-foreground">
+          <p className="text-muted-foreground/60 text-[11px] font-medium uppercase tracking-wide">Good morning,</p>
+          <h1 className="text-xl font-semibold text-foreground mt-0.5">
             {user?.name?.split(' ')[0] || 'there'} 👋
           </h1>
         </div>
@@ -63,7 +63,7 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold tracking-tight">
             Welcome back, {user?.name?.split(' ')[0] || 'there'}!
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground/70 mt-1">
             Here&apos;s what&apos;s happening with your finances this month.
           </p>
         </div>
@@ -91,7 +91,7 @@ export default function DashboardPage() {
         </StaggerItem>
 
         {/* Main Content Grid - Desktop */}
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2">
           {/* Budget Overview */}
           <StaggerItem>
             <BudgetOverview

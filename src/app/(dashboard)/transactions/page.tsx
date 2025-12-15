@@ -202,9 +202,9 @@ export default function TransactionsPage() {
 
         {/* Transactions List */}
         {sortedTransactions.length === 0 ? (
-          <Card className="py-12">
+          <Card>
             <EmptyState
-              icon={<ListOrdered className="h-12 w-12" />}
+              icon={<ListOrdered className="h-10 w-10" />}
               title={searchQuery || categoryFilter !== 'all' || monthFilter !== 'all'
                 ? 'No matching transactions'
                 : 'No transactions yet'}
@@ -221,14 +221,19 @@ export default function TransactionsPage() {
                   <h3 className="text-muted-foreground mb-2 text-caption font-medium px-1">
                     {format(new Date(date), 'EEEE, MMMM d')}
                   </h3>
-                  <Card className="divide-y divide-border p-0 overflow-hidden">
+                  <Card className="divide-y divide-border/50 p-0 overflow-hidden">
                     {dayTransactions.map((transaction) => (
                       <div
                         key={transaction.id}
-                        className="flex items-center justify-between p-4 transition-colors hover:bg-accent/50"
+                        className="flex items-center justify-between p-4 transition-colors hover:bg-muted/30"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background border border-border">
+                          <div 
+                            className="flex h-10 w-10 items-center justify-center rounded-xl"
+                            style={{
+                              background: transaction.category?.color ? `${transaction.category.color}15` : 'var(--muted)',
+                            }}
+                          >
                             {transaction.category && (
                               <CategoryIcon
                                 icon={transaction.category.icon}

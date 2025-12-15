@@ -98,11 +98,11 @@ export default function InsightsPage() {
             <h1 className="text-h1 lg:text-2xl lg:font-bold">Insights</h1>
             <p className="text-muted-foreground text-sm">Understand your spending patterns</p>
           </div>
-          <Card className="py-12">
+          <Card>
             <EmptyState
-              icon={<BarChart3 className="h-12 w-12" />}
-              title="Not enough data"
-              description="Add some transactions to see insights about your spending patterns."
+              icon={<BarChart3 className="h-10 w-10" />}
+              title="No data yet"
+              description="Add some transactions to see insights about your spending patterns and trends."
             />
           </Card>
         </div>
@@ -126,7 +126,6 @@ export default function InsightsPage() {
             <SelectContent>
               <SelectItem value="3">3 months</SelectItem>
               <SelectItem value="6">6 months</SelectItem>
-              <SelectItem value="12">12 months</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -205,32 +204,40 @@ export default function InsightsPage() {
 
         {/* Monthly Spending Chart */}
         <FadeIn>
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-h2">Spending Trend</CardTitle>
+              <CardTitle className="text-base font-semibold">Spending Trend</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex h-48 items-end gap-2">
-                {monthlyData.map((data) => (
-                  <div
-                    key={data.month}
-                    className="flex flex-1 flex-col items-center gap-1"
-                  >
-                    <span className="text-muted-foreground text-[10px]">
-                      {data.total > 0 ? formatCurrency(data.total) : '-'}
-                    </span>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto px-4 sm:px-6 pb-4 scrollbar-thin">
+                <div 
+                  className="flex h-44 items-end gap-1.5 sm:gap-2"
+                  style={{ 
+                    width: timeRange === '12' ? '600px' : '100%',
+                    minWidth: '100%',
+                  }}
+                >
+                  {monthlyData.map((data) => (
                     <div
-                      className={cn(
-                        'w-full rounded-t-lg transition-all duration-300',
-                        data.month === currentMonth ? 'bg-primary' : 'bg-primary/40'
-                      )}
-                      style={{
-                        height: `${Math.max((data.total / maxMonthlySpend) * 140, 4)}px`,
-                      }}
-                    />
-                    <span className="text-caption font-medium">{data.label}</span>
-                  </div>
-                ))}
+                      key={data.month}
+                      className="flex flex-1 flex-col items-center gap-1"
+                    >
+                      <span className="text-muted-foreground text-[7px] sm:text-[9px] whitespace-nowrap">
+                        {data.total > 0 ? formatCurrency(data.total) : '-'}
+                      </span>
+                      <div
+                        className={cn(
+                          'w-full max-w-[32px] sm:max-w-[40px] rounded-t-lg transition-all duration-300',
+                          data.month === currentMonth ? 'bg-primary' : 'bg-primary/30 dark:bg-primary/40'
+                        )}
+                        style={{
+                          height: `${Math.max((data.total / maxMonthlySpend) * 120, 4)}px`,
+                        }}
+                      />
+                      <span className="text-[8px] sm:text-[10px] font-medium text-muted-foreground">{data.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -240,7 +247,7 @@ export default function InsightsPage() {
         <FadeIn>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-h2">By Category</CardTitle>
+              <CardTitle className="text-base font-semibold">By Category</CardTitle>
               <CardDescription className="text-caption">
                 {format(new Date(), 'MMMM yyyy')}
               </CardDescription>
@@ -253,10 +260,15 @@ export default function InsightsPage() {
                       ? (item.total / totalCurrentMonth) * 100
                       : 0;
                     return (
-                      <div key={item.category.id} className="space-y-1.5">
+                      <div key={item.category.id} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background border border-border">
+                          <div className="flex items-center gap-2.5">
+                            <div 
+                              className="flex h-8 w-8 items-center justify-center rounded-xl"
+                              style={{
+                                background: `${item.category.color}15`,
+                              }}
+                            >
                               <CategoryIcon
                                 icon={item.category.icon}
                                 color={item.category.color}
@@ -265,14 +277,14 @@ export default function InsightsPage() {
                             </div>
                             <span className="text-sm font-medium">{item.category.name}</span>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex items-baseline gap-1.5">
                             <span className="text-sm font-semibold">{formatCurrency(item.total)}</span>
-                            <span className="text-muted-foreground ml-1 text-caption">
+                            <span className="text-muted-foreground/60 text-[10px] font-medium">
                               {percentage.toFixed(0)}%
                             </span>
                           </div>
                         </div>
-                        <div className="bg-border h-1.5 overflow-hidden rounded-full">
+                        <div className="bg-muted/50 dark:bg-white/[0.05] h-1.5 overflow-hidden rounded-full">
                           <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{
