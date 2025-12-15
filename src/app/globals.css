@@ -49,9 +49,9 @@
   --color-brand-warning: #FACC15;
   --color-brand-success: #22C55E;
   
-  /* Typography - Using Inter font from design.json */
-  --font-sans: var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Typography - Using Plus Jakarta Sans for modern look */
+  --font-sans: var(--font-plus-jakarta), 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace;
   
   /* Radius */
   --radius-sm: 8px;
