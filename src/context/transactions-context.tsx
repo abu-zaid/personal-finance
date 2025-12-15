@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useCallback, useEffect, useState, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, useMemo, useRef, ReactNode } from 'react';
 import {
   Transaction,
   TransactionWithCategory,
@@ -13,14 +13,21 @@ import { useAuth } from '@/context/auth-context';
 import { useCategories } from '@/context/categories-context';
 import { createClient } from '@/lib/supabase/client';
 import { getMonthString } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface TransactionsContextType {
   transactions: TransactionWithCategory[];
   isLoading: boolean;
   error: string | null;
+  // Pagination
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+  totalCount: number;
+  // CRUD operations
   createTransaction: (input: CreateTransactionInput) => Promise<Transaction>;
   updateTransaction: (id: string, input: UpdateTransactionInput) => Promise<Transaction>;
   deleteTransaction: (id: string) => Promise<void>;
+  // Helpers
   getTransactionById: (id: string) => TransactionWithCategory | undefined;
   getFilteredTransactions: (
     filters?: TransactionFilters,
@@ -33,6 +40,8 @@ interface TransactionsContextType {
 }
 
 const TransactionsContext = createContext<TransactionsContextType | undefined>(undefined);
+
+const PAGE_SIZE = 50;
 
 // Map database row to Transaction type
 function mapDbToTransaction(row: {
@@ -57,17 +66,40 @@ function mapDbToTransaction(row: {
   };
 }
 
+// Generate a temporary ID for optimistic updates
+function generateTempId(): string {
+  return `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
 export function TransactionsProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const { getCategoryById } = useCategories();
   const [rawTransactions, setRawTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const currentPage = useRef(0);
+  
+  // Track pending operations for undo
+  const pendingDeletes = useRef<Map<string, Transaction>>(new Map());
   
   const supabase = createClient();
 
-  // Fetch transactions from Supabase
-  const fetchTransactions = useCallback(async () => {
+  // Fetch transactions count
+  const fetchCount = useCallback(async () => {
+    if (!user || !supabase) return 0;
+    
+    const { count } = await supabase
+      .from('transactions')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+    
+    return count || 0;
+  }, [user, supabase]);
+
+  // Fetch transactions from Supabase with pagination
+  const fetchTransactions = useCallback(async (page: number = 0, append: boolean = false) => {
     if (!user || !supabase) {
       setRawTransactions([]);
       setIsLoading(false);
@@ -75,41 +107,66 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      setIsLoading(true);
+      if (!append) {
+        setIsLoading(true);
+      }
       setError(null);
+
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
 
       const { data, error: fetchError } = await supabase
         .from('transactions')
         .select('*')
         .eq('user_id', user.id)
-        .order('date', { ascending: false });
+        .order('date', { ascending: false })
+        .range(from, to);
 
       if (fetchError) {
         throw fetchError;
       }
 
       const mappedTransactions = (data || []).map(mapDbToTransaction);
-      setRawTransactions(mappedTransactions);
+      
+      if (append) {
+        setRawTransactions((prev) => [...prev, ...mappedTransactions]);
+      } else {
+        setRawTransactions(mappedTransactions);
+        // Fetch total count on initial load
+        const count = await fetchCount();
+        setTotalCount(count);
+      }
+      
+      setHasMore(mappedTransactions.length === PAGE_SIZE);
+      currentPage.current = page;
     } catch (err) {
       console.error('Error fetching transactions:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch transactions');
-      setRawTransactions([]);
+      if (!append) {
+        setRawTransactions([]);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [user, supabase]);
+  }, [user, supabase, fetchCount]);
+
+  // Load more transactions
+  const loadMore = useCallback(async () => {
+    if (!hasMore || isLoading) return;
+    await fetchTransactions(currentPage.current + 1, true);
+  }, [fetchTransactions, hasMore, isLoading]);
 
   // Load transactions when user changes
   useEffect(() => {
     if (isAuthenticated && user) {
-      fetchTransactions();
+      fetchTransactions(0, false);
     } else {
       setRawTransactions([]);
       setIsLoading(false);
     }
   }, [isAuthenticated, user, fetchTransactions]);
 
-  // Subscribe to realtime changes
+  // Subscribe to realtime changes (but don't refetch - let optimistic updates handle it)
   useEffect(() => {
     if (!user || !supabase) return;
 
@@ -121,10 +178,26 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
           event: '*',
           schema: 'public',
           table: 'transactions',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.\${user.id}`,
         },
-        () => {
-          fetchTransactions();
+        (payload) => {
+          // Handle realtime updates for external changes
+          if (payload.eventType === 'INSERT') {
+            const newTx = mapDbToTransaction(payload.new as Parameters<typeof mapDbToTransaction>[0]);
+            // Only add if not already present (avoid duplicates from optimistic updates)
+            setRawTransactions((prev) => {
+              if (prev.some(t => t.id === newTx.id)) return prev;
+              return [newTx, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedTx = mapDbToTransaction(payload.new as Parameters<typeof mapDbToTransaction>[0]);
+            setRawTransactions((prev) => 
+              prev.map(t => t.id === updatedTx.id ? updatedTx : t)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id;
+            setRawTransactions((prev) => prev.filter(t => t.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -132,7 +205,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, supabase, fetchTransactions]);
+  }, [user, supabase]);
 
   // Enrich transactions with category data
   const transactions: TransactionWithCategory[] = useMemo(() => {
@@ -157,81 +230,218 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     });
   }, [rawTransactions, getCategoryById]);
 
+  // Create transaction with optimistic update
   const createTransaction = useCallback(
     async (input: CreateTransactionInput): Promise<Transaction> => {
       if (!user || !supabase) throw new Error('User not authenticated');
 
-      const { data, error: insertError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          amount: input.amount,
-          category_id: input.categoryId,
-          date: input.date.toISOString().split('T')[0],
-          notes: input.notes || null,
-        })
-        .select()
-        .single();
+      // Create optimistic transaction
+      const tempId = generateTempId();
+      const optimisticTransaction: Transaction = {
+        id: tempId,
+        userId: user.id,
+        amount: input.amount,
+        categoryId: input.categoryId,
+        date: input.date,
+        notes: input.notes,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      if (insertError) {
-        throw new Error(insertError.message);
+      // Add optimistically
+      setRawTransactions((prev) => [optimisticTransaction, ...prev]);
+      setTotalCount((prev) => prev + 1);
+
+      try {
+        const { data, error: insertError } = await supabase
+          .from('transactions')
+          .insert({
+            user_id: user.id,
+            amount: input.amount,
+            category_id: input.categoryId,
+            date: input.date.toISOString().split('T')[0],
+            notes: input.notes || null,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          throw new Error(insertError.message);
+        }
+
+        const newTransaction = mapDbToTransaction(data);
+        
+        // Replace optimistic transaction with real one
+        setRawTransactions((prev) =>
+          prev.map((t) => (t.id === tempId ? newTransaction : t))
+        );
+        
+        return newTransaction;
+      } catch (err) {
+        // Rollback optimistic update
+        setRawTransactions((prev) => prev.filter((t) => t.id !== tempId));
+        setTotalCount((prev) => prev - 1);
+        throw err;
       }
-
-      const newTransaction = mapDbToTransaction(data);
-      setRawTransactions((prev) => [newTransaction, ...prev]);
-      return newTransaction;
     },
     [user, supabase]
   );
 
+  // Update transaction with optimistic update
   const updateTransaction = useCallback(
     async (id: string, input: UpdateTransactionInput): Promise<Transaction> => {
       if (!user || !supabase) throw new Error('User not authenticated');
 
-      const updateData: Record<string, unknown> = {};
-      if (input.amount !== undefined) updateData.amount = input.amount;
-      if (input.categoryId !== undefined) updateData.category_id = input.categoryId;
-      if (input.date !== undefined) updateData.date = input.date.toISOString().split('T')[0];
-      if (input.notes !== undefined) updateData.notes = input.notes || null;
-
-      const { data, error: updateError } = await supabase
-        .from('transactions')
-        .update(updateData)
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        throw new Error(updateError.message);
+      // Find existing transaction
+      const existingTransaction = rawTransactions.find((t) => t.id === id);
+      if (!existingTransaction) {
+        throw new Error('Transaction not found');
       }
 
-      const updatedTransaction = mapDbToTransaction(data);
+      // Create optimistic update
+      const optimisticTransaction: Transaction = {
+        ...existingTransaction,
+        amount: input.amount ?? existingTransaction.amount,
+        categoryId: input.categoryId ?? existingTransaction.categoryId,
+        date: input.date ?? existingTransaction.date,
+        notes: input.notes !== undefined ? input.notes : existingTransaction.notes,
+        updatedAt: new Date(),
+      };
+
+      // Apply optimistically
       setRawTransactions((prev) =>
-        prev.map((t) => (t.id === id ? updatedTransaction : t))
+        prev.map((t) => (t.id === id ? optimisticTransaction : t))
       );
-      return updatedTransaction;
+
+      try {
+        const updateData: Record<string, unknown> = {};
+        if (input.amount !== undefined) updateData.amount = input.amount;
+        if (input.categoryId !== undefined) updateData.category_id = input.categoryId;
+        if (input.date !== undefined) updateData.date = input.date.toISOString().split('T')[0];
+        if (input.notes !== undefined) updateData.notes = input.notes || null;
+
+        const { data, error: updateError } = await supabase
+          .from('transactions')
+          .update(updateData)
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
+
+        const updatedTransaction = mapDbToTransaction(data);
+        setRawTransactions((prev) =>
+          prev.map((t) => (t.id === id ? updatedTransaction : t))
+        );
+        return updatedTransaction;
+      } catch (err) {
+        // Rollback optimistic update
+        setRawTransactions((prev) =>
+          prev.map((t) => (t.id === id ? existingTransaction : t))
+        );
+        throw err;
+      }
     },
-    [user, supabase]
+    [user, supabase, rawTransactions]
   );
 
+  // Delete transaction with undo support
   const deleteTransaction = useCallback(
     async (id: string): Promise<void> => {
       if (!user || !supabase) throw new Error('User not authenticated');
 
-      const { error: deleteError } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (deleteError) {
-        throw new Error(deleteError.message);
+      // Find and store the transaction for potential undo
+      const transactionToDelete = rawTransactions.find((t) => t.id === id);
+      if (!transactionToDelete) {
+        throw new Error('Transaction not found');
       }
 
+      // Store for undo
+      pendingDeletes.current.set(id, transactionToDelete);
+
+      // Optimistically remove
       setRawTransactions((prev) => prev.filter((t) => t.id !== id));
+      setTotalCount((prev) => prev - 1);
+
+      // Show toast with undo option
+      const undoDelete = async () => {
+        const deletedTransaction = pendingDeletes.current.get(id);
+        if (!deletedTransaction) return;
+
+        // Re-add to UI immediately
+        setRawTransactions((prev) => {
+          // Insert in correct position based on date
+          const newList = [...prev, deletedTransaction];
+          return newList.sort((a, b) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+          );
+        });
+        setTotalCount((prev) => prev + 1);
+        pendingDeletes.current.delete(id);
+
+        // Re-insert in database
+        try {
+          await supabase
+            .from('transactions')
+            .insert({
+              id: deletedTransaction.id,
+              user_id: deletedTransaction.userId,
+              amount: deletedTransaction.amount,
+              category_id: deletedTransaction.categoryId,
+              date: deletedTransaction.date.toISOString().split('T')[0],
+              notes: deletedTransaction.notes || null,
+            });
+          toast.success('Transaction restored');
+        } catch {
+          // If restore fails, remove from UI again
+          setRawTransactions((prev) => prev.filter((t) => t.id !== id));
+          setTotalCount((prev) => prev - 1);
+          toast.error('Failed to restore transaction');
+        }
+      };
+
+      toast.success('Transaction deleted', {
+        action: {
+          label: 'Undo',
+          onClick: undoDelete,
+        },
+        duration: 5000,
+      });
+
+      // Perform actual delete
+      try {
+        const { error: deleteError } = await supabase
+          .from('transactions')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (deleteError) {
+          throw new Error(deleteError.message);
+        }
+
+        // Clear from pending deletes after successful delete
+        // Keep it for a bit in case user wants to undo
+        setTimeout(() => {
+          pendingDeletes.current.delete(id);
+        }, 6000);
+      } catch (err) {
+        // Rollback optimistic delete
+        setRawTransactions((prev) => {
+          const newList = [...prev, transactionToDelete];
+          return newList.sort((a, b) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+          );
+        });
+        setTotalCount((prev) => prev + 1);
+        pendingDeletes.current.delete(id);
+        throw err;
+      }
     },
-    [user, supabase]
+    [user, supabase, rawTransactions]
   );
 
   const getTransactionById = useCallback(
@@ -321,12 +531,20 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     [transactions]
   );
 
+  const refetch = useCallback(async () => {
+    currentPage.current = 0;
+    await fetchTransactions(0, false);
+  }, [fetchTransactions]);
+
   return (
     <TransactionsContext.Provider
       value={{
         transactions,
         isLoading,
         error,
+        hasMore,
+        loadMore,
+        totalCount,
         createTransaction,
         updateTransaction,
         deleteTransaction,
@@ -335,7 +553,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         getTransactionsByMonth,
         getMonthlyTotal,
         getCategoryTotal,
-        refetch: fetchTransactions,
+        refetch,
       }}
     >
       {children}

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, memo, useCallback } from 'react';
+import { useState, memo, useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Pencil, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -33,18 +33,27 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { transactionSchema, TransactionFormData } from '@/lib/validations';
 import { cn } from '@/lib/utils';
 import { CategoryIcon } from '@/components/features/categories/category-icon';
+import { TransactionWithCategory } from '@/types';
 
-interface AddTransactionModalProps {
+interface TransactionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Transaction to edit - if provided, modal is in edit mode */
+  transaction?: TransactionWithCategory | null;
 }
 
-export const AddTransactionModal = memo(function AddTransactionModal({ open, onOpenChange }: AddTransactionModalProps) {
+export const TransactionModal = memo(function TransactionModal({ 
+  open, 
+  onOpenChange,
+  transaction 
+}: TransactionModalProps) {
   const { categories } = useCategories();
-  const { createTransaction } = useTransactions();
+  const { createTransaction, updateTransaction } = useTransactions();
   const { symbol } = useCurrency();
   const haptics = useHaptics();
   const [isLoading, setIsLoading] = useState(false);
+
+  const isEditMode = !!transaction;
 
   const {
     register,
@@ -52,7 +61,7 @@ export const AddTransactionModal = memo(function AddTransactionModal({ open, onO
     setValue,
     watch,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
@@ -60,24 +69,53 @@ export const AddTransactionModal = memo(function AddTransactionModal({ open, onO
     },
   });
 
+  // Reset form when transaction changes or modal opens
+  useEffect(() => {
+    if (open) {
+      if (transaction) {
+        // Edit mode - populate form with existing data
+        reset({
+          amount: transaction.amount,
+          categoryId: transaction.categoryId,
+          date: new Date(transaction.date),
+          notes: transaction.notes || '',
+        });
+      } else {
+        // Add mode - reset to defaults
+        reset({
+          amount: undefined,
+          categoryId: '',
+          date: new Date(),
+          notes: '',
+        });
+      }
+    }
+  }, [open, transaction, reset]);
+
   const selectedDate = watch('date');
   const selectedCategoryId = watch('categoryId');
 
   const onSubmit = useCallback(async (data: TransactionFormData) => {
     setIsLoading(true);
     try {
-      await createTransaction(data);
-      haptics.success();
-      toast.success('Transaction added successfully');
+      if (isEditMode && transaction) {
+        await updateTransaction(transaction.id, data);
+        haptics.success();
+        toast.success('Transaction updated successfully');
+      } else {
+        await createTransaction(data);
+        haptics.success();
+        toast.success('Transaction added successfully');
+      }
       reset({ date: new Date() });
       onOpenChange(false);
     } catch {
       haptics.error();
-      toast.error('Failed to add transaction');
+      toast.error(isEditMode ? 'Failed to update transaction' : 'Failed to add transaction');
     } finally {
       setIsLoading(false);
     }
-  }, [createTransaction, haptics, onOpenChange, reset]);
+  }, [createTransaction, updateTransaction, haptics, onOpenChange, reset, isEditMode, transaction]);
 
   const handleClose = useCallback(() => {
     haptics.light();
@@ -89,8 +127,25 @@ export const AddTransactionModal = memo(function AddTransactionModal({ open, onO
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Expense</DialogTitle>
-          <DialogDescription>Record a new expense transaction</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            {isEditMode ? (
+              <>
+                <Pencil className="h-4 w-4" />
+                Edit Expense
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Add Expense
+              </>
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            {isEditMode 
+              ? 'Update the details of this expense' 
+              : 'Record a new expense transaction'
+            }
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -122,7 +177,7 @@ export const AddTransactionModal = memo(function AddTransactionModal({ open, onO
             <Label>Category</Label>
             <Select
               value={selectedCategoryId}
-              onValueChange={(value) => setValue('categoryId', value)}
+              onValueChange={(value) => setValue('categoryId', value, { shouldDirty: true })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select a category" />
@@ -163,7 +218,7 @@ export const AddTransactionModal = memo(function AddTransactionModal({ open, onO
                 <Calendar
                   mode="single"
                   selected={selectedDate}
-                  onSelect={(date) => date && setValue('date', date)}
+                  onSelect={(date) => date && setValue('date', date, { shouldDirty: true })}
                   initialFocus
                 />
               </PopoverContent>
@@ -185,13 +240,25 @@ export const AddTransactionModal = memo(function AddTransactionModal({ open, onO
             <Button type="button" variant="outline" className="flex-1" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="flex-1" 
+              disabled={isLoading || (isEditMode && !isDirty)}
+            >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Add Expense
+              {isEditMode ? 'Save Changes' : 'Add Expense'}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
   );
+});
+
+// Keep backward compatibility with AddTransactionModal
+export const AddTransactionModal = memo(function AddTransactionModal({ 
+  open, 
+  onOpenChange 
+}: Omit<TransactionModalProps, 'transaction'>) {
+  return <TransactionModal open={open} onOpenChange={onOpenChange} transaction={null} />;
 });

@@ -7,8 +7,8 @@ import { DataProviders } from '@/components/providers/data-providers';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { BottomNav } from '@/components/layout/bottom-nav';
-import { DashboardSkeleton } from '@/components/shared';
-import { AddTransactionModal } from '@/components/features/transactions/add-transaction-modal';
+import { DashboardSkeleton, ErrorBoundary } from '@/components/shared';
+import { TransactionModal } from '@/components/features/transactions';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -71,11 +71,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <Sidebar onAddExpense={() => setAddExpenseOpen(true)} />
         <div className="flex flex-1 flex-col min-h-0">
           <Header title={getPageTitle()} />
-          <main className="flex-1 overflow-auto p-4 pb-[100px] md:pb-6 lg:p-6 scrollbar-hide">{children}</main>
+          <main className="flex-1 overflow-auto p-4 pb-[100px] md:pb-6 lg:p-6 scrollbar-hide">
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
+          </main>
         </div>
         {/* Mobile Bottom Navigation */}
         <BottomNav onAddExpense={() => setAddExpenseOpen(true)} />
-        <AddTransactionModal open={addExpenseOpen} onOpenChange={setAddExpenseOpen} />
+        <TransactionModal open={addExpenseOpen} onOpenChange={setAddExpenseOpen} />
       </div>
     </DataProviders>
   );

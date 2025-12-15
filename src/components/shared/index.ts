@@ -7,3 +7,4 @@ export {
   DashboardSkeleton,
   PageSkeleton,
 } from './loading-skeleton';
+export { ErrorBoundary, ErrorFallback, withErrorBoundary } from './error-boundary';
