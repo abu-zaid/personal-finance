@@ -15,6 +15,6 @@ export interface UserPreferences {
   firstDayOfWeek: 0 | 1; // 0 = Sunday, 1 = Monday
 }
 
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'SAR' | 'AED' | 'EGP';
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'INR' | 'SAR' | 'AED' | 'EGP';
 export type DateFormat = 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
 export type Theme = 'light' | 'dark' | 'system';

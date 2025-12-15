@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { PageTransition } from '@/components/animations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import {
   Select,
@@ -12,6 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/auth-context';
 import { CURRENCY_OPTIONS, DATE_FORMAT_OPTIONS } from '@/lib/constants';
@@ -20,7 +30,21 @@ import { User, Settings, Bell, Shield, LogOut } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SettingsPage() {
-  const { user, logout, updatePreferences } = useAuth();
+  const { user, logout, updatePreferences, updateProfile } = useAuth();
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editName, setEditName] = useState(user?.name || '');
+
+  const handleSaveProfile = () => {
+    if (editName.trim()) {
+      updateProfile(editName.trim());
+      setIsEditProfileOpen(false);
+    }
+  };
+
+  const openEditProfile = () => {
+    setEditName(user?.name || '');
+    setIsEditProfileOpen(true);
+  };
 
   return (
     <PageTransition>
@@ -49,7 +73,7 @@ export default function SettingsPage() {
                 <Label>Email</Label>
                 <p className="text-muted-foreground">{user?.email || 'Not set'}</p>
               </div>
-              <Button variant="outline">Edit Profile</Button>
+              <Button variant="outline" onClick={openEditProfile}>Edit Profile</Button>
             </CardContent>
           </Card>
 
@@ -188,6 +212,47 @@ export default function SettingsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your profile information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Enter your name"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                value={user?.email || ''}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-muted-foreground text-xs">Email cannot be changed</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditProfileOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveProfile} disabled={!editName.trim()}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageTransition>
   );
 }

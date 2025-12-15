@@ -22,6 +22,7 @@ export const CURRENCY_OPTIONS = [
   { value: 'USD', label: 'US Dollar ($)', symbol: '$' },
   { value: 'EUR', label: 'Euro (€)', symbol: '€' },
   { value: 'GBP', label: 'British Pound (£)', symbol: '£' },
+  { value: 'INR', label: 'Indian Rupee (₹)', symbol: '₹' },
   { value: 'SAR', label: 'Saudi Riyal (ر.س)', symbol: 'ر.س' },
   { value: 'AED', label: 'UAE Dirham (د.إ)', symbol: 'د.إ' },
   { value: 'EGP', label: 'Egyptian Pound (ج.م)', symbol: 'ج.م' },

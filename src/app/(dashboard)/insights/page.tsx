@@ -181,13 +181,13 @@ export default function InsightsPage() {
                 <p className="text-caption text-muted-foreground mb-1">Top Category</p>
                 {topCategory ? (
                   <>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <CategoryIcon
                         icon={topCategory.category.icon}
                         color={topCategory.category.color}
                         size="sm"
                       />
-                      <span className="text-lg font-bold">{topCategory.category.name}</span>
+                      <span className="text-lg font-bold truncate">{topCategory.category.name}</span>
                     </div>
                     <p className="text-muted-foreground mt-1 text-caption">
                       {formatCurrency(topCategory.total)} this month

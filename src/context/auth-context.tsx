@@ -16,6 +16,7 @@ interface AuthContextType {
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updatePreferences: (preferences: Partial<UserPreferences>) => void;
+  updateProfile: (name: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -194,6 +195,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user, getStoredUsers, saveStoredUsers]
   );
 
+  const updateProfile = useCallback(
+    (name: string) => {
+      if (!user) return;
+
+      const updatedUser: User = {
+        ...user,
+        name,
+        updatedAt: new Date(),
+      };
+
+      setUser(updatedUser);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
+
+      // Also update in users storage
+      const users = getStoredUsers();
+      const userIndex = users.findIndex((u) => u.id === user.id);
+      if (userIndex !== -1) {
+        users[userIndex] = {
+          ...users[userIndex],
+          name,
+          updatedAt: updatedUser.updatedAt.toISOString(),
+        };
+        saveStoredUsers(users);
+      }
+    },
+    [user, getStoredUsers, saveStoredUsers]
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -204,6 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         logout,
         updatePreferences,
+        updateProfile,
       }}
     >
       {children}
