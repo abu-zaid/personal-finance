@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { PageTransition, FadeIn } from '@/components/animations';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -132,152 +132,147 @@ export default function TransactionsPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
-            <p className="text-muted-foreground">View and manage all your expenses</p>
-          </div>
+      <div className="space-y-4">
+        {/* Header - Mobile style */}
+        <div className="lg:hidden">
+          <h1 className="text-h1">Transactions</h1>
+          <p className="text-muted-foreground text-sm">
+            {filteredTransactions.length} transactions · {formatCurrency(totalFiltered)}
+          </p>
+        </div>
+
+        {/* Header - Desktop */}
+        <div className="hidden lg:block">
+          <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
+          <p className="text-muted-foreground">View and manage all your expenses</p>
         </div>
 
         {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4 sm:flex-row">
-              {/* Search */}
-              <div className="relative flex-1">
-                <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  placeholder="Search transactions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              {/* Category Filter */}
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      <div className="flex items-center gap-2">
-                        <CategoryIcon icon={category.icon} color={category.color} size="sm" />
-                        {category.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Month Filter */}
-              <Select value={monthFilter} onValueChange={setMonthFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  {availableMonths.map((month) => (
-                    <SelectItem key={month} value={month}>
-                      {format(new Date(month + '-01'), 'MMMM yyyy')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <Card className="p-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+              <Input
+                placeholder="Search transactions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          </CardContent>
+
+            {/* Category Filter */}
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    <div className="flex items-center gap-2">
+                      <CategoryIcon icon={category.icon} color={category.color} size="sm" />
+                      {category.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Month Filter */}
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <Calendar className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                {availableMonths.map((month) => (
+                  <SelectItem key={month} value={month}>
+                    {format(new Date(month + '-01'), 'MMMM yyyy')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </Card>
 
         {/* Transactions List */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div>
-              <CardTitle>
-                {filteredTransactions.length} Transaction{filteredTransactions.length !== 1 ? 's' : ''}
-              </CardTitle>
-              <CardDescription>
-                Total: {formatCurrency(totalFiltered)}
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {sortedTransactions.length === 0 ? (
-              <EmptyState
-                icon={<ListOrdered className="h-12 w-12" />}
-                title={searchQuery || categoryFilter !== 'all' || monthFilter !== 'all'
-                  ? 'No matching transactions'
-                  : 'No transactions yet'}
-                description={searchQuery || categoryFilter !== 'all' || monthFilter !== 'all'
-                  ? 'Try adjusting your filters.'
-                  : 'Start tracking your expenses by adding your first transaction.'}
-              />
-            ) : (
-              <div className="space-y-6">
-                {Object.entries(groupedTransactions).map(([date, dayTransactions]) => (
-                  <FadeIn key={date}>
-                    <div>
-                      <h3 className="text-muted-foreground mb-3 text-sm font-medium">
-                        {format(new Date(date), 'EEEE, MMMM d, yyyy')}
-                      </h3>
-                      <div className="space-y-2">
-                        {dayTransactions.map((transaction) => (
-                          <div
-                            key={transaction.id}
-                            className="bg-muted/50 hover:bg-muted flex items-center justify-between rounded-lg p-3 transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              {transaction.category && (
-                                <CategoryIcon
-                                  icon={transaction.category.icon}
-                                  color={transaction.category.color}
-                                  size="md"
-                                />
-                              )}
-                              <div>
-                                <p className="font-medium">
-                                  {transaction.notes || transaction.category?.name || 'Expense'}
-                                </p>
-                                <p className="text-muted-foreground text-xs">
-                                  {transaction.category?.name}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-red-600 dark:text-red-400">
-                                -{formatCurrency(transaction.amount)}
-                              </span>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => handleDeleteClick(transaction.id)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
+        {sortedTransactions.length === 0 ? (
+          <Card className="py-12">
+            <EmptyState
+              icon={<ListOrdered className="h-12 w-12" />}
+              title={searchQuery || categoryFilter !== 'all' || monthFilter !== 'all'
+                ? 'No matching transactions'
+                : 'No transactions yet'}
+              description={searchQuery || categoryFilter !== 'all' || monthFilter !== 'all'
+                ? 'Try adjusting your filters.'
+                : 'Start tracking your expenses by adding your first transaction.'}
+            />
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(groupedTransactions).map(([date, dayTransactions]) => (
+              <FadeIn key={date}>
+                <div>
+                  <h3 className="text-muted-foreground mb-2 text-caption font-medium px-1">
+                    {format(new Date(date), 'EEEE, MMMM d')}
+                  </h3>
+                  <Card className="divide-y divide-border p-0 overflow-hidden">
+                    {dayTransactions.map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        className="flex items-center justify-between p-4 transition-colors hover:bg-accent/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background border border-border">
+                            {transaction.category && (
+                              <CategoryIcon
+                                icon={transaction.category.icon}
+                                color={transaction.category.color}
+                                size="sm"
+                              />
+                            )}
                           </div>
-                        ))}
+                          <div>
+                            <p className="text-sm font-medium">
+                              {transaction.notes || transaction.category?.name || 'Expense'}
+                            </p>
+                            <p className="text-caption text-muted-foreground">
+                              {transaction.category?.name}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-destructive">
+                            -{formatCurrency(transaction.amount)}
+                          </span>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteClick(transaction.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                    </div>
-                  </FadeIn>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    ))}
+                  </Card>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        )}
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -292,7 +287,7 @@ export default function TransactionsPage() {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="bg-destructive text-white hover:bg-destructive/90"
               >
                 Delete
               </AlertDialogAction>

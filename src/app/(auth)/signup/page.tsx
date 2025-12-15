@@ -57,27 +57,30 @@ export default function SignupPage() {
 
   return (
     <PageTransition>
-      <div className="bg-background flex min-h-screen items-center justify-center px-4 py-8">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1 text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="bg-primary flex h-12 w-12 items-center justify-center rounded-xl">
-                <Wallet className="text-primary-foreground h-6 w-6" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-            <CardDescription>Start managing your finances with {APP_NAME}</CardDescription>
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 py-8">
+        {/* Logo */}
+        <div className="mb-6 flex flex-col items-center">
+          <div className="gradient-primary mb-3 flex h-14 w-14 items-center justify-center rounded-2xl shadow-[0_8px_24px_rgba(152,239,90,0.3)]">
+            <Wallet className="text-primary-foreground h-7 w-7" />
+          </div>
+          <h1 className="text-h1 text-foreground">{APP_NAME}</h1>
+        </div>
+
+        <Card className="w-full max-w-sm">
+          <CardHeader className="space-y-1 text-center pb-2">
+            <CardTitle className="text-h1">Create account</CardTitle>
+            <CardDescription className="text-muted-foreground">Start your financial journey</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {error && (
-                <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
+                <div className="bg-destructive/10 text-destructive rounded-xl p-3 text-sm">
                   {error}
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name" className="text-sm font-medium">Name</Label>
                 <Input
                   id="name"
                   type="text"
@@ -86,12 +89,12 @@ export default function SignupPage() {
                   {...register('name')}
                 />
                 {errors.name && (
-                  <p className="text-destructive text-sm">{errors.name.message}</p>
+                  <p className="text-destructive text-caption">{errors.name.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -100,12 +103,12 @@ export default function SignupPage() {
                   {...register('email')}
                 />
                 {errors.email && (
-                  <p className="text-destructive text-sm">{errors.email.message}</p>
+                  <p className="text-destructive text-caption">{errors.email.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -114,7 +117,7 @@ export default function SignupPage() {
                   {...register('password')}
                 />
                 {errors.password && (
-                  <p className="text-destructive text-sm">{errors.password.message}</p>
+                  <p className="text-destructive text-caption">{errors.password.message}</p>
                 )}
 
                 {/* Password requirements */}
@@ -126,8 +129,8 @@ export default function SignupPage() {
                         <div
                           key={index}
                           className={cn(
-                            'flex items-center gap-2 text-xs transition-colors',
-                            isMet ? 'text-green-600' : 'text-muted-foreground'
+                            'flex items-center gap-2 text-caption transition-colors',
+                            isMet ? 'text-primary' : 'text-muted-foreground'
                           )}
                         >
                           {isMet ? (
@@ -144,7 +147,7 @@ export default function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -153,17 +156,17 @@ export default function SignupPage() {
                   {...register('confirmPassword')}
                 />
                 {errors.confirmPassword && (
-                  <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
+                  <p className="text-destructive text-caption">{errors.confirmPassword.message}</p>
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Account
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm">
+            <div className="mt-6 text-center text-sm text-muted-foreground">
               Already have an account?{' '}
               <Link href="/login" className="text-primary font-medium hover:underline">
                 Sign in

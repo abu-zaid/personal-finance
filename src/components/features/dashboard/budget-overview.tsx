@@ -17,48 +17,47 @@ function AllocationItem({ allocation, category }: AllocationItemProps) {
   const remaining = allocation.amount - allocation.spent;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {category && (
             <CategoryIcon icon={category.icon} color={category.color} size="sm" />
           )}
-          <span className="text-sm font-medium">{category?.name || 'Unknown'}</span>
+          <span className="text-sm font-medium truncate">{category?.name || 'Unknown'}</span>
         </div>
-        <div className="text-right">
+        <div className="text-right flex-shrink-0">
           <span
-            className={cn('text-sm font-medium', {
+            className={cn('text-xs font-medium', {
               'text-destructive': isOverBudget,
             })}
           >
             {formatCurrency(allocation.spent)}
           </span>
-          <span className="text-muted-foreground text-sm">
-            {' '}
-            / {formatCurrency(allocation.amount)}
+          <span className="text-muted-foreground text-xs">
+            /{formatCurrency(allocation.amount)}
           </span>
         </div>
       </div>
       <Progress
         value={percentage}
-        className={cn('h-2', {
-          '[&>div]:bg-green-500': percentage < 75,
+        className={cn('h-1.5', {
+          '[&>div]:bg-primary': percentage < 75,
           '[&>div]:bg-yellow-500': percentage >= 75 && percentage < 100,
-          '[&>div]:bg-red-500': percentage >= 100,
+          '[&>div]:bg-destructive': percentage >= 100,
         })}
       />
-      <div className="flex justify-between text-xs">
+      <div className="flex justify-between text-[10px]">
         <span className="text-muted-foreground">{percentage.toFixed(0)}% used</span>
         <span
           className={cn({
-            'text-green-600 dark:text-green-400': remaining > 0,
-            'text-red-600 dark:text-red-400': remaining < 0,
+            'text-primary': remaining > 0,
+            'text-destructive': remaining < 0,
             'text-muted-foreground': remaining === 0,
           })}
         >
           {remaining >= 0
-            ? `${formatCurrency(remaining)} left`
-            : `${formatCurrency(Math.abs(remaining))} over`}
+            ? `₹${Math.round(remaining)} left`
+            : `₹${Math.round(Math.abs(remaining))} over`}
         </span>
       </div>
     </div>
@@ -79,11 +78,11 @@ export function BudgetOverview({ budget, categories, spendingByCategory }: Budge
   if (!budget || budget.allocations.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Budget Overview</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Budget Overview</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-muted-foreground py-8 text-center text-sm">
+          <div className="text-muted-foreground py-6 text-center text-sm">
             No budgets set up yet
           </div>
         </CardContent>
@@ -108,10 +107,10 @@ export function BudgetOverview({ budget, categories, spendingByCategory }: Budge
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Budget Overview</CardTitle>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold">Budget Overview</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {topAllocations.map((allocation) => (
           <AllocationItem
             key={allocation.categoryId}

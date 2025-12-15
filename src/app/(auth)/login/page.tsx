@@ -46,27 +46,30 @@ export default function LoginPage() {
 
   return (
     <PageTransition>
-      <div className="bg-background flex min-h-screen items-center justify-center px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1 text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="bg-primary flex h-12 w-12 items-center justify-center rounded-xl">
-                <Wallet className="text-primary-foreground h-6 w-6" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-            <CardDescription>Sign in to your {APP_NAME} account</CardDescription>
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4">
+        {/* Logo */}
+        <div className="mb-8 flex flex-col items-center">
+          <div className="gradient-primary mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-[0_8px_24px_rgba(152,239,90,0.3)]">
+            <Wallet className="text-primary-foreground h-8 w-8" />
+          </div>
+          <h1 className="text-display text-foreground">{APP_NAME}</h1>
+        </div>
+
+        <Card className="w-full max-w-sm">
+          <CardHeader className="space-y-1 text-center pb-2">
+            <CardTitle className="text-h1">Welcome back</CardTitle>
+            <CardDescription className="text-muted-foreground">Sign in to continue</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {error && (
-                <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
+                <div className="bg-destructive/10 text-destructive rounded-xl p-3 text-sm">
                   {error}
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -75,16 +78,16 @@ export default function LoginPage() {
                   {...register('email')}
                 />
                 {errors.email && (
-                  <p className="text-destructive text-sm">{errors.email.message}</p>
+                  <p className="text-destructive text-caption">{errors.email.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                   <Link
                     href="/forgot-password"
-                    className="text-muted-foreground hover:text-primary text-sm"
+                    className="text-muted-foreground hover:text-primary text-caption"
                   >
                     Forgot password?
                   </Link>
@@ -97,17 +100,17 @@ export default function LoginPage() {
                   {...register('password')}
                 />
                 {errors.password && (
-                  <p className="text-destructive text-sm">{errors.password.message}</p>
+                  <p className="text-destructive text-caption">{errors.password.message}</p>
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign In
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm">
+            <div className="mt-6 text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{' '}
               <Link href="/signup" className="text-primary font-medium hover:underline">
                 Sign up

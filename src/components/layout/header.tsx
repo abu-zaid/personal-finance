@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, LogOut, Settings, User } from 'lucide-react';
+import { Bell, LogOut, Settings, User, Wallet } from 'lucide-react';
 
 import { ThemeToggle } from '@/components/shared/theme-toggle';
-import { MobileSidebar } from '@/components/layout/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -16,13 +15,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/auth-context';
+import { APP_NAME } from '@/lib/constants';
 
 interface HeaderProps {
   title?: string;
-  onAddExpense?: () => void;
 }
 
-export function Header({ title, onAddExpense }: HeaderProps) {
+export function Header({ title }: HeaderProps) {
   const { user, logout } = useAuth();
 
   const getInitials = (name: string) => {
@@ -35,26 +34,33 @@ export function Header({ title, onAddExpense }: HeaderProps) {
   };
 
   return (
-    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 flex h-16 items-center justify-between border-b px-4 backdrop-blur md:px-6">
-      <div className="flex items-center gap-4">
-        <MobileSidebar onAddExpense={onAddExpense} />
-        {title && <h1 className="text-xl font-semibold md:text-2xl">{title}</h1>}
+    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border px-4 backdrop-blur lg:px-6">
+      <div className="flex items-center gap-3">
+        {/* Mobile Logo */}
+        <div className="flex items-center gap-2 lg:hidden">
+          <div className="gradient-primary flex h-8 w-8 items-center justify-center rounded-lg">
+            <Wallet className="text-primary-foreground h-4 w-4" />
+          </div>
+          <span className="text-base font-semibold">{APP_NAME}</span>
+        </div>
+        {/* Desktop Title */}
+        {title && <h1 className="hidden text-xl font-semibold lg:block">{title}</h1>}
       </div>
 
       <div className="flex items-center gap-2">
         <ThemeToggle />
 
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-          <Bell className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+          <Bell className="h-5 w-5" />
           <span className="sr-only">Notifications</span>
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-              <Avatar className="h-9 w-9">
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
+              <Avatar className="h-10 w-10 border-2 border-border">
                 <AvatarImage src="/avatar.png" alt={user?.name || 'User'} />
-                <AvatarFallback>
+                <AvatarFallback className="bg-card text-card-foreground">
                   {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
                 </AvatarFallback>
               </Avatar>

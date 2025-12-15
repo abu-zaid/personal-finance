@@ -91,19 +91,17 @@ export default function InsightsPage() {
   if (transactions.length === 0) {
     return (
       <PageTransition>
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Insights</h2>
-            <p className="text-muted-foreground">Understand your spending patterns</p>
+            <h1 className="text-h1 lg:text-2xl lg:font-bold">Insights</h1>
+            <p className="text-muted-foreground text-sm">Understand your spending patterns</p>
           </div>
-          <Card>
-            <CardContent className="py-12">
-              <EmptyState
-                icon={<BarChart3 className="h-12 w-12" />}
-                title="Not enough data"
-                description="Add some transactions to see insights about your spending patterns."
-              />
-            </CardContent>
+          <Card className="py-12">
+            <EmptyState
+              icon={<BarChart3 className="h-12 w-12" />}
+              title="Not enough data"
+              description="Add some transactions to see insights about your spending patterns."
+            />
           </Card>
         </div>
       </PageTransition>
@@ -112,51 +110,47 @@ export default function InsightsPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Insights</h2>
-            <p className="text-muted-foreground">Understand your spending patterns</p>
+            <h1 className="text-h1 lg:text-2xl lg:font-bold">Insights</h1>
+            <p className="text-muted-foreground text-sm">Understand your spending</p>
           </div>
           <Select value={timeRange} onValueChange={(v) => setTimeRange(v as '3' | '6' | '12')}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[130px]">
               <Calendar className="mr-2 h-4 w-4" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="3">Last 3 months</SelectItem>
-              <SelectItem value="6">Last 6 months</SelectItem>
-              <SelectItem value="12">Last 12 months</SelectItem>
+              <SelectItem value="3">3 months</SelectItem>
+              <SelectItem value="6">6 months</SelectItem>
+              <SelectItem value="12">12 months</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Summary Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
           <FadeIn>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-muted-foreground text-sm font-medium">
-                  This Month
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+              <CardContent className="p-4">
+                <p className="text-caption text-muted-foreground mb-1">This Month</p>
+                <div className="text-h2 font-bold">
                   <AnimatedNumber value={currentMonthTotal} format="currency" />
                 </div>
-                <div className="mt-1 flex items-center text-xs">
+                <div className="mt-1 flex items-center text-caption">
                   {monthChange > 0 ? (
                     <>
-                      <ArrowUpRight className="mr-1 h-3 w-3 text-red-500" />
-                      <span className="text-red-500">
-                        {monthChange.toFixed(1)}% more than last month
+                      <ArrowUpRight className="mr-1 h-3 w-3 text-destructive" />
+                      <span className="text-destructive">
+                        {monthChange.toFixed(0)}% more
                       </span>
                     </>
                   ) : monthChange < 0 ? (
                     <>
-                      <ArrowDownRight className="mr-1 h-3 w-3 text-green-500" />
-                      <span className="text-green-500">
-                        {Math.abs(monthChange).toFixed(1)}% less than last month
+                      <ArrowDownRight className="mr-1 h-3 w-3 text-primary" />
+                      <span className="text-primary">
+                        {Math.abs(monthChange).toFixed(0)}% less
                       </span>
                     </>
                   ) : (
@@ -169,30 +163,22 @@ export default function InsightsPage() {
 
           <FadeIn>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-muted-foreground text-sm font-medium">
-                  Monthly Average
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+              <CardContent className="p-4">
+                <p className="text-caption text-muted-foreground mb-1">Average</p>
+                <div className="text-h2 font-bold">
                   <AnimatedNumber value={averageMonthlySpend} format="currency" />
                 </div>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Over the last {timeRange} months
+                <p className="text-muted-foreground mt-1 text-caption">
+                  Last {timeRange} months
                 </p>
               </CardContent>
             </Card>
           </FadeIn>
 
           <FadeIn>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-muted-foreground text-sm font-medium">
-                  Top Category
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <Card className="col-span-2 lg:col-span-1">
+              <CardContent className="p-4">
+                <p className="text-caption text-muted-foreground mb-1">Top Category</p>
                 {topCategory ? (
                   <>
                     <div className="flex items-center gap-2">
@@ -201,9 +187,9 @@ export default function InsightsPage() {
                         color={topCategory.category.color}
                         size="sm"
                       />
-                      <span className="text-xl font-bold">{topCategory.category.name}</span>
+                      <span className="text-lg font-bold">{topCategory.category.name}</span>
                     </div>
-                    <p className="text-muted-foreground mt-1 text-xs">
+                    <p className="text-muted-foreground mt-1 text-caption">
                       {formatCurrency(topCategory.total)} this month
                     </p>
                   </>
@@ -218,30 +204,29 @@ export default function InsightsPage() {
         {/* Monthly Spending Chart */}
         <FadeIn>
           <Card>
-            <CardHeader>
-              <CardTitle>Monthly Spending</CardTitle>
-              <CardDescription>Your spending over the last {timeRange} months</CardDescription>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-h2">Spending Trend</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex h-64 items-end gap-2">
+              <div className="flex h-48 items-end gap-2">
                 {monthlyData.map((data) => (
                   <div
                     key={data.month}
-                    className="flex flex-1 flex-col items-center gap-2"
+                    className="flex flex-1 flex-col items-center gap-1"
                   >
-                    <span className="text-muted-foreground text-xs">
-                      {formatCurrency(data.total)}
+                    <span className="text-muted-foreground text-[10px]">
+                      {data.total > 0 ? formatCurrency(data.total) : '-'}
                     </span>
                     <div
                       className={cn(
-                        'bg-primary/80 hover:bg-primary w-full rounded-t-md transition-all',
-                        data.month === currentMonth && 'bg-primary'
+                        'w-full rounded-t-lg transition-all duration-300',
+                        data.month === currentMonth ? 'bg-primary' : 'bg-primary/40'
                       )}
                       style={{
-                        height: `${Math.max((data.total / maxMonthlySpend) * 180, 4)}px`,
+                        height: `${Math.max((data.total / maxMonthlySpend) * 140, 4)}px`,
                       }}
                     />
-                    <span className="text-xs font-medium">{data.label}</span>
+                    <span className="text-caption font-medium">{data.label}</span>
                   </div>
                 ))}
               </div>
@@ -252,41 +237,40 @@ export default function InsightsPage() {
         {/* Category Breakdown */}
         <FadeIn>
           <Card>
-            <CardHeader>
-              <CardTitle>Spending by Category</CardTitle>
-              <CardDescription>
-                {format(new Date(), 'MMMM yyyy')} breakdown
+            <CardHeader className="pb-2">
+              <CardTitle className="text-h2">By Category</CardTitle>
+              <CardDescription className="text-caption">
+                {format(new Date(), 'MMMM yyyy')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {categoryBreakdown.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {categoryBreakdown.map((item) => {
                     const percentage = totalCurrentMonth > 0
                       ? (item.total / totalCurrentMonth) * 100
                       : 0;
                     return (
-                      <div key={item.category.id} className="space-y-2">
+                      <div key={item.category.id} className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <CategoryIcon
-                              icon={item.category.icon}
-                              color={item.category.color}
-                              size="sm"
-                            />
-                            <span className="font-medium">{item.category.name}</span>
-                            <span className="text-muted-foreground text-sm">
-                              ({item.count} transaction{item.count !== 1 ? 's' : ''})
-                            </span>
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background border border-border">
+                              <CategoryIcon
+                                icon={item.category.icon}
+                                color={item.category.color}
+                                size="sm"
+                              />
+                            </div>
+                            <span className="text-sm font-medium">{item.category.name}</span>
                           </div>
                           <div className="text-right">
-                            <span className="font-medium">{formatCurrency(item.total)}</span>
-                            <span className="text-muted-foreground ml-2 text-sm">
-                              ({percentage.toFixed(1)}%)
+                            <span className="text-sm font-semibold">{formatCurrency(item.total)}</span>
+                            <span className="text-muted-foreground ml-1 text-caption">
+                              {percentage.toFixed(0)}%
                             </span>
                           </div>
                         </div>
-                        <div className="bg-muted h-2 overflow-hidden rounded-full">
+                        <div className="bg-border h-1.5 overflow-hidden rounded-full">
                           <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{

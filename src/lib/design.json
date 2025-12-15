@@ -1,0 +1,200 @@
+{
+  "meta": {
+    "product": "Personal Finance App",
+    "design_source": "Provided branding & UI reference image",
+    "design_philosophy": "Calm, modern, premium, mobile-first, finance-focused",
+    "ui_style": "Soft dark mode with neon-accent highlights"
+  },
+  "colors": {
+    "brand": {
+      "primary": "#98EF5A",
+      "secondary": "#935AEF",
+      "background": "#101010",
+      "surface": "#1A1A1A",
+      "text_primary": "#FFFFFF",
+      "text_secondary": "#B3B3B3",
+      "border": "#2A2A2A",
+      "danger": "#EF4444",
+      "warning": "#FACC15",
+      "success": "#22C55E"
+    },
+    "gradients": {
+      "primary_card": "linear-gradient(135deg, #98EF5A 0%, #7BEA3C 100%)",
+      "accent": "linear-gradient(135deg, #935AEF 0%, #7A3AED 100%)"
+    }
+  },
+  "typography": {
+    "font_family": "TASA Orbiter, Inter, system-ui, sans-serif",
+    "weights": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    },
+    "scale": {
+      "display": {
+        "size": "32px",
+        "line_height": "40px",
+        "weight": 700
+      },
+      "h1": {
+        "size": "24px",
+        "line_height": "32px",
+        "weight": 600
+      },
+      "h2": {
+        "size": "20px",
+        "line_height": "28px",
+        "weight": 600
+      },
+      "body": {
+        "size": "14px",
+        "line_height": "20px",
+        "weight": 400
+      },
+      "caption": {
+        "size": "12px",
+        "line_height": "16px",
+        "weight": 400
+      }
+    }
+  },
+  "spacing": {
+    "unit": 4,
+    "xs": 4,
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
+    "2xl": 40
+  },
+  "radius": {
+    "sm": "8px",
+    "md": "12px",
+    "lg": "20px",
+    "xl": "28px",
+    "full": "9999px"
+  },
+  "shadows": {
+    "card": "0 8px 24px rgba(0,0,0,0.35)",
+    "floating": "0 12px 40px rgba(0,0,0,0.45)",
+    "focus": "0 0 0 2px rgba(152,239,90,0.4)"
+  },
+  "components": {
+    "button": {
+      "variants": {
+        "primary": {
+          "background": "#98EF5A",
+          "text": "#101010",
+          "hover": "brightness(0.95)",
+          "radius": "full"
+        },
+        "secondary": {
+          "background": "#1A1A1A",
+          "text": "#FFFFFF",
+          "border": "1px solid #2A2A2A"
+        },
+        "icon": {
+          "size": "40px",
+          "radius": "full",
+          "background": "#FFFFFF",
+          "icon_color": "#101010"
+        }
+      }
+    },
+    "card": {
+      "background": "#1A1A1A",
+      "radius": "lg",
+      "padding": "16px",
+      "shadow": "card"
+    },
+    "input": {
+      "background": "#1A1A1A",
+      "border": "1px solid #2A2A2A",
+      "focus": "brand.primary",
+      "radius": "md"
+    },
+    "progress": {
+      "height": "6px",
+      "background": "#2A2A2A",
+      "fill": "#98EF5A",
+      "radius": "full"
+    }
+  },
+  "navigation": {
+    "type": "bottom-tab",
+    "height": "72px",
+    "background": "#101010",
+    "items": [
+      { "id": "home", "icon": "home", "label": "Home" },
+      { "id": "transactions", "icon": "list", "label": "Transactions" },
+      { "id": "add", "icon": "plus", "label": "Add", "highlight": true },
+      { "id": "insights", "icon": "chart", "label": "Insights" },
+      { "id": "profile", "icon": "user", "label": "Profile" }
+    ],
+    "active_state": {
+      "background": "#98EF5A",
+      "icon_color": "#101010",
+      "radius": "full"
+    }
+  },
+  "screens": {
+    "dashboard": {
+      "hero_card": {
+        "type": "balance-card",
+        "currency": "USD",
+        "balance_style": "display",
+        "actions": ["add", "send", "scan", "more"]
+      },
+      "sections": [
+        "quick-transfer",
+        "recent-transactions"
+      ]
+    },
+    "transactions": {
+      "list_style": "grouped",
+      "item": {
+        "icon": "brand",
+        "title": "merchant",
+        "amount": "right-aligned",
+        "date": "caption"
+      }
+    },
+    "add_expense": {
+      "input_style": "numeric-keypad",
+      "primary_action": "Save Expense"
+    }
+  },
+  "animations": {
+    "library": "framer-motion",
+    "page_transition": {
+      "type": "fade-slide",
+      "duration": 0.3
+    },
+    "card_entry": {
+      "type": "scale-fade",
+      "duration": 0.25
+    },
+    "button_press": {
+      "scale": 0.96
+    },
+    "loading": {
+      "type": "skeleton",
+      "pulse": true
+    }
+  },
+  "accessibility": {
+    "contrast": "WCAG AA",
+    "tap_target": "44px",
+    "font_scaling": true
+  },
+  "responsive": {
+    "mobile_first": true,
+    "breakpoints": {
+      "sm": "640px",
+      "md": "768px",
+      "lg": "1024px",
+      "xl": "1280px"
+    }
+  }
+}

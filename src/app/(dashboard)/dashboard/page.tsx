@@ -6,7 +6,7 @@ import { useCategories } from '@/context/categories-context';
 import { useTransactions } from '@/context/transactions-context';
 import { useBudgets } from '@/context/budgets-context';
 import {
-  SummaryCards,
+  BalanceCard,
   BudgetOverview,
   RecentTransactions,
   SpendingByCategory,
@@ -41,19 +41,25 @@ export default function DashboardPage() {
   // Calculate current month budgets
   const currentMonthBudget = budgets.find((b) => b.month === currentMonth);
 
-  // Calculate total budget and remaining
+  // Calculate total budget and spent
   const totalBudget = currentMonthBudget?.totalAmount ?? 0;
   const totalSpent = getMonthlyTotal(currentMonth);
   const budgetRemaining = Math.max(0, totalBudget - totalSpent);
-  const budgetUsagePercent = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0;
-
-  // Loading state available if needed: transactionsLoading, budgetsLoading
+  const budgetUsage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
   return (
     <PageTransition>
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Welcome Message */}
-        <div>
+        <div className="lg:hidden">
+          <p className="text-muted-foreground text-xs">Good morning,</p>
+          <h1 className="text-xl font-semibold text-foreground">
+            {user?.name?.split(' ')[0] || 'there'} 👋
+          </h1>
+        </div>
+
+        {/* Desktop Welcome */}
+        <div className="hidden lg:block">
           <h2 className="text-2xl font-bold tracking-tight">
             Welcome back, {user?.name?.split(' ')[0] || 'there'}!
           </h2>
@@ -62,21 +68,30 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Summary Cards */}
+        {/* Hero Balance Card */}
         <StaggerContainer>
           <StaggerItem>
-            <SummaryCards
-              totalSpent={totalSpent}
-              budgetRemaining={budgetRemaining}
-              totalBudget={totalBudget}
+            <BalanceCard
+              balance={budgetRemaining}
+              income={totalBudget}
+              expenses={totalSpent}
               transactionCount={currentMonthTransactions.length}
-              budgetUsagePercent={budgetUsagePercent}
+              budgetUsage={budgetUsage}
             />
           </StaggerItem>
         </StaggerContainer>
 
-        {/* Main Content Grid */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        {/* Recent Transactions - Mobile First */}
+        <StaggerItem>
+          <RecentTransactions
+            transactions={currentMonthTransactions}
+            categories={categories}
+            limit={5}
+          />
+        </StaggerItem>
+
+        {/* Main Content Grid - Desktop */}
+        <div className="grid gap-4 lg:grid-cols-2">
           {/* Budget Overview */}
           <StaggerItem>
             <BudgetOverview
@@ -95,15 +110,6 @@ export default function DashboardPage() {
             />
           </StaggerItem>
         </div>
-
-        {/* Recent Transactions */}
-        <StaggerItem>
-          <RecentTransactions
-            transactions={currentMonthTransactions}
-            categories={categories}
-            limit={5}
-          />
-        </StaggerItem>
       </div>
     </PageTransition>
   );
