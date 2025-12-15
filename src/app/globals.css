@@ -3,14 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* TASA Orbiter Font - Fallback to Inter */
-@font-face {
-  font-family: 'TASA Orbiter';
-  src: local('TASA Orbiter'), local('TASAOrbiter');
-  font-weight: 400 700;
-  font-display: swap;
-}
-
 @theme inline {
   /* Colors */
   --color-background: var(--background);
@@ -57,9 +49,9 @@
   --color-brand-warning: #FACC15;
   --color-brand-success: #22C55E;
   
-  /* Typography */
-  --font-sans: 'TASA Orbiter', 'Inter', system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  /* Typography - Using Inter font from design.json */
+  --font-sans: var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   
   /* Radius */
   --radius-sm: 8px;
@@ -153,7 +145,7 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'TASA Orbiter', 'Inter', system-ui, sans-serif;
+    font-family: var(--font-sans);
   }
   
   /* Typography Scale from design.json */
@@ -219,9 +211,9 @@
     height: calc(72px + env(safe-area-inset-bottom, 0));
   }
   
-  /* Content padding for bottom nav */
+  /* Content padding for bottom nav - increased to prevent content from being hidden */
   .pb-bottom-nav {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0));
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0));
   }
 }
 

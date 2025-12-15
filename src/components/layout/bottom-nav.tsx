@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
   ListOrdered,
@@ -21,6 +21,27 @@ const navItems = [
   { href: '/settings', label: 'Profile', icon: User, id: 'profile' },
 ];
 
+const navItemVariants = {
+  inactive: { scale: 1 },
+  active: { scale: 1 },
+  tap: { scale: 0.9 },
+};
+
+const iconVariants = {
+  inactive: { y: 0 },
+  active: { y: -2 },
+};
+
+const indicatorVariants = {
+  initial: { scale: 0, opacity: 0 },
+  animate: { 
+    scale: 1, 
+    opacity: 1, 
+    transition: { type: 'spring' as const, stiffness: 500, damping: 30 } 
+  },
+  exit: { scale: 0, opacity: 0, transition: { duration: 0.15 } },
+};
+
 interface BottomNavProps {
   onAddExpense?: () => void;
 }
@@ -30,28 +51,35 @@ export function BottomNav({ onAddExpense }: BottomNavProps) {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-      {/* Glass background */}
-      <div className="bg-background/95 backdrop-blur-xl border-t border-border">
-        <div className="flex items-center justify-around h-[72px] pb-safe px-2">
-          {navItems.map((item) => {
+      {/* Translucent glass background */}
+      <div className="bg-[#101010]/80 backdrop-blur-2xl border-t border-white/10">
+        <div className="flex items-center justify-around h-[72px] pb-safe px-4">
+          {navItems.map((item, index) => {
             const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
             const Icon = item.icon;
 
-            // Special "Add" button in the center
+            // Add button - styled like other buttons but with primary color
             if (item.highlight) {
               return (
-                <button
+                <motion.button
                   key={item.id}
                   onClick={onAddExpense}
-                  className="relative -mt-6"
+                  variants={navItemVariants}
+                  initial="inactive"
+                  whileTap="tap"
+                  className="relative flex flex-col items-center justify-center gap-1 tap-target"
                 >
                   <motion.div
-                    whileTap={{ scale: 0.9 }}
-                    className="flex items-center justify-center w-14 h-14 rounded-full bg-primary shadow-[0_8px_24px_rgba(152,239,90,0.4)]"
+                    className="flex items-center justify-center w-11 h-11 rounded-2xl bg-primary"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <Icon className="h-6 w-6 text-primary-foreground" strokeWidth={2.5} />
+                    <Icon className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
                   </motion.div>
-                </button>
+                  <span className="text-[10px] font-medium text-primary">
+                    {item.label}
+                  </span>
+                </motion.button>
               );
             }
 
@@ -62,28 +90,51 @@ export function BottomNav({ onAddExpense }: BottomNavProps) {
                 className="relative flex flex-col items-center justify-center gap-1 tap-target"
               >
                 <motion.div
-                  whileTap={{ scale: 0.9 }}
-                  className={cn(
-                    'flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-200',
-                    isActive && 'bg-primary'
-                  )}
+                  variants={navItemVariants}
+                  initial="inactive"
+                  animate={isActive ? 'active' : 'inactive'}
+                  whileTap="tap"
+                  className="relative flex items-center justify-center w-11 h-11 rounded-2xl"
                 >
-                  <Icon
-                    className={cn(
-                      'h-5 w-5 transition-colors duration-200',
-                      isActive ? 'text-primary-foreground' : 'text-muted-foreground'
+                  {/* Active background indicator */}
+                  <AnimatePresence>
+                    {isActive && (
+                      <motion.div
+                        variants={indicatorVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="absolute inset-0 bg-primary rounded-2xl"
+                        layoutId="navIndicator"
+                      />
                     )}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
+                  </AnimatePresence>
+                  
+                  <motion.div
+                    variants={iconVariants}
+                    animate={isActive ? 'active' : 'inactive'}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className="relative z-10"
+                  >
+                    <Icon
+                      className={cn(
+                        'h-5 w-5 transition-colors duration-200',
+                        isActive ? 'text-primary-foreground' : 'text-muted-foreground'
+                      )}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                  </motion.div>
                 </motion.div>
-                <span
-                  className={cn(
-                    'text-[10px] font-medium transition-colors duration-200',
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  )}
+                <motion.span
+                  animate={{
+                    color: isActive ? 'var(--primary)' : 'var(--muted-foreground)',
+                    fontWeight: isActive ? 500 : 400,
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[10px]"
                 >
                   {item.label}
-                </span>
+                </motion.span>
               </Link>
             );
           })}
