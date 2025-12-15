@@ -1,38 +1,35 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { User, UserPreferences } from '@/types';
-import { generateId } from '@/lib/utils';
+import { User as SupabaseUser, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
+import { UserPreferences } from '@/types';
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  avatarUrl?: string;
+  preferences: UserPreferences;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 interface AuthContextType {
   user: User | null;
+  supabaseUser: SupabaseUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (
-    name: string,
-    email: string,
-    password: string
-  ) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  isConfigured: boolean;
+  signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   updatePreferences: (preferences: Partial<UserPreferences>) => void;
   updateProfile: (name: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'financeflow_auth';
-const USERS_KEY = 'financeflow_users';
-
-interface StoredUser {
-  id: string;
-  email: string;
-  name: string;
-  password: string; // In real app, this would be hashed on server
-  preferences: UserPreferences;
-  createdAt: string;
-  updatedAt: string;
-}
+const PREFERENCES_KEY = 'financeflow_preferences';
 
 const defaultPreferences: UserPreferences = {
   currency: 'USD',
@@ -41,158 +38,134 @@ const defaultPreferences: UserPreferences = {
   firstDayOfWeek: 0,
 };
 
+function getStoredPreferences(userId: string): UserPreferences {
+  try {
+    const stored = localStorage.getItem(`${PREFERENCES_KEY}_${userId}`);
+    return stored ? { ...defaultPreferences, ...JSON.parse(stored) } : defaultPreferences;
+  } catch {
+    return defaultPreferences;
+  }
+}
+
+function savePreferences(userId: string, preferences: UserPreferences) {
+  localStorage.setItem(`${PREFERENCES_KEY}_${userId}`, JSON.stringify(preferences));
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const supabase = createClient();
+  const isConfigured = supabase !== null;
 
-  // Load user from localStorage on mount
+  // Convert Supabase user to our User type
+  const mapSupabaseUser = useCallback((supaUser: SupabaseUser): User => {
+    const preferences = getStoredPreferences(supaUser.id);
+    return {
+      id: supaUser.id,
+      email: supaUser.email || '',
+      name: supaUser.user_metadata?.full_name || supaUser.user_metadata?.name || supaUser.email?.split('@')[0] || 'User',
+      avatarUrl: supaUser.user_metadata?.avatar_url || supaUser.user_metadata?.picture,
+      preferences,
+      createdAt: new Date(supaUser.created_at),
+      updatedAt: new Date(supaUser.updated_at || supaUser.created_at),
+    };
+  }, []);
+
+  // Initialize auth state
   useEffect(() => {
-    const loadUser = () => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+
+    const initAuth = async () => {
       try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const userData = JSON.parse(stored) as User;
-          // Convert date strings back to Date objects
-          userData.createdAt = new Date(userData.createdAt);
-          userData.updatedAt = new Date(userData.updatedAt);
-          setUser(userData);
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          setUser(mapSupabaseUser(session.user));
         }
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        console.error('Error loading auth:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadUser();
-  }, []);
+    initAuth();
 
-  // Get all users from storage
-  const getStoredUsers = useCallback((): StoredUser[] => {
-    try {
-      const stored = localStorage.getItem(USERS_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          setUser(mapSupabaseUser(session.user));
+        } else {
+          setSupabaseUser(null);
+          setUser(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, mapSupabaseUser]);
+
+  const signInWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase is not configured' };
     }
-  }, []);
 
-  // Save users to storage
-  const saveStoredUsers = useCallback((users: StoredUser[]) => {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  }, []);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
 
-  const login = useCallback(
-    async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      const users = getStoredUsers();
-      const existingUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-
-      if (!existingUser) {
-        return { success: false, error: 'No account found with this email' };
+      if (error) {
+        return { success: false, error: error.message };
       }
-
-      if (existingUser.password !== password) {
-        return { success: false, error: 'Incorrect password' };
-      }
-
-      const userData: User = {
-        id: existingUser.id,
-        email: existingUser.email,
-        name: existingUser.name,
-        preferences: existingUser.preferences,
-        createdAt: new Date(existingUser.createdAt),
-        updatedAt: new Date(existingUser.updatedAt),
-      };
-
-      setUser(userData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
 
       return { success: true };
-    },
-    [getStoredUsers]
-  );
+    } catch (error) {
+      return { success: false, error: 'Failed to sign in with Google' };
+    }
+  }, [supabase]);
 
-  const signup = useCallback(
-    async (
-      name: string,
-      email: string,
-      password: string
-    ): Promise<{ success: boolean; error?: string }> => {
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      const users = getStoredUsers();
-      const existingUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-
-      if (existingUser) {
-        return { success: false, error: 'An account with this email already exists' };
-      }
-
-      const now = new Date();
-      const newStoredUser: StoredUser = {
-        id: generateId(),
-        email,
-        name,
-        password, // In real app, hash this
-        preferences: defaultPreferences,
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      };
-
-      users.push(newStoredUser);
-      saveStoredUsers(users);
-
-      const userData: User = {
-        id: newStoredUser.id,
-        email: newStoredUser.email,
-        name: newStoredUser.name,
-        preferences: newStoredUser.preferences,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      setUser(userData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-
-      return { success: true };
-    },
-    [getStoredUsers, saveStoredUsers]
-  );
-
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
-  }, []);
+    setSupabaseUser(null);
+  }, [supabase]);
 
   const updatePreferences = useCallback(
     (preferences: Partial<UserPreferences>) => {
       if (!user) return;
 
+      const updatedPreferences = { ...user.preferences, ...preferences };
       const updatedUser: User = {
         ...user,
-        preferences: { ...user.preferences, ...preferences },
+        preferences: updatedPreferences,
         updatedAt: new Date(),
       };
 
       setUser(updatedUser);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
-
-      // Also update in users storage
-      const users = getStoredUsers();
-      const userIndex = users.findIndex((u) => u.id === user.id);
-      if (userIndex !== -1) {
-        users[userIndex] = {
-          ...users[userIndex],
-          preferences: updatedUser.preferences,
-          updatedAt: updatedUser.updatedAt.toISOString(),
-        };
-        saveStoredUsers(users);
-      }
+      savePreferences(user.id, updatedPreferences);
     },
-    [user, getStoredUsers, saveStoredUsers]
+    [user]
   );
 
   const updateProfile = useCallback(
@@ -206,31 +179,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
 
       setUser(updatedUser);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
-
-      // Also update in users storage
-      const users = getStoredUsers();
-      const userIndex = users.findIndex((u) => u.id === user.id);
-      if (userIndex !== -1) {
-        users[userIndex] = {
-          ...users[userIndex],
-          name,
-          updatedAt: updatedUser.updatedAt.toISOString(),
-        };
-        saveStoredUsers(users);
-      }
     },
-    [user, getStoredUsers, saveStoredUsers]
+    [user]
   );
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        supabaseUser,
         isLoading,
         isAuthenticated: !!user,
-        login,
-        signup,
+        isConfigured,
+        signInWithGoogle,
         logout,
         updatePreferences,
         updateProfile,
