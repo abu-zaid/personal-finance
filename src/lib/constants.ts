@@ -56,6 +56,25 @@ export const CATEGORY_COLORS = {
   slate: { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-200' },
 } as const;
 
+// Category icons (matching CategoryIcon component)
+export const CATEGORY_ICONS = {
+  'utensils-crossed': 'Food & Dining',
+  car: 'Transportation',
+  home: 'Housing',
+  zap: 'Utilities',
+  film: 'Entertainment',
+  'shopping-bag': 'Shopping',
+  heart: 'Health',
+  'graduation-cap': 'Education',
+  plane: 'Travel',
+  shirt: 'Clothing',
+  dumbbell: 'Fitness',
+  coffee: 'Coffee',
+  gift: 'Gifts',
+  'credit-card': 'Bills',
+  'more-horizontal': 'Other',
+} as const;
+
 // Animation durations (in seconds for Framer Motion)
 export const ANIMATION_DURATION = {
   fast: 0.15,

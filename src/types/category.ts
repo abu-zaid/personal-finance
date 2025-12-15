@@ -3,68 +3,41 @@ export interface Category {
   id: string;
   userId: string;
   name: string;
-  icon: CategoryIcon;
-  color: CategoryColor;
+  icon: string;
+  color: string;
   isDefault: boolean;
   order: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export type CategoryIcon =
-  | 'shopping-cart'
+// Icon options for UI
+export type CategoryIconOption =
+  | 'utensils-crossed'
   | 'coffee'
   | 'car'
   | 'home'
-  | 'utensils'
+  | 'shopping-bag'
   | 'film'
   | 'heart'
   | 'zap'
-  | 'smartphone'
   | 'gift'
-  | 'briefcase'
-  | 'book'
   | 'plane'
-  | 'music'
-  | 'gamepad'
   | 'shirt'
   | 'dumbbell'
-  | 'pill'
-  | 'dog'
-  | 'baby'
   | 'graduation-cap'
-  | 'wrench'
+  | 'credit-card'
   | 'more-horizontal';
-
-export type CategoryColor =
-  | 'red'
-  | 'orange'
-  | 'amber'
-  | 'yellow'
-  | 'lime'
-  | 'green'
-  | 'emerald'
-  | 'teal'
-  | 'cyan'
-  | 'sky'
-  | 'blue'
-  | 'indigo'
-  | 'violet'
-  | 'purple'
-  | 'fuchsia'
-  | 'pink'
-  | 'rose'
-  | 'slate';
 
 export interface CreateCategoryInput {
   name: string;
-  icon: CategoryIcon;
-  color: CategoryColor;
+  icon: string;
+  color: string;
 }
 
 export interface UpdateCategoryInput {
   name?: string;
-  icon?: CategoryIcon;
-  color?: CategoryColor;
+  icon?: string;
+  color?: string;
   order?: number;
 }
