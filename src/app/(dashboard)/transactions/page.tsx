@@ -150,7 +150,7 @@ export default function TransactionsPage() {
     );
     return categories
       .filter((c) => map.has(c.id))
-      .sort((a, b) => (map.get(b.id)! - map.get(a.id)!))
+      .sort((a, b) => map.get(b.id)! - map.get(a.id)!)
       .slice(0, 6);
   }, [transactions, categories]);
 
@@ -189,63 +189,7 @@ export default function TransactionsPage() {
             </button>
           </div>
 
-          {/* STATS */}
-          <StaggerContainer>
-            <div className="grid grid-cols-2 gap-3">
-              <StaggerItem>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex gap-2 mb-2">
-                      <Wallet className="h-4 w-4 text-primary" />
-                      <span className="text-xs text-muted-foreground">
-                        This Month
-                      </span>
-                    </div>
-                    <p className="text-lg font-bold">
-                      {formatCurrency(getMonthlyTotal(currentMonth))}
-                    </p>
-                  </CardContent>
-                </Card>
-              </StaggerItem>
-
-              <StaggerItem>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex gap-2 mb-2">
-                      <ListOrdered className="h-4 w-4 text-blue-500" />
-                      <span className="text-xs text-muted-foreground">
-                        Transactions
-                      </span>
-                    </div>
-                    <p className="text-lg font-bold">
-                      {filteredTransactions.length}
-                    </p>
-                  </CardContent>
-                </Card>
-              </StaggerItem>
-            </div>
-          </StaggerContainer>
-
-          {/* SEARCH */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              className="pl-10 pr-10"
-              placeholder="Search transactions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-
-          {/* CATEGORY CHIPS — SAFE */}
+          {/* CATEGORY FILTERS */}
           <div className="relative -mx-4 px-4 overflow-x-auto">
             <div className="flex w-max min-w-full gap-2 pb-2">
               <Badge
@@ -291,11 +235,18 @@ export default function TransactionsPage() {
                     <div
                       key={t.id}
                       className={cn(
-                        'flex justify-between items-center p-4',
+                        'group flex justify-between items-center p-4',
                         i !== list.length - 1 && 'border-b'
                       )}
                     >
-                      <div className="flex gap-3 min-w-0">
+                      {/* LEFT */}
+                      <div
+                        className="flex gap-3 min-w-0 cursor-pointer"
+                        onClick={() => {
+                          setEditingTransaction(t);
+                          setModalOpen(true);
+                        }}
+                      >
                         <div
                           className="h-10 w-10 rounded-xl flex items-center justify-center"
                           style={{
@@ -317,9 +268,51 @@ export default function TransactionsPage() {
                         </div>
                       </div>
 
-                      <span className="font-semibold">
-                        {formatCurrency(t.amount)}
-                      </span>
+                      {/* RIGHT */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">
+                          {formatCurrency(t.amount)}
+                        </span>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="
+                                h-8 w-8
+                                lg:opacity-0
+                                lg:group-hover:opacity-100
+                                lg:focus:opacity-100
+                              "
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingTransaction(t);
+                                setModalOpen(true);
+                              }}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => deleteTransaction(t.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   ))}
                 </Card>
