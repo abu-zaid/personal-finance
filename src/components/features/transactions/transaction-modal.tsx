@@ -275,16 +275,18 @@ export const TransactionModal = memo(function TransactionModal({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-[110px] justify-start text-left font-normal"
+                    className="w-[100px] justify-start text-left font-normal px-2"
                   >
-                    <Clock className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, 'h:mm a') : 'Time'}
+                    <Clock className="mr-1.5 h-4 w-4 shrink-0" />
+                    <span className="truncate">
+                      {selectedDate ? format(selectedDate, 'h:mm a') : 'Time'}
+                    </span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-3" align="start">
-                  <div className="flex gap-2">
+                <PopoverContent className="w-auto p-3" align="end" side="top">
+                  <div className="flex gap-1.5">
                     <div className="flex flex-col gap-1">
-                      <Label className="text-xs text-muted-foreground">Hour</Label>
+                      <Label className="text-[10px] text-muted-foreground">Hour</Label>
                       <Select
                         value={selectedDate ? String(selectedDate.getHours() % 12 || 12) : '12'}
                         onValueChange={(val) => {
@@ -297,7 +299,7 @@ export const TransactionModal = memo(function TransactionModal({
                           setValue('date', newDate, { shouldDirty: true });
                         }}
                       >
-                        <SelectTrigger className="w-[70px]">
+                        <SelectTrigger className="w-[56px] h-9 px-2">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -308,7 +310,7 @@ export const TransactionModal = memo(function TransactionModal({
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <Label className="text-xs text-muted-foreground">Min</Label>
+                      <Label className="text-[10px] text-muted-foreground">Min</Label>
                       <Select
                         value={selectedDate ? String(Math.floor(selectedDate.getMinutes() / 5) * 5).padStart(2, '0') : '00'}
                         onValueChange={(val) => {
@@ -317,7 +319,7 @@ export const TransactionModal = memo(function TransactionModal({
                           setValue('date', newDate, { shouldDirty: true });
                         }}
                       >
-                        <SelectTrigger className="w-[70px]">
+                        <SelectTrigger className="w-[56px] h-9 px-2">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -330,7 +332,7 @@ export const TransactionModal = memo(function TransactionModal({
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <Label className="text-xs text-muted-foreground">AM/PM</Label>
+                      <Label className="text-[10px] text-muted-foreground">AM/PM</Label>
                       <Select
                         value={selectedDate && selectedDate.getHours() >= 12 ? 'PM' : 'AM'}
                         onValueChange={(val) => {
@@ -344,7 +346,7 @@ export const TransactionModal = memo(function TransactionModal({
                           setValue('date', newDate, { shouldDirty: true });
                         }}
                       >
-                        <SelectTrigger className="w-[70px]">
+                        <SelectTrigger className="w-[56px] h-9 px-2">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
