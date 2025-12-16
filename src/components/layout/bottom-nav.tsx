@@ -17,11 +17,11 @@ import { cn } from '@/lib/utils';
 import { useHaptics } from '@/hooks/use-haptics';
 
 const navItems = [
-  { href: '/dashboard', label: 'Home', icon: Home, id: 'home' },
-  { href: '/transactions', label: 'Transactions', icon: ListOrdered, id: 'transactions' },
-  { href: null, label: 'Add', icon: Plus, id: 'add', highlight: true },
-  { href: '/budgets', label: 'Budgets', icon: Wallet, id: 'budgets' },
-  { href: '/insights', label: 'Insights', icon: BarChart3, id: 'insights' },
+  { href: '/dashboard', icon: Home, id: 'home' },
+  { href: '/transactions', icon: ListOrdered, id: 'transactions' },
+  { href: null, icon: Plus, id: 'add', highlight: true },
+  { href: '/budgets', icon: Wallet, id: 'budgets' },
+  { href: '/insights', icon: BarChart3, id: 'insights' },
 ];
 
 const navItemVariants: Variants = {
@@ -32,7 +32,7 @@ const navItemVariants: Variants = {
 
 const iconVariants: Variants = {
   inactive: { y: 0 },
-  active: { y: -2 },
+  active: { y: -1 },
 };
 
 const indicatorVariants: Variants = {
@@ -86,7 +86,7 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
             WebkitBackdropFilter: 'blur(24px) saturate(180%)',
           }}
         >
-          <div className="flex items-center justify-around h-[72px] px-4 pt-1 pb-2">
+          <div className="flex items-center justify-around h-[72px] px-4 pt-2 pb-3">
             {navItems.map((item) => {
               const isActive =
                 item.href &&
@@ -94,7 +94,7 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
 
               const Icon = item.icon;
 
-              // Add Button (Blended)
+              // Add button (no label)
               if (item.highlight) {
                 return (
                   <motion.button
@@ -103,10 +103,17 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                     variants={navItemVariants}
                     initial="inactive"
                     whileTap="tap"
-                    className="relative flex flex-col items-center justify-center gap-2 tap-target"
+                    className="relative flex items-center justify-center tap-target"
                   >
                     <motion.div
-                      className="flex items-center justify-center w-11 h-11 rounded-xl"
+                      className="
+                        flex
+                        items-center
+                        justify-center
+                        w-12
+                        h-12
+                        rounded-[16px]
+                      "
                       style={{
                         background:
                           'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
@@ -114,13 +121,10 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                       }}
                     >
                       <Icon
-                        className="h-5 w-5 text-[#101010]"
+                        className="h-6 w-6 text-[#101010]"
                         strokeWidth={2.75}
                       />
                     </motion.div>
-                    <span className="text-[11px] font-medium text-[#98EF5A] leading-none">
-                      Add
-                    </span>
                   </motion.button>
                 );
               }
@@ -130,15 +134,24 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                   key={item.id}
                   href={item.href!}
                   onClick={handleNavClick}
-                  className="relative flex flex-col items-center justify-center gap-2 tap-target"
+                  className="relative flex items-center justify-center tap-target"
                 >
                   <motion.div
                     variants={navItemVariants}
                     initial="inactive"
                     animate={isActive ? 'active' : 'inactive'}
                     whileTap="tap"
-                    className="relative flex items-center justify-center w-10 h-10 rounded-xl"
+                    className="
+                      relative
+                      flex
+                      items-center
+                      justify-center
+                      w-12
+                      h-12
+                      rounded-[16px]
+                    "
                   >
+                    {/* Active squircle background */}
                     <AnimatePresence>
                       {isActive && (
                         <motion.div
@@ -147,7 +160,7 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                           initial="initial"
                           animate="animate"
                           exit="exit"
-                          className="absolute inset-0 bg-primary/90 rounded-xl"
+                          className="absolute inset-0 bg-primary rounded-[16px]"
                         />
                       )}
                     </AnimatePresence>
@@ -160,7 +173,7 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                     >
                       <Icon
                         className={cn(
-                          'h-5 w-5 transition-colors duration-200',
+                          'h-6 w-6 transition-colors duration-200',
                           isActive
                             ? 'text-primary-foreground'
                             : 'text-muted-foreground'
@@ -169,14 +182,6 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                       />
                     </motion.div>
                   </motion.div>
-
-                  <motion.span
-                    animate={{ opacity: isActive ? 1 : 0.6 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-[11px] text-muted-foreground leading-none"
-                  >
-                    {item.label}
-                  </motion.span>
                 </Link>
               );
             })}
