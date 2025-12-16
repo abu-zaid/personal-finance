@@ -478,8 +478,13 @@ export default function TransactionsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-sm font-semibold text-destructive">
-                              -{formatCurrency(transaction.amount)}
+                            <span className={cn(
+                              "text-sm font-semibold",
+                              transaction.type === 'income' 
+                                ? 'text-green-600 dark:text-green-400' 
+                                : 'text-destructive'
+                            )}>
+                              {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                             </span>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>

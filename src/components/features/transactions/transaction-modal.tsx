@@ -65,6 +65,7 @@ export const TransactionModal = memo(function TransactionModal({
   } = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
+      type: 'expense',
       date: new Date(),
     },
   });
@@ -76,6 +77,7 @@ export const TransactionModal = memo(function TransactionModal({
         // Edit mode - populate form with existing data
         reset({
           amount: transaction.amount,
+          type: transaction.type || 'expense',
           categoryId: transaction.categoryId,
           date: new Date(transaction.date),
           notes: transaction.notes || '',
@@ -84,6 +86,7 @@ export const TransactionModal = memo(function TransactionModal({
         // Add mode - reset to defaults
         reset({
           amount: undefined,
+          type: 'expense',
           categoryId: '',
           date: new Date(),
           notes: '',
@@ -94,6 +97,7 @@ export const TransactionModal = memo(function TransactionModal({
 
   const selectedDate = watch('date');
   const selectedCategoryId = watch('categoryId');
+  const selectedType = watch('type');
 
   const onSubmit = useCallback(async (data: TransactionFormData) => {
     setIsLoading(true);
@@ -119,7 +123,7 @@ export const TransactionModal = memo(function TransactionModal({
 
   const handleClose = useCallback(() => {
     haptics.light();
-    reset({ date: new Date() });
+    reset({ type: 'expense', date: new Date() });
     onOpenChange(false);
   }, [haptics, onOpenChange, reset]);
 
@@ -131,30 +135,66 @@ export const TransactionModal = memo(function TransactionModal({
             {isEditMode ? (
               <>
                 <Pencil className="h-4 w-4" />
-                Edit Expense
+                Edit Transaction
               </>
             ) : (
               <>
                 <Plus className="h-4 w-4" />
-                Add Expense
+                Add Transaction
               </>
             )}
           </DialogTitle>
           <DialogDescription>
             {isEditMode 
-              ? 'Update the details of this expense' 
-              : 'Record a new expense transaction'
+              ? 'Update the details of this transaction' 
+              : 'Record a new income or expense'
             }
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Transaction Type Toggle */}
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setValue('type', 'expense', { shouldDirty: true })}
+                className={cn(
+                  'flex items-center justify-center gap-2 rounded-lg border-2 py-2.5 px-4 text-sm font-medium transition-all',
+                  selectedType === 'expense'
+                    ? 'border-destructive bg-destructive/10 text-destructive'
+                    : 'border-border hover:border-muted-foreground/50'
+                )}
+              >
+                <span className="text-lg">−</span>
+                Expense
+              </button>
+              <button
+                type="button"
+                onClick={() => setValue('type', 'income', { shouldDirty: true })}
+                className={cn(
+                  'flex items-center justify-center gap-2 rounded-lg border-2 py-2.5 px-4 text-sm font-medium transition-all',
+                  selectedType === 'income'
+                    ? 'border-green-500 bg-green-500/10 text-green-600 dark:text-green-400'
+                    : 'border-border hover:border-muted-foreground/50'
+                )}
+              >
+                <span className="text-lg">+</span>
+                Income
+              </button>
+            </div>
+          </div>
+
           {/* Amount */}
           <div className="space-y-2">
             <Label htmlFor="amount">Amount</Label>
             <div className="relative">
-              <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2">
-                {symbol}
+              <span className={cn(
+                "absolute left-3 top-1/2 -translate-y-1/2",
+                selectedType === 'income' ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
+              )}>
+                {selectedType === 'income' ? '+' : '−'}{symbol}
               </span>
               <Input
                 id="amount"
@@ -163,7 +203,7 @@ export const TransactionModal = memo(function TransactionModal({
                 step="0.01"
                 min="0"
                 placeholder="0.00"
-                className="pl-7 text-lg"
+                className="pl-10 text-lg"
                 {...register('amount', { valueAsNumber: true })}
               />
             </div>
@@ -269,7 +309,7 @@ export const TransactionModal = memo(function TransactionModal({
               disabled={isLoading || (isEditMode && !isDirty)}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditMode ? 'Save Changes' : 'Add Expense'}
+              {isEditMode ? 'Save Changes' : 'Add Transaction'}
             </Button>
           </div>
         </form>

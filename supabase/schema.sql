@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   amount DECIMAL(12, 2) NOT NULL,
+  type TEXT NOT NULL DEFAULT 'expense' CHECK (type IN ('expense', 'income')),
   category_id UUID NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
   date DATE NOT NULL,
   notes TEXT,

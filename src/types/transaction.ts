@@ -1,8 +1,11 @@
 // Transaction Types
+export type TransactionType = 'expense' | 'income';
+
 export interface Transaction {
   id: string;
   userId: string;
   amount: number;
+  type: TransactionType;
   categoryId: string;
   date: Date;
   notes?: string;
@@ -21,6 +24,7 @@ export interface TransactionWithCategory extends Transaction {
 
 export interface CreateTransactionInput {
   amount: number;
+  type: TransactionType;
   categoryId: string;
   date: Date;
   notes?: string;
@@ -28,6 +32,7 @@ export interface CreateTransactionInput {
 
 export interface UpdateTransactionInput {
   amount?: number;
+  type?: TransactionType;
   categoryId?: string;
   date?: Date;
   notes?: string;

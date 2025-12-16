@@ -48,6 +48,7 @@ function mapDbToTransaction(row: {
   id: string;
   user_id: string;
   amount: number;
+  type?: string;
   category_id: string;
   date: string;
   notes: string | null;
@@ -58,6 +59,7 @@ function mapDbToTransaction(row: {
     id: row.id,
     userId: row.user_id,
     amount: Number(row.amount),
+    type: (row.type as 'expense' | 'income') || 'expense',
     categoryId: row.category_id,
     date: new Date(row.date),
     notes: row.notes || undefined,
@@ -241,6 +243,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         id: tempId,
         userId: user.id,
         amount: input.amount,
+        type: input.type,
         categoryId: input.categoryId,
         date: input.date,
         notes: input.notes,
@@ -263,6 +266,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
           .insert({
             user_id: user.id,
             amount: input.amount,
+            type: input.type,
             category_id: input.categoryId,
             date: dateTimeString,
             notes: input.notes || null,
@@ -307,6 +311,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       const optimisticTransaction: Transaction = {
         ...existingTransaction,
         amount: input.amount ?? existingTransaction.amount,
+        type: input.type ?? existingTransaction.type,
         categoryId: input.categoryId ?? existingTransaction.categoryId,
         date: input.date ?? existingTransaction.date,
         notes: input.notes !== undefined ? input.notes : existingTransaction.notes,
@@ -321,6 +326,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       try {
         const updateData: Record<string, unknown> = {};
         if (input.amount !== undefined) updateData.amount = input.amount;
+        if (input.type !== undefined) updateData.type = input.type;
         if (input.categoryId !== undefined) updateData.category_id = input.categoryId;
         if (input.date !== undefined) {
           // Use local date format to avoid timezone issues

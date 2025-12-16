@@ -33,6 +33,7 @@ export const transactionSchema = z.object({
   amount: z
     .number({ error: 'Please enter a valid amount' })
     .positive('Amount must be greater than 0'),
+  type: z.enum(['expense', 'income']),
   categoryId: z.string().min(1, 'Please select a category'),
   date: z.date(),
   notes: z.string().optional(),
