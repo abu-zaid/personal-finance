@@ -82,7 +82,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     }
   }, [user, supabase]);
 
-  // Fetch categories from Supabase
+  // Fetch categories from Supabase with timeout
   const fetchCategories = useCallback(async () => {
     if (!user || !supabase) {
       setCategories([]);
@@ -94,11 +94,18 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       setError(null);
 
+      // Add timeout to prevent hanging on slow connections
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const { data, error: fetchError } = await supabase
         .from('categories')
         .select('*')
         .eq('user_id', user.id)
-        .order('sort_order', { ascending: true });
+        .order('sort_order', { ascending: true })
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
 
       if (fetchError) {
         throw fetchError;

@@ -100,7 +100,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     return count || 0;
   }, [user, supabase]);
 
-  // Fetch transactions from Supabase with pagination
+  // Fetch transactions from Supabase with pagination and timeout
   const fetchTransactions = useCallback(async (page: number = 0, append: boolean = false) => {
     if (!user || !supabase) {
       setRawTransactions([]);
@@ -117,12 +117,19 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
+      // Add timeout to prevent hanging on slow connections
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const { data, error: fetchError } = await supabase
         .from('transactions')
         .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: false })
-        .range(from, to);
+        .range(from, to)
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
 
       if (fetchError) {
         throw fetchError;
@@ -134,9 +141,8 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         setRawTransactions((prev) => [...prev, ...mappedTransactions]);
       } else {
         setRawTransactions(mappedTransactions);
-        // Fetch total count on initial load
-        const count = await fetchCount();
-        setTotalCount(count);
+        // Fetch total count on initial load (don't block on this)
+        fetchCount().then(count => setTotalCount(count)).catch(() => {});
       }
       
       setHasMore(mappedTransactions.length === PAGE_SIZE);
