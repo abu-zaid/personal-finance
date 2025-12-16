@@ -53,34 +53,6 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
   
   const supabase = createClient();
 
-  // Create default categories for new users
-  const createDefaultCategories = useCallback(async () => {
-    if (!user || !supabase) return;
-
-    const categoriesToCreate = DEFAULT_CATEGORIES.map((cat, index) => ({
-      user_id: user.id,
-      name: cat.name,
-      icon: cat.icon,
-      color: cat.color,
-      is_default: true,
-      sort_order: index,
-    }));
-
-    const { data, error } = await supabase
-      .from('categories')
-      .insert(categoriesToCreate)
-      .select();
-
-    if (error) {
-      console.error('Error creating default categories:', error);
-      return;
-    }
-
-    if (data) {
-      const mappedCategories = data.map(mapDbToCategory);
-      setCategories(mappedCategories);
-    }
-  }, [user, supabase]);
 
   // Fetch categories from Supabase with timeout
   const fetchCategories = useCallback(async () => {
@@ -113,9 +85,9 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
 
       const mappedCategories = (data || []).map(mapDbToCategory);
       
-      // If no categories exist, create default ones
+      // If no categories exist, just set empty (default categories handled by Supabase trigger)
       if (mappedCategories.length === 0) {
-        await createDefaultCategories();
+        setCategories([]);
         return;
       }
       
@@ -127,7 +99,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [user, supabase, createDefaultCategories]);
+  }, [user, supabase]);
 
   // Load categories when user changes
   useEffect(() => {
