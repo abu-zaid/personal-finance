@@ -27,7 +27,7 @@ const navItems = [
 const navItemVariants: Variants = {
   inactive: { scale: 1 },
   active: { scale: 1 },
-  tap: { scale: 0.9 },
+  tap: { scale: 0.92 },
 };
 
 const iconVariants: Variants = {
@@ -36,25 +36,16 @@ const iconVariants: Variants = {
 };
 
 const indicatorVariants: Variants = {
-  initial: {
-    scale: 0.85,
-    opacity: 0,
-  },
+  initial: { scale: 0.9, opacity: 0 },
   animate: {
     scale: 1,
     opacity: 1,
-    transition: {
-      type: 'spring',
-      stiffness: 500,
-      damping: 30,
-    },
+    transition: { type: 'spring', stiffness: 420, damping: 28 },
   },
   exit: {
-    scale: 0.85,
+    scale: 0.9,
     opacity: 0,
-    transition: {
-      duration: 0.15,
-    },
+    transition: { duration: 0.15 },
   },
 };
 
@@ -86,8 +77,8 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
             rounded-[28px]
             bg-white/80 dark:bg-[#101010]/80
             backdrop-blur-2xl
-            shadow-[0_8px_30px_rgba(0,0,0,0.12)]
-            dark:shadow-[0_16px_40px_rgba(0,0,0,0.45)]
+            shadow-[0_10px_36px_rgba(0,0,0,0.14)]
+            dark:shadow-[0_18px_48px_rgba(0,0,0,0.5)]
             pb-safe
           "
           style={{
@@ -95,54 +86,51 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
             WebkitBackdropFilter: 'blur(24px) saturate(180%)',
           }}
         >
-          {/* Floating Add Button */}
-          <motion.button
-            onClick={handleAddClick}
-            whileTap={{ scale: 0.92 }}
-            className="
-              absolute
-              -top-7
-              left-1/2
-              -translate-x-1/2
-              z-20
-              flex
-              items-center
-              justify-center
-            "
-          >
-            <motion.div
-              className="flex items-center justify-center w-14 h-14 rounded-full"
-              style={{
-                background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-                boxShadow:
-                  '0 12px 24px rgba(152,239,90,0.35), 0 6px 12px rgba(0,0,0,0.25)',
-              }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Plus className="h-7 w-7 text-[#101010]" strokeWidth={2.75} />
-            </motion.div>
-          </motion.button>
-
-          {/* Nav Items */}
-          <div className="flex items-center justify-around h-[64px] px-3">
+          <div className="flex items-center justify-around h-[72px] px-4 pt-1 pb-2">
             {navItems.map((item) => {
-              if (item.highlight) {
-                return <div key={item.id} className="w-10" />;
-              }
-
               const isActive =
                 item.href &&
                 (pathname === item.href || pathname.startsWith(item.href + '/'));
 
               const Icon = item.icon;
 
+              // Add Button (Blended)
+              if (item.highlight) {
+                return (
+                  <motion.button
+                    key={item.id}
+                    onClick={handleAddClick}
+                    variants={navItemVariants}
+                    initial="inactive"
+                    whileTap="tap"
+                    className="relative flex flex-col items-center justify-center gap-2 tap-target"
+                  >
+                    <motion.div
+                      className="flex items-center justify-center w-11 h-11 rounded-xl"
+                      style={{
+                        background:
+                          'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
+                        boxShadow: '0 6px 16px rgba(152,239,90,0.28)',
+                      }}
+                    >
+                      <Icon
+                        className="h-5 w-5 text-[#101010]"
+                        strokeWidth={2.75}
+                      />
+                    </motion.div>
+                    <span className="text-[11px] font-medium text-[#98EF5A] leading-none">
+                      Add
+                    </span>
+                  </motion.button>
+                );
+              }
+
               return (
                 <Link
                   key={item.id}
                   href={item.href!}
                   onClick={handleNavClick}
-                  className="relative flex flex-col items-center justify-center gap-1 tap-target"
+                  className="relative flex flex-col items-center justify-center gap-2 tap-target"
                 >
                   <motion.div
                     variants={navItemVariants}
@@ -167,7 +155,7 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                     <motion.div
                       variants={iconVariants}
                       animate={isActive ? 'active' : 'inactive'}
-                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      transition={{ type: 'spring', stiffness: 360, damping: 26 }}
                       className="relative z-10"
                     >
                       <Icon
@@ -185,7 +173,7 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                   <motion.span
                     animate={{ opacity: isActive ? 1 : 0.6 }}
                     transition={{ duration: 0.2 }}
-                    className="text-[10px] text-muted-foreground"
+                    className="text-[11px] text-muted-foreground leading-none"
                   >
                     {item.label}
                   </motion.span>
