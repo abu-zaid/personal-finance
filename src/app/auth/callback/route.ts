@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -22,16 +21,22 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/login?error=supabase_not_configured`);
     }
 
-    const cookieStore = await cookies();
-    
+    // Create response that we'll use for the redirect - cookies will be set on this
+    const redirectPath = next.startsWith('/') ? next : `/${next}`;
+    const redirectUrl = `${origin}${redirectPath}`;
+    let response = NextResponse.redirect(redirectUrl);
+
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          return request.headers.get('cookie')?.split('; ').map(cookie => {
+            const [name, ...rest] = cookie.split('=');
+            return { name, value: rest.join('=') };
+          }) ?? [];
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
+            response.cookies.set(name, value, options);
           });
         },
       },
@@ -40,9 +45,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (!error) {
-      // Ensure next path starts with /
-      const redirectPath = next.startsWith('/') ? next : `/${next}`;
-      return NextResponse.redirect(`${origin}${redirectPath}`);
+      return response;
     }
     
     console.error('Auth callback error:', error.message);
