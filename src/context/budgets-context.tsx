@@ -137,7 +137,7 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, user, fetchBudgets]);
 
-  // Subscribe to realtime changes
+  // Subscribe to realtime changes - handle budget changes incrementally
   useEffect(() => {
     if (!user || !supabase) return;
 
@@ -151,12 +151,21 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
           table: 'budgets',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          fetchBudgets();
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id;
+            setBudgets((prev) => prev.filter(b => b.id !== deletedId));
+          } else {
+            // For INSERT/UPDATE, refetch to get allocations
+            fetchBudgets();
+          }
         }
       )
       .subscribe();
 
+    // For allocations, we need to refetch since they're linked to budgets
+    // But debounce to avoid multiple rapid refetches
+    let allocationsTimeout: NodeJS.Timeout | null = null;
     const allocationsChannel = supabase
       .channel('allocations-changes')
       .on(
@@ -167,12 +176,17 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
           table: 'budget_allocations',
         },
         () => {
-          fetchBudgets();
+          // Debounce allocation changes
+          if (allocationsTimeout) clearTimeout(allocationsTimeout);
+          allocationsTimeout = setTimeout(() => {
+            fetchBudgets();
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      if (allocationsTimeout) clearTimeout(allocationsTimeout);
       supabase.removeChannel(budgetsChannel);
       supabase.removeChannel(allocationsChannel);
     };

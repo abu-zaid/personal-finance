@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, useMemo, ReactNode } from 'react';
 import { Category, CreateCategoryInput, UpdateCategoryInput } from '@/types';
 import { useAuth } from '@/context/auth-context';
 import { createClient } from '@/lib/supabase/client';
@@ -8,6 +8,7 @@ import { DEFAULT_CATEGORIES } from '@/lib/constants';
 
 interface CategoriesContextType {
   categories: Category[];
+  categoriesMap: Map<string, Category>;
   isLoading: boolean;
   error: string | null;
   createCategory: (input: CreateCategoryInput) => Promise<Category>;
@@ -131,7 +132,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, user, fetchCategories]);
 
-  // Subscribe to realtime changes
+  // Subscribe to realtime changes - handle incrementally instead of refetching
   useEffect(() => {
     if (!user || !supabase) return;
 
@@ -145,9 +146,23 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
           table: 'categories',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          // Refetch on any change
-          fetchCategories();
+        (payload) => {
+          // Handle changes incrementally
+          if (payload.eventType === 'INSERT') {
+            const newCat = mapDbToCategory(payload.new as Parameters<typeof mapDbToCategory>[0]);
+            setCategories((prev) => {
+              if (prev.some(c => c.id === newCat.id)) return prev;
+              return [...prev, newCat];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedCat = mapDbToCategory(payload.new as Parameters<typeof mapDbToCategory>[0]);
+            setCategories((prev) =>
+              prev.map(c => c.id === updatedCat.id ? updatedCat : c)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id;
+            setCategories((prev) => prev.filter(c => c.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -155,7 +170,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, supabase, fetchCategories]);
+  }, [user, supabase]);
 
   const createCategory = useCallback(
     async (input: CreateCategoryInput): Promise<Category> => {
@@ -235,17 +250,23 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     [user, supabase]
   );
 
+  // Create a memoized Map for O(1) lookups
+  const categoriesMap = useMemo(() => {
+    return new Map(categories.map(cat => [cat.id, cat]));
+  }, [categories]);
+
   const getCategoryById = useCallback(
     (id: string): Category | undefined => {
-      return categories.find((cat) => cat.id === id);
+      return categoriesMap.get(id);
     },
-    [categories]
+    [categoriesMap]
   );
 
   return (
     <CategoriesContext.Provider
       value={{
         categories,
+        categoriesMap,
         isLoading,
         error,
         createCategory,

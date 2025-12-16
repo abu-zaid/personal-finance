@@ -54,16 +54,20 @@ export default function DashboardPage() {
     });
   }, [transactions, currentMonth]);
 
-  const spendingByCategory = categories.map((category) => {
-    const categoryTransactions = currentMonthTransactions.filter(
-      (t) => t.categoryId === category.id
-    );
-    const amount = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
-    return { categoryId: category.id, amount };
-  });
+  const spendingByCategory = useMemo(() => {
+    return categories.map((category) => {
+      const categoryTransactions = currentMonthTransactions.filter(
+        (t) => t.categoryId === category.id
+      );
+      const amount = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
+      return { categoryId: category.id, amount };
+    });
+  }, [categories, currentMonthTransactions]);
 
   // Filter for display (only categories with spending)
-  const spendingByCategoryFiltered = spendingByCategory.filter((item) => item.amount > 0);
+  const spendingByCategoryFiltered = useMemo(() => {
+    return spendingByCategory.filter((item) => item.amount > 0);
+  }, [spendingByCategory]);
 
   // Calculate total budget and spent
   const totalBudget = currentMonthBudget?.totalAmount ?? 0;

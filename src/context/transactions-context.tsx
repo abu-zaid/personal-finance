@@ -73,7 +73,7 @@ function generateTempId(): string {
 
 export function TransactionsProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
-  const { getCategoryById } = useCategories();
+  const { categoriesMap } = useCategories();
   const [rawTransactions, setRawTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +178,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
           event: '*',
           schema: 'public',
           table: 'transactions',
-          filter: `user_id=eq.\${user.id}`,
+          filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
           // Handle realtime updates for external changes
@@ -207,10 +207,10 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     };
   }, [user, supabase]);
 
-  // Enrich transactions with category data
+  // Enrich transactions with category data - use Map for O(1) lookups
   const transactions: TransactionWithCategory[] = useMemo(() => {
     return rawTransactions.map((t) => {
-      const category = getCategoryById(t.categoryId);
+      const category = categoriesMap.get(t.categoryId);
       return {
         ...t,
         category: category
@@ -228,7 +228,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
             },
       };
     });
-  }, [rawTransactions, getCategoryById]);
+  }, [rawTransactions, categoriesMap]);
 
   // Create transaction with optimistic update
   const createTransaction = useCallback(
