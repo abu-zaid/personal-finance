@@ -36,7 +36,7 @@ import {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { categories } = useCategories();
-  const { transactions, getMonthlyTotal } = useTransactions();
+  const { transactions, getMonthlyTotal, getMonthlyIncome, getMonthlyExpenses } = useTransactions();
   const { getBudgetByMonth } = useBudgets();
   const { formatCurrency } = useCurrency();
 
@@ -46,11 +46,11 @@ export default function DashboardPage() {
   // Get current month budget
   const currentMonthBudget = getBudgetByMonth(currentMonth);
 
-  // Calculate spending by category for current month
+  // Calculate spending by category for current month (expenses only)
   const currentMonthTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const transactionMonth = getMonthString(new Date(t.date));
-      return transactionMonth === currentMonth;
+      return transactionMonth === currentMonth && t.type === 'expense';
     });
   }, [transactions, currentMonth]);
 
@@ -69,26 +69,28 @@ export default function DashboardPage() {
     return spendingByCategory.filter((item) => item.amount > 0);
   }, [spendingByCategory]);
 
-  // Calculate total budget and spent
+  // Calculate totals
   const totalBudget = currentMonthBudget?.totalAmount ?? 0;
-  const totalSpent = getMonthlyTotal(currentMonth);
-  const previousMonthSpent = getMonthlyTotal(previousMonth);
-  const budgetRemaining = totalBudget - totalSpent; // Allow negative values
+  const totalSpent = getMonthlyExpenses(currentMonth);
+  const totalIncome = getMonthlyIncome(currentMonth);
+  const previousMonthSpent = getMonthlyExpenses(previousMonth);
+  const budgetRemaining = totalBudget - totalSpent;
   const budgetUsage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
   const hasBudget = totalBudget > 0;
+  const netBalance = totalIncome - totalSpent;
 
   // Month-over-month change
   const monthChange = previousMonthSpent > 0
     ? ((totalSpent - previousMonthSpent) / previousMonthSpent) * 100
     : 0;
 
-  // Last 7 days spending
+  // Last 7 days spending (expenses only)
   const last7DaysSpending = useMemo(() => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
       const date = startOfDay(subDays(new Date(), i));
       const dayTransactions = transactions.filter((t) =>
-        isSameDay(new Date(t.date), date)
+        isSameDay(new Date(t.date), date) && t.type === 'expense'
       );
       const total = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
       days.push({

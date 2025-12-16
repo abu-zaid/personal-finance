@@ -271,20 +271,91 @@ export const TransactionModal = memo(function TransactionModal({
                   />
                 </PopoverContent>
               </Popover>
-              <div className="relative w-[120px]">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="time"
-                  className="pl-9"
-                  value={selectedDate ? format(selectedDate, 'HH:mm') : ''}
-                  onChange={(e) => {
-                    const [hours, minutes] = e.target.value.split(':').map(Number);
-                    const newDate = new Date(selectedDate || new Date());
-                    newDate.setHours(hours, minutes);
-                    setValue('date', newDate, { shouldDirty: true });
-                  }}
-                />
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-[110px] justify-start text-left font-normal"
+                  >
+                    <Clock className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, 'h:mm a') : 'Time'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3" align="start">
+                  <div className="flex gap-2">
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-xs text-muted-foreground">Hour</Label>
+                      <Select
+                        value={selectedDate ? String(selectedDate.getHours() % 12 || 12) : '12'}
+                        onValueChange={(val) => {
+                          const newDate = new Date(selectedDate || new Date());
+                          const isPM = newDate.getHours() >= 12;
+                          let hour = parseInt(val);
+                          if (isPM && hour !== 12) hour += 12;
+                          if (!isPM && hour === 12) hour = 0;
+                          newDate.setHours(hour);
+                          setValue('date', newDate, { shouldDirty: true });
+                        }}
+                      >
+                        <SelectTrigger className="w-[70px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((h) => (
+                            <SelectItem key={h} value={String(h)}>{h}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-xs text-muted-foreground">Min</Label>
+                      <Select
+                        value={selectedDate ? String(Math.floor(selectedDate.getMinutes() / 5) * 5).padStart(2, '0') : '00'}
+                        onValueChange={(val) => {
+                          const newDate = new Date(selectedDate || new Date());
+                          newDate.setMinutes(parseInt(val));
+                          setValue('date', newDate, { shouldDirty: true });
+                        }}
+                      >
+                        <SelectTrigger className="w-[70px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                            <SelectItem key={m} value={String(m).padStart(2, '0')}>
+                              {String(m).padStart(2, '0')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-xs text-muted-foreground">AM/PM</Label>
+                      <Select
+                        value={selectedDate && selectedDate.getHours() >= 12 ? 'PM' : 'AM'}
+                        onValueChange={(val) => {
+                          const newDate = new Date(selectedDate || new Date());
+                          const currentHour = newDate.getHours();
+                          if (val === 'PM' && currentHour < 12) {
+                            newDate.setHours(currentHour + 12);
+                          } else if (val === 'AM' && currentHour >= 12) {
+                            newDate.setHours(currentHour - 12);
+                          }
+                          setValue('date', newDate, { shouldDirty: true });
+                        }}
+                      >
+                        <SelectTrigger className="w-[70px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AM">AM</SelectItem>
+                          <SelectItem value="PM">PM</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 

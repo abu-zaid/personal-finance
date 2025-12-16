@@ -35,6 +35,8 @@ interface TransactionsContextType {
   ) => TransactionWithCategory[];
   getTransactionsByMonth: (month: string) => TransactionWithCategory[];
   getMonthlyTotal: (month: string) => number;
+  getMonthlyExpenses: (month: string) => number;
+  getMonthlyIncome: (month: string) => number;
   getCategoryTotal: (categoryId: string, month?: string) => number;
   refetch: () => Promise<void>;
 }
@@ -536,16 +538,38 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     [transactions]
   );
 
-  const getMonthlyTotal = useCallback(
+  // Get total expenses for a month
+  const getMonthlyExpenses = useCallback(
     (month: string): number => {
-      return getTransactionsByMonth(month).reduce((sum, t) => sum + t.amount, 0);
+      return getTransactionsByMonth(month)
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
     },
     [getTransactionsByMonth]
   );
 
+  // Get total income for a month
+  const getMonthlyIncome = useCallback(
+    (month: string): number => {
+      return getTransactionsByMonth(month)
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+    },
+    [getTransactionsByMonth]
+  );
+
+  // Get net total (income - expenses) for a month - DEPRECATED: use getMonthlyExpenses for budget tracking
+  const getMonthlyTotal = useCallback(
+    (month: string): number => {
+      // For backward compatibility, return expenses only (used for budget tracking)
+      return getMonthlyExpenses(month);
+    },
+    [getMonthlyExpenses]
+  );
+
   const getCategoryTotal = useCallback(
     (categoryId: string, month?: string): number => {
-      let filtered = transactions.filter((t) => t.categoryId === categoryId);
+      let filtered = transactions.filter((t) => t.categoryId === categoryId && t.type === 'expense');
       if (month) {
         filtered = filtered.filter((t) => getMonthString(t.date) === month);
       }
@@ -575,6 +599,8 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         getFilteredTransactions,
         getTransactionsByMonth,
         getMonthlyTotal,
+        getMonthlyExpenses,
+        getMonthlyIncome,
         getCategoryTotal,
         refetch,
       }}
