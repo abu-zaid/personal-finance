@@ -3,7 +3,7 @@
 import { useState, memo, useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CalendarIcon, Loader2, Pencil, Plus } from 'lucide-react';
+import { CalendarIcon, Clock, Loader2, Pencil, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -200,29 +200,52 @@ export const TransactionModal = memo(function TransactionModal({
 
           {/* Date */}
           <div className="space-y-2">
-            <Label>Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'w-full justify-start text-left font-normal',
-                    !selectedDate && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setValue('date', date, { shouldDirty: true })}
-                  initialFocus
+            <Label>Date & Time</Label>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'flex-1 justify-start text-left font-normal',
+                      !selectedDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, 'MMM d, yyyy') : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        // Preserve the current time when changing date
+                        const currentTime = selectedDate || new Date();
+                        date.setHours(currentTime.getHours(), currentTime.getMinutes());
+                        setValue('date', date, { shouldDirty: true });
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <div className="relative w-[120px]">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="time"
+                  className="pl-9"
+                  value={selectedDate ? format(selectedDate, 'HH:mm') : ''}
+                  onChange={(e) => {
+                    const [hours, minutes] = e.target.value.split(':').map(Number);
+                    const newDate = new Date(selectedDate || new Date());
+                    newDate.setHours(hours, minutes);
+                    setValue('date', newDate, { shouldDirty: true });
+                  }}
                 />
-              </PopoverContent>
-            </Popover>
+              </div>
+            </div>
           </div>
 
           {/* Notes */}

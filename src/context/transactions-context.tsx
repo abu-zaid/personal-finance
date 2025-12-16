@@ -253,13 +253,18 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       setTotalCount((prev) => prev + 1);
 
       try {
+        // Use local date format to avoid timezone issues
+        const localDate = `${input.date.getFullYear()}-${String(input.date.getMonth() + 1).padStart(2, '0')}-${String(input.date.getDate()).padStart(2, '0')}`;
+        const localTime = `${String(input.date.getHours()).padStart(2, '0')}:${String(input.date.getMinutes()).padStart(2, '0')}:00`;
+        const dateTimeString = `${localDate}T${localTime}`;
+        
         const { data, error: insertError } = await supabase
           .from('transactions')
           .insert({
             user_id: user.id,
             amount: input.amount,
             category_id: input.categoryId,
-            date: input.date.toISOString().split('T')[0],
+            date: dateTimeString,
             notes: input.notes || null,
           })
           .select()
@@ -317,7 +322,13 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         const updateData: Record<string, unknown> = {};
         if (input.amount !== undefined) updateData.amount = input.amount;
         if (input.categoryId !== undefined) updateData.category_id = input.categoryId;
-        if (input.date !== undefined) updateData.date = input.date.toISOString().split('T')[0];
+        if (input.date !== undefined) {
+          // Use local date format to avoid timezone issues
+          const d = input.date;
+          const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const localTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:00`;
+          updateData.date = `${localDate}T${localTime}`;
+        }
         if (input.notes !== undefined) updateData.notes = input.notes || null;
 
         const { data, error: updateError } = await supabase
