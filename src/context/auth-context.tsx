@@ -60,50 +60,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createClient();
   const isConfigured = supabase !== null;
 
-  // Fetch user preferences from Supabase with timeout
-  const fetchPreferences = useCallback(async (userId: string): Promise<UserPreferences> => {
-    if (!supabase) return defaultPreferences;
-
-    try {
-      // Add timeout to prevent hanging on slow mobile connections
-      const timeoutPromise = new Promise<null>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 5000)
-      );
-      
-      const fetchPromise = supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      const result = await Promise.race([fetchPromise, timeoutPromise]);
-      
-      if (!result || 'error' in result && result.error) {
-        // If no preferences exist, they'll be created by the database trigger
-        console.log('No preferences found, using defaults');
-        return defaultPreferences;
-      }
-
-      return mapDbToPreferences(result.data);
-    } catch (err) {
-      console.log('Error fetching preferences, using defaults:', err);
-      return defaultPreferences;
-    }
-  }, [supabase]);
-
-  // Convert Supabase user to our User type
-  const mapSupabaseUser = useCallback(async (supaUser: SupabaseUser): Promise<User> => {
-    const preferences = await fetchPreferences(supaUser.id);
+  // Convert Supabase user to our User type (without preferences - instant)
+  const mapSupabaseUserQuick = useCallback((supaUser: SupabaseUser): User => {
     return {
       id: supaUser.id,
       email: supaUser.email || '',
       name: supaUser.user_metadata?.full_name || supaUser.user_metadata?.name || supaUser.email?.split('@')[0] || 'User',
       avatarUrl: supaUser.user_metadata?.avatar_url || supaUser.user_metadata?.picture,
-      preferences,
+      preferences: defaultPreferences,
       createdAt: new Date(supaUser.created_at),
       updatedAt: new Date(supaUser.updated_at || supaUser.created_at),
     };
-  }, [fetchPreferences]);
+  }, []);
+
+  // Fetch user preferences from Supabase (background, non-blocking)
+  const fetchAndUpdatePreferences = useCallback(async (userId: string) => {
+    if (!supabase) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (!error && data) {
+        const prefs = mapDbToPreferences(data);
+        setUser(prev => prev ? { ...prev, preferences: prefs } : null);
+      }
+    } catch {
+      // Preferences will use defaults, that's fine
+    }
+  }, [supabase]);
 
   // Initialize auth state
   useEffect(() => {
@@ -116,61 +104,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     const initAuth = async () => {
       try {
-        // Add timeout for the entire auth initialization (8 seconds max)
-        const timeoutPromise = new Promise<null>((_, reject) =>
-          setTimeout(() => reject(new Error('Auth timeout')), 8000)
-        );
+        const { data: { session } } = await supabase.auth.getSession();
         
-        const authPromise = (async () => {
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session?.user && isMounted) {
-            setSupabaseUser(session.user);
-            // Try to get preferences, but don't block on failure
-            try {
-              const mappedUser = await mapSupabaseUser(session.user);
-              if (isMounted) setUser(mappedUser);
-            } catch {
-              // Fallback to user without preferences
-              if (isMounted) {
-                setUser({
-                  id: session.user.id,
-                  email: session.user.email || '',
-                  name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-                  avatarUrl: session.user.user_metadata?.avatar_url,
-                  preferences: defaultPreferences,
-                  createdAt: new Date(session.user.created_at),
-                  updatedAt: new Date(),
-                });
-              }
-            }
-          }
-          return true;
-        })();
-        
-        await Promise.race([authPromise, timeoutPromise]);
+        if (session?.user && isMounted) {
+          setSupabaseUser(session.user);
+          // Set user immediately with defaults
+          setUser(mapSupabaseUserQuick(session.user));
+          // Fetch preferences in background (non-blocking)
+          fetchAndUpdatePreferences(session.user.id);
+        }
       } catch (error) {
         console.error('Error loading auth:', error);
-        // On timeout or error, check if there's a session anyway
-        if (isMounted) {
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-              setSupabaseUser(session.user);
-              setUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-                avatarUrl: session.user.user_metadata?.avatar_url,
-                preferences: defaultPreferences,
-                createdAt: new Date(session.user.created_at),
-                updatedAt: new Date(),
-              });
-            }
-          } catch {
-            // Ignore secondary errors
-          }
-        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -181,31 +125,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        try {
-          if (session?.user) {
-            setSupabaseUser(session.user);
-            const mappedUser = await mapSupabaseUser(session.user);
-            setUser(mappedUser);
-          } else {
-            setSupabaseUser(null);
-            setUser(null);
-          }
-        } catch (error) {
-          console.error('Error in auth state change:', error);
-          // Still set user from session even if preferences fail
-          if (session?.user) {
-            setSupabaseUser(session.user);
-            setUser({
-              id: session.user.id,
-              email: session.user.email || '',
-              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-              avatarUrl: session.user.user_metadata?.avatar_url,
-              preferences: defaultPreferences,
-              createdAt: new Date(session.user.created_at),
-              updatedAt: new Date(),
-            });
-          }
-        } finally {
+        console.log('Auth state change:', event);
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          // Set user immediately with defaults
+          setUser(mapSupabaseUserQuick(session.user));
+          setIsLoading(false);
+          // Fetch preferences in background (non-blocking)
+          fetchAndUpdatePreferences(session.user.id);
+        } else {
+          setSupabaseUser(null);
+          setUser(null);
           setIsLoading(false);
         }
       }
@@ -215,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [supabase, mapSupabaseUser]);
+  }, [supabase, mapSupabaseUserQuick, fetchAndUpdatePreferences]);
 
   const signInWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     if (!supabase) {
