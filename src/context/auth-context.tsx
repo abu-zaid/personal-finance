@@ -112,19 +112,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let isMounted = true;
+    
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Add timeout for the entire auth initialization (8 seconds max)
+        const timeoutPromise = new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('Auth timeout')), 8000)
+        );
         
-        if (session?.user) {
-          setSupabaseUser(session.user);
-          const mappedUser = await mapSupabaseUser(session.user);
-          setUser(mappedUser);
-        }
+        const authPromise = (async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session?.user && isMounted) {
+            setSupabaseUser(session.user);
+            // Try to get preferences, but don't block on failure
+            try {
+              const mappedUser = await mapSupabaseUser(session.user);
+              if (isMounted) setUser(mappedUser);
+            } catch {
+              // Fallback to user without preferences
+              if (isMounted) {
+                setUser({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+                  avatarUrl: session.user.user_metadata?.avatar_url,
+                  preferences: defaultPreferences,
+                  createdAt: new Date(session.user.created_at),
+                  updatedAt: new Date(),
+                });
+              }
+            }
+          }
+          return true;
+        })();
+        
+        await Promise.race([authPromise, timeoutPromise]);
       } catch (error) {
         console.error('Error loading auth:', error);
+        // On timeout or error, check if there's a session anyway
+        if (isMounted) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              setSupabaseUser(session.user);
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+                avatarUrl: session.user.user_metadata?.avatar_url,
+                preferences: defaultPreferences,
+                createdAt: new Date(session.user.created_at),
+                updatedAt: new Date(),
+              });
+            }
+          } catch {
+            // Ignore secondary errors
+          }
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -164,6 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [supabase, mapSupabaseUser]);

@@ -12,6 +12,7 @@ import { useBudgets } from '@/context/budgets-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CategoryIcon } from '@/components/features/categories';
+import { DashboardSkeleton } from '@/components/shared';
 import {
   BalanceCard,
   BudgetOverview,
@@ -35,10 +36,13 @@ import {
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { categories } = useCategories();
-  const { transactions, getMonthlyTotal, getMonthlyIncome, getMonthlyExpenses } = useTransactions();
-  const { getBudgetByMonth } = useBudgets();
+  const { categories, isLoading: categoriesLoading } = useCategories();
+  const { transactions, isLoading: transactionsLoading, getMonthlyTotal, getMonthlyIncome, getMonthlyExpenses } = useTransactions();
+  const { getBudgetByMonth, isLoading: budgetsLoading } = useBudgets();
   const { formatCurrency } = useCurrency();
+  
+  // Combined loading state - show skeleton until all data is ready
+  const isDataLoading = categoriesLoading || transactionsLoading || budgetsLoading;
 
   const currentMonth = getMonthString(new Date());
   const previousMonth = getMonthString(subMonths(new Date(), 1));
@@ -171,6 +175,11 @@ export default function DashboardPage() {
       setGreeting('Good evening');
     }
   }, []);
+
+  // Show skeleton while data is loading
+  if (isDataLoading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <PageTransition>
