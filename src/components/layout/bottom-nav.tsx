@@ -6,22 +6,21 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
-  Home,
-  ListOrdered,
+  House,
+  ListBullets,
   Plus,
-  BarChart3,
+  ChartBar,
   Wallet,
-} from 'lucide-react';
+} from 'phosphor-react';
 
-import { cn } from '@/lib/utils';
 import { useHaptics } from '@/hooks/use-haptics';
 
 const navItems = [
-  { href: '/dashboard', icon: Home, id: 'home' },
-  { href: '/transactions', icon: ListOrdered, id: 'transactions' },
+  { href: '/dashboard', icon: House, id: 'home' },
+  { href: '/transactions', icon: ListBullets, id: 'transactions' },
   { href: null, icon: Plus, id: 'add', highlight: true },
   { href: '/budgets', icon: Wallet, id: 'budgets' },
-  { href: '/insights', icon: BarChart3, id: 'insights' },
+  { href: '/insights', icon: ChartBar, id: 'insights' },
 ];
 
 const navItemVariants: Variants = {
@@ -30,20 +29,15 @@ const navItemVariants: Variants = {
   tap: { scale: 0.92 },
 };
 
-const iconVariants: Variants = {
-  inactive: { y: 0 },
-  active: { y: -1 },
-};
-
 const indicatorVariants: Variants = {
-  initial: { scale: 0.9, opacity: 0 },
+  initial: { scale: 0.92, opacity: 0 },
   animate: {
     scale: 1,
     opacity: 1,
     transition: { type: 'spring', stiffness: 420, damping: 28 },
   },
   exit: {
-    scale: 0.9,
+    scale: 0.92,
     opacity: 0,
     transition: { duration: 0.15 },
   },
@@ -75,18 +69,22 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
             w-full
             max-w-md
             rounded-[28px]
-            bg-white/80 dark:bg-[#101010]/80
-            backdrop-blur-2xl
-            shadow-[0_10px_36px_rgba(0,0,0,0.14)]
-            dark:shadow-[0_18px_48px_rgba(0,0,0,0.5)]
+            bg-white/55 dark:bg-[#101010]/55
+            backdrop-blur-[28px]
+            shadow-[0_12px_40px_rgba(0,0,0,0.18)]
+            dark:shadow-[0_20px_56px_rgba(0,0,0,0.6)]
             pb-safe
+            overflow-hidden
           "
           style={{
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+            backdropFilter: 'blur(28px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(160%)',
           }}
         >
-          <div className="flex items-center justify-around h-[72px] px-4 pt-2 pb-3">
+          {/* subtle iOS tint layer */}
+          <div className="pointer-events-none absolute inset-0 bg-white/20 dark:bg-white/[0.04]" />
+
+          <div className="relative flex items-center justify-around h-[72px] px-4 pt-2 pb-3">
             {navItems.map((item) => {
               const isActive =
                 item.href &&
@@ -94,7 +92,7 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
 
               const Icon = item.icon;
 
-              // Add button (no label)
+              // Add button (blended, no label)
               if (item.highlight) {
                 return (
                   <motion.button
@@ -103,9 +101,9 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                     variants={navItemVariants}
                     initial="inactive"
                     whileTap="tap"
-                    className="relative flex items-center justify-center tap-target"
+                    className="flex items-center justify-center tap-target"
                   >
-                    <motion.div
+                    <div
                       className="
                         flex
                         items-center
@@ -113,18 +111,18 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                         w-12
                         h-12
                         rounded-[16px]
+                        bg-gradient-to-br
+                        from-[#98EF5A]
+                        to-[#7BEA3C]
+                        shadow-[0_6px_18px_rgba(152,239,90,0.32)]
                       "
-                      style={{
-                        background:
-                          'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-                        boxShadow: '0 6px 16px rgba(152,239,90,0.28)',
-                      }}
                     >
                       <Icon
-                        className="h-6 w-6 text-[#101010]"
-                        strokeWidth={2.75}
+                        size={26}
+                        weight="bold"
+                        className="text-[#101010]"
                       />
-                    </motion.div>
+                    </div>
                   </motion.button>
                 );
               }
@@ -134,24 +132,14 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                   key={item.id}
                   href={item.href!}
                   onClick={handleNavClick}
-                  className="relative flex items-center justify-center tap-target"
+                  className="flex items-center justify-center tap-target"
                 >
                   <motion.div
                     variants={navItemVariants}
-                    initial="inactive"
                     animate={isActive ? 'active' : 'inactive'}
                     whileTap="tap"
-                    className="
-                      relative
-                      flex
-                      items-center
-                      justify-center
-                      w-12
-                      h-12
-                      rounded-[16px]
-                    "
+                    className="relative flex items-center justify-center w-12 h-12 rounded-[16px]"
                   >
-                    {/* Active squircle background */}
                     <AnimatePresence>
                       {isActive && (
                         <motion.div
@@ -165,22 +153,17 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                       )}
                     </AnimatePresence>
 
-                    <motion.div
-                      variants={iconVariants}
-                      animate={isActive ? 'active' : 'inactive'}
-                      transition={{ type: 'spring', stiffness: 360, damping: 26 }}
-                      className="relative z-10"
-                    >
+                    <div className="relative z-10">
                       <Icon
-                        className={cn(
-                          'h-6 w-6 transition-colors duration-200',
+                        size={24}
+                        weight={isActive ? 'fill' : 'regular'}
+                        className={
                           isActive
                             ? 'text-primary-foreground'
-                            : 'text-muted-foreground'
-                        )}
-                        strokeWidth={isActive ? 2.5 : 2}
+                            : 'text-muted-foreground/70'
+                        }
                       />
-                    </motion.div>
+                    </div>
                   </motion.div>
                 </Link>
               );
