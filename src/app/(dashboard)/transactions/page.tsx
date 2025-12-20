@@ -242,251 +242,257 @@ export default function TransactionsPage() {
   ].filter(Boolean).length;
 
   return (
-    <PageTransition className="w-full pb-24 space-y-4 overflow-x-hidden">
+    <PageTransition className="flex flex-col h-full w-full overflow-hidden bg-background">
 
-      {/* --- HEADER --- */}
-      <div className="flex flex-col gap-2 sticky top-0 bg-background/95 backdrop-blur-md z-40 py-3 border-b md:border-none duration-200 transition-all">
-
-        {/* Top Bar */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
-            <p className="text-muted-foreground text-sm">
-              {selectedCategoryIds.length > 0 ? (
-                <span>
-                  {selectedCategoryIds.length === 1
-                    ? categories.find(c => c.id === selectedCategoryIds[0])?.name
-                    : `${selectedCategoryIds.length} categories`}
-                  {' • '}
-                  <span className={cn(stats.expense > 0 ? "text-red-500" : "text-green-500")}>
-                    {stats.expense > 0 ? formatCurrency(stats.expense) : formatCurrency(stats.income)}
+      {/* --- FIXED HEADER AREA --- */}
+      <div className="flex-none z-40 bg-background border-b shadow-sm relative w-full">
+        {/* Top Bar with Padding */}
+        <div className="flex flex-col gap-3 px-4 py-3 md:px-6 md:py-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
+              <p className="text-muted-foreground text-sm">
+                {selectedCategoryIds.length > 0 ? (
+                  <span>
+                    {selectedCategoryIds.length === 1
+                      ? categories.find(c => c.id === selectedCategoryIds[0])?.name
+                      : `${selectedCategoryIds.length} categories`}
+                    {' • '}
+                    <span className="font-medium text-foreground">
+                      {/* Calculate total for selected categories */}
+                      {formatCurrency(
+                        filteredTransactions
+                          .filter(t => selectedCategoryIds.includes(t.categoryId))
+                          .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0) // Treat expense as positive cost
+                      )} spent
+                    </span>
                   </span>
-                  {' '}
-                  {stats.expense > 0 ? 'spent' : 'earned'}
-                </span>
-              ) : (
-                <span>{totalCount} entries • {formatCurrency(stats.expense)} expenses</span>
-              )}
-            </p>
-          </div>
+                ) : (
+                  `${filteredTransactions.length} entries • ${formatCurrency(stats.expense)}`
+                )}
+              </p>
+            </div>
 
-          <div className="flex items-center gap-2">
-            {/* Mobile: Filter Sheet Trigger */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="h-10 gap-2 relative">
-                  <SlidersHorizontal className="w-4 h-4" />
-                  <span className="hidden sm:inline">Filters</span>
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="h-5 px-1.5 ml-1 text-[10px] min-w-[1.25rem]">{activeFilterCount}</Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="flex flex-col max-h-[85vh] h-[85vh] sm:h-auto sm:side-right rounded-t-[20px] sm:rounded-none p-0 gap-0">
-                <div className="p-6 pb-2">
-                  <SheetHeader className="text-left">
-                    <SheetTitle>Filter & Sort</SheetTitle>
-                    <SheetDescription>Refine your transaction list</SheetDescription>
-                  </SheetHeader>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-                  {/* Search in Filter for Mobile */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Search</label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search notes, categories..."
-                        defaultValue={searchQuery}
-                        onChange={(e) => {
-                          // Simple debounce
-                          const val = e.target.value;
-                          const timeoutId = setTimeout(() => setSearchQuery(val), 300);
-                          return () => clearTimeout(timeoutId);
-                        }}
-                        className="pl-9"
-                      />
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                {/* Mobile: Filter Sheet Trigger */}
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-10 gap-2 relative">
+                      <SlidersHorizontal className="w-4 h-4" />
+                      <span className="hidden sm:inline">Filters</span>
+                      {activeFilterCount > 0 && (
+                        <Badge variant="secondary" className="h-5 px-1.5 ml-1 text-[10px] min-w-[1.25rem]">{activeFilterCount}</Badge>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="flex flex-col max-h-[85vh] h-[85vh] sm:h-auto sm:side-right rounded-t-[20px] sm:rounded-none p-0 gap-0">
+                    <div className="p-6 pb-2">
+                      <SheetHeader className="text-left">
+                        <SheetTitle>Filter & Sort</SheetTitle>
+                        <SheetDescription>Refine your transaction list</SheetDescription>
+                      </SheetHeader>
                     </div>
-                  </div>
 
-                  {/* Sort */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Sort By</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        variant={sortConfig.field === 'date' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSortConfig({ field: 'date', order: sortConfig.order === 'asc' ? 'desc' : 'asc' })}
-                      >
-                        Date {sortConfig.field === 'date' && (sortConfig.order === 'asc' ? '↑' : '↓')}
-                      </Button>
-                      <Button
-                        variant={sortConfig.field === 'amount' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSortConfig({ field: 'amount', order: sortConfig.order === 'desc' ? 'asc' : 'desc' })}
-                      >
-                        Amount {sortConfig.field === 'amount' && (sortConfig.order === 'asc' ? '↑' : '↓')}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Type */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Type</label>
-                    <div className="flex p-1 bg-muted rounded-lg">
-                      {['all', 'expense', 'income'].map((type) => (
-                        <button
-                          key={type}
-                          onClick={() => setSelectedType(type as any)}
-                          className={cn(
-                            "flex-1 py-1.5 text-sm font-medium rounded-md capitalize transition-all",
-                            selectedType === type ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          {type}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Categories */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Categories</label>
-                    <div className="flex flex-wrap gap-2">
-                      {categories.map(cat => {
-                        const isSelected = selectedCategoryIds.includes(cat.id);
-                        return (
-                          <Badge
-                            key={cat.id}
-                            variant={isSelected ? 'default' : 'outline'}
-                            className="cursor-pointer"
-                            style={isSelected ? { backgroundColor: cat.color, color: '#000' } : {}}
-                            onClick={() => {
-                              if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
-                              else setSelectedCategoryIds(prev => [...prev, cat.id]);
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+                      {/* Search in Filter for Mobile */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Search</label>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search notes, categories..."
+                            defaultValue={searchQuery}
+                            onChange={(e) => {
+                              // Simple debounce
+                              const val = e.target.value;
+                              const timeoutId = setTimeout(() => setSearchQuery(val), 300);
+                              return () => clearTimeout(timeoutId);
                             }}
+                            className="pl-9"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sort */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Sort By</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant={sortConfig.field === 'date' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setSortConfig({ field: 'date', order: sortConfig.order === 'asc' ? 'desc' : 'asc' })}
                           >
-                            {cat.name}
-                          </Badge>
-                        )
-                      })}
+                            Date {sortConfig.field === 'date' && (sortConfig.order === 'asc' ? '↑' : '↓')}
+                          </Button>
+                          <Button
+                            variant={sortConfig.field === 'amount' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setSortConfig({ field: 'amount', order: sortConfig.order === 'desc' ? 'asc' : 'desc' })}
+                          >
+                            Amount {sortConfig.field === 'amount' && (sortConfig.order === 'asc' ? '↑' : '↓')}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Type */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Type</label>
+                        <div className="flex p-1 bg-muted rounded-lg">
+                          {['all', 'expense', 'income'].map((type) => (
+                            <button
+                              key={type}
+                              onClick={() => setSelectedType(type as any)}
+                              className={cn(
+                                "flex-1 py-1.5 text-sm font-medium rounded-md capitalize transition-all",
+                                selectedType === type ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Categories */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Categories</label>
+                        <div className="flex flex-wrap gap-2">
+                          {categories.map(cat => {
+                            const isSelected = selectedCategoryIds.includes(cat.id);
+                            return (
+                              <Badge
+                                key={cat.id}
+                                variant={isSelected ? 'default' : 'outline'}
+                                className="cursor-pointer"
+                                style={isSelected ? { backgroundColor: cat.color, color: '#000' } : {}}
+                                onClick={() => {
+                                  if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                                  else setSelectedCategoryIds(prev => [...prev, cat.id]);
+                                }}
+                              >
+                                {cat.name}
+                              </Badge>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Date Range - Simplistic for now */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Timeframe</label>
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setDateRange({ from: undefined, to: undefined })}>All Time</Button>
+                          <Button variant="outline" size="sm" onClick={() => setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })}>This Month</Button>
+                          <Button variant="outline" size="sm" onClick={() => setDateRange({ from: subDays(new Date(), 30), to: new Date() })}>Last 30 Days</Button>
+                        </div>
+                      </div>
+
                     </div>
-                  </div>
 
-                  {/* Date Range - Simplistic for now */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Timeframe</label>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setDateRange({ from: undefined, to: undefined })}>All Time</Button>
-                      <Button variant="outline" size="sm" onClick={() => setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })}>This Month</Button>
-                      <Button variant="outline" size="sm" onClick={() => setDateRange({ from: subDays(new Date(), 30), to: new Date() })}>Last 30 Days</Button>
+                    <div className="p-4 bg-background border-t">
+                      <SheetFooter className="flex-row gap-3 sm:justify-between w-full">
+                        <Button variant="outline" onClick={clearFilters} className="flex-1">Reset</Button>
+                        <SheetClose asChild>
+                          <Button className="flex-[2]">Show {filteredTransactions.length} Results</Button>
+                        </SheetClose>
+                      </SheetFooter>
                     </div>
-                  </div>
+                  </SheetContent>
+                </Sheet>
 
-                </div>
+                <Button
+                  variant={isBatchMode ? 'secondary' : 'outline'}
+                  size="sm"
+                  className="h-10"
+                  onClick={() => {
+                    setIsBatchMode(!isBatchMode);
+                    setSelectedIds(new Set());
+                  }}
+                >
+                  {isBatchMode ? 'Done' : 'Select'}
+                </Button>
 
-                <div className="p-4 bg-background border-t">
-                  <SheetFooter className="flex-row gap-3 sm:justify-between w-full">
-                    <Button variant="outline" onClick={clearFilters} className="flex-1">Reset</Button>
-                    <SheetClose asChild>
-                      <Button className="flex-[2]">Show {filteredTransactions.length} Results</Button>
-                    </SheetClose>
-                  </SheetFooter>
-                </div>
-              </SheetContent>
-            </Sheet>
+                <Button
+                  size="sm"
+                  className="h-10 w-10 p-0 rounded-full shadow-lg bg-gradient-to-br from-[#98EF5A] to-[#7BEA3C] hover:shadow-xl hover:scale-105 transition-all text-[#101010]"
+                  onClick={() => {
+                    setEditingTransaction(null);
+                    setModalOpen(true);
+                  }}
+                >
+                  <Plus className="h-5 w-5" strokeWidth={3} />
+                </Button>
+              </div>
+            </div>
 
-            <Button
-              variant={isBatchMode ? 'secondary' : 'outline'}
-              size="sm"
-              className="h-10"
-              onClick={() => {
-                setIsBatchMode(!isBatchMode);
-                setSelectedIds(new Set());
-              }}
-            >
-              {isBatchMode ? 'Done' : 'Select'}
-            </Button>
-
-            <Button
-              size="sm"
-              className="h-10 w-10 p-0 rounded-full shadow-lg bg-gradient-to-br from-[#98EF5A] to-[#7BEA3C] hover:shadow-xl hover:scale-105 transition-all text-[#101010]"
-              onClick={() => {
-                setEditingTransaction(null);
-                setModalOpen(true);
-              }}
-            >
-              <Plus className="h-5 w-5" strokeWidth={3} />
-            </Button>
-          </div>
-        </div>
-
-        {/* Quick Category Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide mask-fade-right w-[calc(100%+2rem)] md:w-full">
-          <button
-            onClick={() => setSelectedCategoryIds([])}
-            className={cn(
-              "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
-              selectedCategoryIds.length === 0
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background text-muted-foreground border-border"
-            )}
-          >
-            All
-          </button>
-          {categories.map(cat => {
-            const isSelected = selectedCategoryIds.includes(cat.id);
-            return (
+            {/* Quick Category Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 mt-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide mask-fade-right w-full">
               <button
-                key={cat.id}
-                onClick={() => {
-                  if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
-                  else setSelectedCategoryIds(prev => [...prev, cat.id]);
-                }}
+                onClick={() => setSelectedCategoryIds([])}
                 className={cn(
-                  "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5",
-                  isSelected
-                    ? "bg-foreground text-background border-foreground"
+                  "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+                  selectedCategoryIds.length === 0
+                    ? "bg-primary text-primary-foreground border-primary"
                     : "bg-background text-muted-foreground border-border"
                 )}
-                style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color, color: '#000' } : {}}
               >
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: isSelected ? '#000' : cat.color }} />
-                {cat.name}
+                All
               </button>
-            )
-          })}
+              {categories.map(cat => {
+                const isSelected = selectedCategoryIds.includes(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                      else setSelectedCategoryIds(prev => [...prev, cat.id]);
+                    }}
+                    className={cn(
+                      "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5",
+                      isSelected
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background text-muted-foreground border-border"
+                    )}
+                    style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color, color: '#000' } : {}}
+                  >
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: isSelected ? '#000' : cat.color }} />
+                    {cat.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* --- DESKTOP TOOLBAR (Hidden on mobile) --- */}
+          <div className="hidden md:flex gap-4 items-center">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search transactions..."
+                defaultValue={searchQuery}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const timeoutId = setTimeout(() => setSearchQuery(val), 300);
+                  return () => clearTimeout(timeoutId);
+                }}
+                className="pl-9 bg-muted/40"
+              />
+            </div>
+            {/* Helper Tags */}
+            <div className="flex gap-2">
+              {activeFilterCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-foreground">
+                  Clear Filters ({activeFilterCount})
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* --- DESKTOP TOOLBAR (Hidden on mobile) --- */}
-      <div className="hidden md:flex gap-4 items-center">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search transactions..."
-            defaultValue={searchQuery}
-            onChange={(e) => {
-              const val = e.target.value;
-              const timeoutId = setTimeout(() => setSearchQuery(val), 300);
-              return () => clearTimeout(timeoutId);
-            }}
-            className="pl-9 bg-muted/40"
-          />
-        </div>
-        {/* Helper Tags */}
-        <div className="flex gap-2">
-          {activeFilterCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-foreground">
-              Clear Filters ({activeFilterCount})
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* --- CONTENT --- */}
-      <div className="space-y-6 min-h-[50vh]">
+      {/* --- SCROLLABLE CONTENT AREA --- */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:px-6 pb-32 md:pb-6 scrollbar-hide w-full">
         {Object.keys(groupedTransactions).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
@@ -503,8 +509,8 @@ export default function TransactionsPage() {
         ) : (
           Object.entries(groupedTransactions).map(([date, list]) => (
             <div key={date} className="relative">
-              {/* Sticky Date Header - Offset for main header */}
-              <div className="sticky top-[152px] md:top-[112px] z-30 py-2 bg-background/95 backdrop-blur-sm flex items-center justify-between border-b border-border/40 mb-2 transition-all">
+              {/* Sticky Date Header - NO OFFSET NEEDED NOW */}
+              <div className="sticky top-0 z-30 py-2 bg-background/95 backdrop-blur-sm flex items-center justify-between border-b border-border/40 mb-2 transition-all">
                 <h3 className="text-sm font-semibold text-primary">{getDateLabel(new Date(date))}</h3>
                 <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
                   {formatCurrency(list.reduce((sum, t) => sum + (t.type === 'expense' ? -t.amount : t.amount), 0))}

@@ -10,6 +10,7 @@ import { BottomNav } from '@/components/layout/bottom-nav';
 import { DashboardSkeleton, ErrorBoundary } from '@/components/shared';
 import { TransactionModal } from '@/components/features/transactions';
 import { useSequenceShortcuts, useShortcuts } from '@/hooks/use-shortcuts';
+import { cn } from '@/lib/utils';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -78,7 +79,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <Sidebar onAddExpense={() => setAddExpenseOpen(true)} />
         <div className="flex flex-1 flex-col min-h-0">
           <Header title={getPageTitle()} />
-          <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 pb-[120px] md:pb-6 lg:p-6 scrollbar-hide">
+          <main className={cn(
+            "flex-1 overflow-x-hidden p-4 pb-[120px] md:pb-6 lg:p-6 scrollbar-hide",
+            pathname === '/transactions' ? "flex flex-col overflow-hidden !p-0" : "overflow-y-auto"
+          )}>
             <ErrorBoundary>
               {children}
             </ErrorBoundary>
