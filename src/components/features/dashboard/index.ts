@@ -1,5 +1,7 @@
-export { SummaryCards } from './summary-cards';
+export { BalanceCard } from './balance-card';
 export { BudgetOverview } from './budget-overview';
 export { RecentTransactions } from './recent-transactions';
 export { SpendingByCategory } from './spending-by-category';
-export { BalanceCard } from './balance-card';
+export { FinancialHealthScore } from './financial-health-score';
+export { SmartInsights } from './smart-insights';
+export { QuickActions } from './quick-actions';
