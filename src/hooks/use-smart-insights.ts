@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTransactions } from '@/context/transactions-context';
 import { useCategories } from '@/context/categories-context';
 import { useBudgets } from '@/context/budgets-context';
+import { useCurrency } from '@/hooks/use-currency';
 import { getMonthString } from '@/lib/utils';
 import { subMonths } from 'date-fns';
 
@@ -17,6 +18,7 @@ export function useSmartInsights(): SmartInsight[] {
   const { transactions, getMonthlyExpenses } = useTransactions();
   const { categories } = useCategories();
   const { getBudgetByMonth } = useBudgets();
+  const { formatCurrency } = useCurrency();
 
   const currentMonth = getMonthString(new Date());
   const previousMonth = getMonthString(subMonths(new Date(), 1));
@@ -45,8 +47,8 @@ export function useSmartInsights(): SmartInsight[] {
           insights.push({
             type: 'warning',
             title: 'Budget Alert',
-            message: `Projected to exceed budget by $${Math.round(projectedOverage)}`,
-            impact: `Reduce to $${Math.round((budget.totalAmount - currentExpenses) / daysRemaining)}/day`,
+            message: `Projected to exceed budget by ${formatCurrency(Math.round(projectedOverage))}`,
+            impact: `Reduce to ${formatCurrency(Math.round((budget.totalAmount - currentExpenses) / daysRemaining))}/day`,
           });
         }
       }
@@ -59,18 +61,27 @@ export function useSmartInsights(): SmartInsight[] {
       return { category: cat, amount };
     }).filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount);
 
-    if (categorySpending.length > 0 && currentExpenses > 0) {
+    if (categorySpending.length > 0 && currentExpenses > 0 && budget && budget.totalAmount > 0) {
       const topCategory = categorySpending[0];
       const percentage = (topCategory.amount / currentExpenses) * 100;
+      const recommendedBudget = budget.totalAmount * 0.25;
       
       if (percentage > 30) {
         const savingsOpportunity = topCategory.amount * 0.2;
+        const targetAmount = topCategory.amount * 0.8;
         insights.push({
           type: 'opportunity',
           title: 'Savings Opportunity',
           message: `${topCategory.category.name} is ${percentage.toFixed(0)}% of spending`,
-          action: 'Reduce by 20%',
-          impact: `Save $${Math.round(savingsOpportunity)}/mo`,
+          action: `Target ${formatCurrency(Math.round(targetAmount))} (20% less)`,
+          impact: `Save ${formatCurrency(Math.round(savingsOpportunity))}/mo`,
+        });
+      } else if (topCategory.amount > recommendedBudget) {
+        insights.push({
+          type: 'tip',
+          title: 'Budget Allocation',
+          message: `${topCategory.category.name}: ${formatCurrency(Math.round(topCategory.amount))}`,
+          action: `Recommended: ${formatCurrency(Math.round(recommendedBudget))} (25% of budget)`,
         });
       }
     }
@@ -97,5 +108,5 @@ export function useSmartInsights(): SmartInsight[] {
     return insights
       .sort((a, b) => priorityOrder[a.type] - priorityOrder[b.type])
       .slice(0, 3);
-  }, [transactions, categories, getMonthlyExpenses, getBudgetByMonth, currentMonth, previousMonth]);
+  }, [transactions, categories, getMonthlyExpenses, getBudgetByMonth, formatCurrency, currentMonth, previousMonth]);
 }

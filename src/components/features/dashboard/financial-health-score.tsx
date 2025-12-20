@@ -34,9 +34,18 @@ export function FinancialHealthScore() {
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="relative">
-            <svg className="w-36 h-36 -rotate-90">
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          <div className="relative flex-shrink-0">
+            <svg className="w-32 h-32 md:w-36 md:h-36 -rotate-90">
+              <circle
+                cx="64"
+                cy="64"
+                r="60"
+                stroke="currentColor"
+                strokeWidth="8"
+                fill="none"
+                className="text-muted/20 md:hidden"
+              />
               <circle
                 cx="72"
                 cy="72"
@@ -44,7 +53,21 @@ export function FinancialHealthScore() {
                 stroke="currentColor"
                 strokeWidth="8"
                 fill="none"
-                className="text-muted/20"
+                className="text-muted/20 hidden md:block"
+              />
+              <motion.circle
+                cx="64"
+                cy="64"
+                r="60"
+                stroke="currentColor"
+                strokeWidth="8"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 60}
+                className={cn(getStatusColor(), "md:hidden")}
+                initial={{ strokeDashoffset: 2 * Math.PI * 60 }}
+                animate={{ strokeDashoffset: (2 * Math.PI * 60) - (health.overall / 100) * (2 * Math.PI * 60) }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
               />
               <motion.circle
                 cx="72"
@@ -55,19 +78,19 @@ export function FinancialHealthScore() {
                 fill="none"
                 strokeLinecap="round"
                 strokeDasharray={circumference}
-                className={getStatusColor()}
+                className={cn(getStatusColor(), "hidden md:block")}
                 initial={{ strokeDashoffset: circumference }}
                 animate={{ strokeDashoffset: offset }}
                 transition={{ duration: 1.5, ease: "easeOut" }}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={cn("text-4xl font-bold", getStatusColor())}>{health.overall}</span>
+              <span className={cn("text-3xl md:text-4xl font-bold", getStatusColor())}>{health.overall}</span>
               <span className="text-xs text-muted-foreground">/ 100</span>
             </div>
           </div>
 
-          <div className="flex-1 space-y-3">
+          <div className="flex-1 w-full min-w-0 space-y-3">
             <ScoreBar label="Savings" score={health.savingsRate} icon={Sparkles} />
             <ScoreBar label="Budget" score={health.budgetAdherence} icon={Target} />
             <ScoreBar label="Trend" score={health.spendingTrend} icon={health.spendingTrend >= 50 ? TrendingDown : TrendingUp} />
