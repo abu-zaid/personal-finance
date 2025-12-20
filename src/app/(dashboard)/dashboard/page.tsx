@@ -255,24 +255,24 @@ export default function DashboardPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-5">
+      <div className="space-y-6 px-4 md:px-0">
         {/* Welcome Message - Mobile */}
         <div className="lg:hidden flex items-start justify-between">
           <div>
             <p className="text-muted-foreground/60 text-[11px] font-medium uppercase tracking-wide">{greeting},</p>
-            <h1 className="text-xl font-semibold text-foreground mt-0.5">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mt-0.5">
               {user?.name?.split(' ')[0] || 'there'} 👋
             </h1>
           </div>
           <Link href="/transactions">
             <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl shadow-lg cursor-pointer"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-lg cursor-pointer hover:scale-105 transition-transform"
               style={{
-                background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-                boxShadow: '0 0 12px rgba(152, 239, 90, 0.25)',
+                background: 'linear-gradient(135deg, #98EF5A 0%, #7BEA3C 100%)',
+                boxShadow: '0 4px 20px rgba(152, 239, 90, 0.3)',
               }}
             >
-              <Plus className="h-4 w-4 text-[#101010]" />
+              <Plus className="h-5 w-5 text-[#101010]" strokeWidth={2.5} />
             </div>
           </Link>
         </div>
@@ -280,22 +280,22 @@ export default function DashboardPage() {
         {/* Desktop Welcome */}
         <div className="hidden lg:flex lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
               {greeting}, {user?.name?.split(' ')[0] || 'there'}!
             </h2>
-            <p className="text-muted-foreground/70 mt-1">
+            <p className="text-muted-foreground/70 mt-2 text-base">
               Here&apos;s what&apos;s happening with your finances this month.
             </p>
           </div>
           <Link href="/transactions">
             <button
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-[#101010] shadow-lg transition-transform hover:scale-105"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-[#101010] shadow-lg transition-all hover:scale-105 hover:shadow-xl"
               style={{
-                background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-                boxShadow: '0 4px 16px rgba(152, 239, 90, 0.3)',
+                background: 'linear-gradient(135deg, #98EF5A 0%, #7BEA3C 100%)',
+                boxShadow: '0 8px 24px rgba(152, 239, 90, 0.35)',
               }}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-5 w-5" strokeWidth={2.5} />
               Add Expense
             </button>
           </Link>
@@ -314,40 +314,40 @@ export default function DashboardPage() {
           </StaggerItem>
         </StaggerContainer>
 
-        {/* Quick Insight Banner - Refined */}
+        {/* Quick Insight Banner - Modern */}
         <FadeIn>
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(
-              "relative overflow-hidden rounded-xl p-3 border-none flex items-center gap-3",
+              "relative overflow-hidden rounded-2xl p-4 border flex items-center gap-3 backdrop-blur-sm",
               {
-                'bg-amber-500/10 text-amber-600 dark:text-amber-400': insight.type === 'warning',
-                'bg-primary/10 text-primary-600 dark:text-primary-400': insight.type === 'success',
-                'bg-blue-500/10 text-blue-600 dark:text-blue-400': insight.type === 'info',
+                'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400': insight.type === 'warning',
+                'bg-primary/10 border-primary/20 text-primary-600 dark:text-primary-400': insight.type === 'success',
+                'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400': insight.type === 'info',
               }
             )}
           >
             <div className={cn(
-              "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg",
+              "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl",
               {
                 'bg-amber-500/20 text-amber-600': insight.type === 'warning',
                 'bg-primary/20 text-primary': insight.type === 'success',
                 'bg-blue-500/20 text-blue-500': insight.type === 'info',
               }
             )}>
-              <insight.icon className="h-4 w-4" />
+              <insight.icon className="h-5 w-5" strokeWidth={2} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] md:text-xs font-bold leading-tight uppercase tracking-wider opacity-80 mb-0.5">{insight.title}</p>
-              <p className="text-xs md:text-sm font-medium leading-tight truncate">{insight.message}</p>
+              <p className="text-xs font-bold leading-tight uppercase tracking-wider opacity-90 mb-1">{insight.title}</p>
+              <p className="text-sm font-medium leading-snug">{insight.message}</p>
             </div>
           </motion.div>
         </FadeIn>
 
         {/* 7-Day Spending Chart */}
         <FadeIn>
-          <Card>
+          <Card className="border-border/40 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-semibold">Last 7 Days</CardTitle>
@@ -445,15 +445,15 @@ export default function DashboardPage() {
         {/* Quick Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FadeIn>
-            <Card className="h-full border-none shadow-sm bg-muted/20">
-              <CardContent className="p-4 flex flex-col justify-center h-full">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-primary/20">
-                    <Zap className="h-4 w-4 text-primary" />
+            <Card className="h-full border-border/40 shadow-sm hover:shadow-md transition-all bg-gradient-to-br from-primary/5 to-primary/10">
+              <CardContent className="p-5 flex flex-col justify-center h-full">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="p-2 rounded-xl bg-primary/20">
+                    <Zap className="h-5 w-5 text-primary" strokeWidth={2} />
                   </div>
-                  <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Daily Avg</span>
+                  <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Daily Average</span>
                 </div>
-                <p className="text-2xl font-bold">
+                <p className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                   {formatCurrency(currentMonthTransactions.length > 0
                     ? totalSpent / new Date().getDate()
                     : 0
@@ -464,25 +464,27 @@ export default function DashboardPage() {
           </FadeIn>
 
           <FadeIn>
-            <Card className="h-full border-none shadow-sm bg-muted/20">
-              <CardContent className="p-4 flex flex-col justify-center h-full">
-                <div className="flex items-center gap-2 mb-2">
+            <Card className="h-full border-border/40 shadow-sm hover:shadow-md transition-all bg-gradient-to-br from-muted/30 to-muted/50">
+              <CardContent className="p-5 flex flex-col justify-center h-full">
+                <div className="flex items-center gap-2.5 mb-3">
                   {topCategory ? (
-                    <CategoryIcon
-                      icon={topCategory.category.icon}
-                      color={topCategory.category.color}
-                      size="sm"
-                    />
+                    <div className="p-2 rounded-xl" style={{ backgroundColor: `${topCategory.category.color}20` }}>
+                      <CategoryIcon
+                        icon={topCategory.category.icon}
+                        color={topCategory.category.color}
+                        size="sm"
+                      />
+                    </div>
                   ) : (
-                    <div className="p-1.5 rounded-lg bg-muted">
-                      <PiggyBank className="h-4 w-4 text-muted-foreground" />
+                    <div className="p-2 rounded-xl bg-muted">
+                      <PiggyBank className="h-5 w-5 text-muted-foreground" />
                     </div>
                   )}
-                  <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider truncate">
+                  <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider truncate">
                     {topCategory?.category.name || 'Top Spend'}
                   </span>
                 </div>
-                <p className="text-2xl font-bold">
+                <p className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                   {topCategory ? formatCurrency(topCategory.amount) : '-'}
                 </p>
               </CardContent>
