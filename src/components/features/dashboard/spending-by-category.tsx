@@ -62,9 +62,9 @@ export function SpendingByCategory({
                   whileHover={{ scale: 1.02 }}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <motion.div
-                        className="flex h-8 w-8 items-center justify-center rounded-lg transition-all"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 transition-all"
                         style={{
                           background: category?.color ? `${category.color}15` : 'var(--muted)',
                         }}
@@ -81,7 +81,7 @@ export function SpendingByCategory({
                         )}
                       </motion.div>
                       <span className={cn(
-                        "text-sm font-medium transition-colors",
+                        "text-sm font-medium transition-colors truncate",
                         isHovered && "text-foreground font-semibold"
                       )}>
                         {category?.name || 'Unknown'}

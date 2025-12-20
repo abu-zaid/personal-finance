@@ -443,9 +443,9 @@ export default function DashboardPage() {
           </Card>
         </FadeIn>
         {/* Quick Insights & Actions Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-hidden">
           {/* Quick Stats Integrated */}
-          <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FadeIn>
               <Card className="h-full border-none shadow-sm bg-muted/20">
                 <CardContent className="p-4 flex flex-col justify-center h-full">
@@ -496,7 +496,7 @@ export default function DashboardPage() {
           <FadeIn className="lg:col-span-1">
             <Card className="h-full border-none shadow-sm bg-primary/5">
               <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
                   <Link href="/transactions">
                     <Button variant="ghost" size="sm" className="w-full h-11 rounded-xl bg-background shadow-sm hover:shadow-md transition-all text-xs font-bold border-none">
                       <Plus className="h-3.5 w-3.5 mr-1" />

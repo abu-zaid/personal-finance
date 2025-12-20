@@ -16,9 +16,9 @@ interface BalanceCardProps {
   budgetUsage?: number;
 }
 
-export const BalanceCard = memo(function BalanceCard({ 
-  balance, 
-  income, 
+export const BalanceCard = memo(function BalanceCard({
+  balance,
+  income,
   expenses,
   transactionCount = 0,
   budgetUsage = 0,
@@ -73,7 +73,7 @@ export const BalanceCard = memo(function BalanceCard({
       {/* Decorative circles */}
       <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
       <div className="absolute -left-8 -bottom-8 h-24 w-24 rounded-full bg-white/10 blur-xl" />
-      
+
       {/* Balance Section */}
       <div className="relative mb-5">
         {!hasBudget ? (
@@ -88,7 +88,7 @@ export const BalanceCard = memo(function BalanceCard({
               </span>
             </div>
             <Link href="/budgets">
-              <motion.div 
+              <motion.div
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="mt-4 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 cursor-pointer transition-colors hover:bg-white/30"
@@ -133,8 +133,7 @@ export const BalanceCard = memo(function BalanceCard({
 
       {/* Stats Grid */}
       <div className={cn(
-        "relative grid gap-2.5",
-        hasBudget ? "grid-cols-2" : "grid-cols-2"
+        "relative grid gap-2.5 grid-cols-1 sm:grid-cols-2"
       )}>
         {statsItems.map((item, index) => (
           <motion.div
@@ -151,7 +150,7 @@ export const BalanceCard = memo(function BalanceCard({
           >
             {/* Hover shine effect */}
             <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-500 group-hover:translate-x-full" />
-            
+
             <div className="relative flex items-center gap-2 mb-1.5">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/40 shadow-sm">
                 <item.icon className={cn(
