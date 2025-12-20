@@ -9,6 +9,7 @@ import { Header } from '@/components/layout/header';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { DashboardSkeleton, ErrorBoundary } from '@/components/shared';
 import { TransactionModal } from '@/components/features/transactions';
+import { useSequenceShortcuts, useShortcuts } from '@/hooks/use-shortcuts';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -19,6 +20,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const { isLoading, isAuthenticated } = useAuth();
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
+
+  // Initialize global shortcuts
+  useSequenceShortcuts();
+  useShortcuts({
+    n: () => setAddExpenseOpen(true),
+  });
 
   // Redirect to login if not authenticated
   useEffect(() => {

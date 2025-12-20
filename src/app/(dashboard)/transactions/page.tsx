@@ -72,6 +72,8 @@ export default function TransactionsPage() {
   const [editingTransaction, setEditingTransaction] =
     useState<TransactionWithCategory | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBatchMode, setIsBatchMode] = useState(false);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -165,6 +167,29 @@ export default function TransactionsPage() {
     return format(d, 'EEEE, MMMM d');
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedIds.size} transactions?`)) {
+      for (const id of selectedIds) {
+        await deleteTransaction(id);
+      }
+      setSelectedIds(new Set());
+      setIsBatchMode(false);
+    }
+  };
+
   // NEW: Monthly spending trend (last 30 days)
   const monthlyTrend = useMemo(() => {
     const days = [];
@@ -195,17 +220,68 @@ export default function TransactionsPage() {
                 {format(new Date(), 'MMMM yyyy')} • {totalCount} total
               </p>
             </div>
-            <button
-              onClick={() => setModalOpen(true)}
-              className="lg:hidden h-9 w-9 rounded-xl shadow-lg flex items-center justify-center"
-              style={{
-                background:
-                  'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-              }}
-            >
-              <Plus className="h-4 w-4 text-[#101010]" />
-            </button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsBatchMode(!isBatchMode);
+                  if (isBatchMode) setSelectedIds(new Set());
+                }}
+                className={cn(
+                  "text-xs font-semibold rounded-lg h-9 px-3 transition-colors",
+                  isBatchMode ? "bg-primary/20 text-primary" : "text-muted-foreground"
+                )}
+              >
+                {isBatchMode ? 'Cancel' : 'Select'}
+              </Button>
+              <button
+                onClick={() => setModalOpen(true)}
+                className="lg:hidden h-9 w-9 rounded-xl shadow-lg flex items-center justify-center"
+                style={{
+                  background:
+                    'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
+                }}
+              >
+                <Plus className="h-4 w-4 text-[#101010]" />
+              </button>
+            </div>
           </div>
+
+          {/* BATCH ACTIONS BAR */}
+          {isBatchMode && selectedIds.size > 0 && (
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="fixed bottom-24 left-4 right-4 lg:left-1/2 lg:-translate-x-1/2 lg:w-max z-50"
+            >
+              <Card className="shadow-2xl border-primary/20 bg-background/80 backdrop-blur-md">
+                <CardContent className="p-3 flex items-center gap-4">
+                  <span className="text-sm font-bold ml-2">
+                    {selectedIds.size} selected
+                  </span>
+                  <div className="h-4 w-px bg-border mx-1" />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="h-9 px-4 rounded-xl font-bold"
+                    onClick={handleBatchDelete}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 px-4 rounded-xl font-bold"
+                    onClick={() => setSelectedIds(new Set())}
+                  >
+                    Clear
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* NEW: Monthly Trend Sparkline */}
           {monthlyTrend.some(v => v > 0) && (
@@ -228,12 +304,40 @@ export default function TransactionsPage() {
             </Card>
           )}
 
+          {/* SEARCH & MONTH FILTERS */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search transactions..."
+                className="pl-9 h-11 rounded-xl bg-muted/40 border-none focus-visible:ring-1 focus-visible:ring-primary/50"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <SelectTrigger className="w-[130px] h-11 rounded-xl bg-muted/40 border-none">
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                {availableMonths.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* CATEGORY FILTERS */}
-          <div className="relative -mx-4 px-4 overflow-x-auto">
+          <div className="relative -mx-4 px-4 overflow-x-auto scrollbar-hide">
             <div className="flex w-max min-w-full gap-2 pb-2">
               <Badge
                 onClick={() => setCategoryFilter('all')}
                 variant={categoryFilter === 'all' ? 'default' : 'outline'}
+                className="cursor-pointer h-8 rounded-lg px-4"
               >
                 All
               </Badge>
@@ -247,6 +351,7 @@ export default function TransactionsPage() {
                     color:
                       categoryFilter === c.id ? '#101010' : undefined,
                   }}
+                  className="cursor-pointer h-8 rounded-lg px-4"
                 >
                   {c.name}
                 </Badge>
@@ -258,11 +363,12 @@ export default function TransactionsPage() {
           <div className="space-y-4 overflow-hidden">
             {Object.entries(groupedTransactions).map(([date, list]) => (
               <div key={date}>
-                <div className="flex justify-between mb-2 px-1">
-                  <span className="text-sm font-semibold">
+                <div className="sticky top-0 z-10 py-2 -mx-4 px-5 bg-background/95 backdrop-blur-sm flex justify-between items-center border-b border-border/10">
+                  <span className="text-sm font-bold text-primary flex items-center gap-2">
+                    <Calendar className="h-4 w-4 opacity-50" />
                     {getDateLabel(date)}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs font-semibold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md">
                     {formatCurrency(
                       list.reduce((s, t) => s + t.amount, 0)
                     )}
@@ -279,31 +385,60 @@ export default function TransactionsPage() {
                       )}
                     >
                       {/* LEFT */}
-                      <div
-                        className="flex gap-3 min-w-0 cursor-pointer"
-                        onClick={() => {
-                          setEditingTransaction(t);
-                          setModalOpen(true);
-                        }}
-                      >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {isBatchMode && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleSelect(t.id);
+                            }}
+                            className={cn(
+                              "flex-shrink-0 w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center cursor-pointer",
+                              selectedIds.has(t.id)
+                                ? "bg-primary border-primary"
+                                : "border-muted-foreground/30 hover:border-primary/50"
+                            )}
+                          >
+                            {selectedIds.has(t.id) && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                              >
+                                <Plus className="h-3 w-3 text-[#101010] rotate-45" />
+                              </motion.div>
+                            )}
+                          </div>
+                        )}
                         <div
-                          className="h-10 w-10 rounded-xl flex items-center justify-center"
-                          style={{
-                            backgroundColor: `${t.category?.color}22`,
+                          className="flex gap-3 min-w-0 cursor-pointer"
+                          onClick={() => {
+                            if (isBatchMode) {
+                              toggleSelect(t.id);
+                            } else {
+                              setEditingTransaction(t);
+                              setModalOpen(true);
+                            }
                           }}
                         >
-                          <CategoryIcon
-                            icon={t.category?.icon}
-                            color={t.category?.color}
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">
-                            {t.notes || t.category?.name}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {t.category?.name}
-                          </p>
+                          <div
+                            className="h-10 w-10 rounded-xl flex items-center justify-center"
+                            style={{
+                              backgroundColor: `${t.category?.color}22`,
+                            }}
+                          >
+                            <CategoryIcon
+                              icon={t.category?.icon}
+                              color={t.category?.color}
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">
+                              {t.notes || t.category?.name}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {t.category?.name}
+                            </p>
+                          </div>
                         </div>
                       </div>
 

@@ -31,13 +31,13 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { CURRENCY_OPTIONS, DATE_FORMAT_OPTIONS } from '@/lib/constants';
 import { Currency, DateFormat } from '@/types';
 import { cn } from '@/lib/utils';
-import { 
-  User, 
-  Settings, 
-  Bell, 
-  LogOut, 
-  Sun, 
-  Moon, 
+import {
+  User,
+  Settings,
+  Bell,
+  LogOut,
+  Sun,
+  Moon,
   Monitor,
   Palette,
   ChevronRight,
@@ -46,23 +46,27 @@ import {
   Calendar,
   Smartphone,
   Tags,
-  Check
+  Check,
+  Download,
+  FileText
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useTransactions } from '@/context/transactions-context';
+import { format } from 'date-fns';
 
 // Memoized theme option component
-const ThemeOption = memo(function ThemeOption({ 
-  value, 
-  label, 
-  icon: Icon, 
-  isSelected, 
-  onClick 
-}: { 
-  value: string; 
-  label: string; 
-  icon: React.ElementType; 
-  isSelected: boolean; 
+const ThemeOption = memo(function ThemeOption({
+  value,
+  label,
+  icon: Icon,
+  isSelected,
+  onClick
+}: {
+  value: string;
+  label: string;
+  icon: React.ElementType;
+  isSelected: boolean;
   onClick: () => void;
 }) {
   return (
@@ -70,8 +74,8 @@ const ThemeOption = memo(function ThemeOption({
       onClick={onClick}
       className={cn(
         "relative flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all",
-        isSelected 
-          ? "border-primary bg-primary/10" 
+        isSelected
+          ? "border-primary bg-primary/10"
           : "border-transparent bg-muted/50 hover:bg-muted"
       )}
     >
@@ -102,14 +106,46 @@ const ThemeOption = memo(function ThemeOption({
 
 export default function SettingsPage() {
   const { user, logout, updatePreferences, updateProfile } = useAuth();
+  const { transactions } = useTransactions();
   const { theme, setTheme } = useTheme();
   const haptics = useHaptics();
-  
+
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [weeklyDigest, setWeeklyDigest] = useState(true);
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
+
+  const handleExportCSV = useCallback(() => {
+    haptics.success();
+
+    // Prepare CSV content
+    const headers = ['Date', 'Category', 'Amount', 'Notes'];
+    const rows = transactions.map(t => [
+      format(new Date(t.date), 'yyyy-MM-dd'),
+      t.category?.name || 'Uncategorized',
+      t.amount,
+      `"${t.notes || ''}"` // Wrap notes in quotes to handle commas
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.join(','))
+    ].join('\n');
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `financeflow-export-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success('Transaction history exported to CSV');
+  }, [transactions, haptics]);
 
   const handleSaveProfile = useCallback(() => {
     if (editName.trim()) {
@@ -148,7 +184,7 @@ export default function SettingsPage() {
   }, [logout, haptics]);
 
   const handleToggleChange = useCallback((
-    setter: (value: boolean) => void, 
+    setter: (value: boolean) => void,
     value: boolean
   ) => {
     haptics.light();
@@ -185,10 +221,10 @@ export default function SettingsPage() {
             >
               <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
               <div className="absolute -left-8 -bottom-8 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-              
+
               <div className="relative flex items-center gap-4">
                 <Avatar className="h-14 w-14 sm:h-16 sm:w-16 border-2 border-white/30 shadow-lg">
-                  <AvatarFallback 
+                  <AvatarFallback
                     className="bg-white/20 text-[#101010] text-lg sm:text-xl font-bold"
                   >
                     {getInitials(user?.name || 'User')}
@@ -202,7 +238,7 @@ export default function SettingsPage() {
                     {user?.email || 'No email'}
                   </p>
                 </div>
-                <Button 
+                <Button
                   size="sm"
                   onClick={openEditProfile}
                   className="bg-white/20 hover:bg-white/30 text-[#101010] border-0 backdrop-blur-sm text-xs sm:text-sm"
@@ -339,7 +375,7 @@ export default function SettingsPage() {
                         <p className="text-[10px] sm:text-xs text-muted-foreground">Vibration on tap</p>
                       </div>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={hapticsEnabled}
                       onCheckedChange={(v) => handleToggleChange(setHapticsEnabled, v)}
                     />
@@ -394,7 +430,7 @@ export default function SettingsPage() {
                         <p className="text-[10px] sm:text-xs text-muted-foreground">Near budget limit</p>
                       </div>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={notificationsEnabled}
                       onCheckedChange={(v) => handleToggleChange(setNotificationsEnabled, v)}
                     />
@@ -412,10 +448,47 @@ export default function SettingsPage() {
                         <p className="text-[10px] sm:text-xs text-muted-foreground">Spending summary</p>
                       </div>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={weeklyDigest}
                       onCheckedChange={(v) => handleToggleChange(setWeeklyDigest, v)}
                     />
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeIn>
+          </StaggerItem>
+
+          {/* Data Management Section */}
+          <StaggerItem>
+            <FadeIn>
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-orange-500/10">
+                      <Download className="h-4 w-4 text-orange-500" />
+                    </div>
+                    <CardTitle className="text-sm sm:text-base">Data Management</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <Label className="text-xs sm:text-sm font-medium">Export Transactions</Label>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">Download as CSV file</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportCSV}
+                      className="h-9 px-4 rounded-xl font-bold"
+                    >
+                      Export
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -427,7 +500,7 @@ export default function SettingsPage() {
             <FadeIn>
               <Card className="border-destructive/30">
                 <CardContent className="py-4">
-                  <button 
+                  <button
                     onClick={handleLogout}
                     className="w-full flex items-center justify-between"
                   >
@@ -454,7 +527,7 @@ export default function SettingsPage() {
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <div 
+              <div
                 className="p-2 rounded-xl"
                 style={{
                   background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
@@ -468,12 +541,12 @@ export default function SettingsPage() {
               Update your profile information
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             {/* Avatar Preview */}
             <div className="flex justify-center">
               <Avatar className="h-20 w-20 border-4 border-primary/20">
-                <AvatarFallback 
+                <AvatarFallback
                   className="bg-primary/10 text-primary text-2xl font-bold"
                 >
                   {getInitials(editName || 'U')}
@@ -491,7 +564,7 @@ export default function SettingsPage() {
                 className="h-10 sm:h-11"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email" className="text-xs sm:text-sm">Email</Label>
               <Input
@@ -503,22 +576,22 @@ export default function SettingsPage() {
               <p className="text-muted-foreground text-[10px] sm:text-xs">Email cannot be changed</p>
             </div>
           </div>
-          
+
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsEditProfileOpen(false)}
               className="flex-1 sm:flex-none"
             >
               Cancel
             </Button>
-            <Button 
-              onClick={handleSaveProfile} 
+            <Button
+              onClick={handleSaveProfile}
               disabled={!editName.trim()}
               className="flex-1 sm:flex-none"
               style={{
-                background: editName.trim() 
-                  ? 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)' 
+                background: editName.trim()
+                  ? 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)'
                   : undefined,
                 color: editName.trim() ? '#101010' : undefined,
               }}

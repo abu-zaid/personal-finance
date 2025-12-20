@@ -9,6 +9,8 @@ import {
   BarChart3,
   Settings,
   Plus,
+  RefreshCw,
+  Target as GoalIcon,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -18,6 +20,8 @@ import { APP_NAME } from '@/lib/constants';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/budgets', label: 'Budgets', icon: Wallet },
+  { href: '/recurring', label: 'Recurring', icon: RefreshCw },
+  { href: '/goals', label: 'Goals', icon: GoalIcon },
   { href: '/transactions', label: 'Transactions', icon: ListOrdered },
   { href: '/insights', label: 'Insights', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: Settings },

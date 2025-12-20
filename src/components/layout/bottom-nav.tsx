@@ -10,16 +10,18 @@ import {
   Plus,
   ChartBar,
   Wallet,
+  ArrowsClockwise,
+  Flag,
 } from 'phosphor-react';
 
 import { useHaptics } from '@/hooks/use-haptics';
 
 const navItems = [
   { href: '/dashboard', icon: House, id: 'home' },
-  { href: '/transactions', icon: ListBullets, id: 'transactions' },
-  { href: null, icon: Plus, id: 'add', highlight: true },
   { href: '/budgets', icon: Wallet, id: 'budgets' },
-  { href: '/insights', icon: ChartBar, id: 'insights' },
+  { href: null, icon: Plus, id: 'add', highlight: true },
+  { href: '/recurring', icon: ArrowsClockwise, id: 'recurring' },
+  { href: '/goals', icon: Flag, id: 'goals' },
 ];
 
 interface BottomNavProps {
@@ -111,10 +113,9 @@ export const BottomNav = memo(function BottomNav({
                       className={`
                         absolute inset-0 rounded-[16px]
                         transition-transform transition-opacity duration-200
-                        ${
-                          isActive
-                            ? 'scale-100 opacity-100 bg-primary'
-                            : 'scale-90 opacity-0'
+                        ${isActive
+                          ? 'scale-100 opacity-100 bg-primary'
+                          : 'scale-90 opacity-0'
                         }
                       `}
                     />

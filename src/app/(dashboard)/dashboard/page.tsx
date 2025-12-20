@@ -11,6 +11,7 @@ import { useTransactions } from '@/context/transactions-context';
 import { useBudgets } from '@/context/budgets-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoryIcon } from '@/components/features/categories';
 import { DashboardSkeleton } from '@/components/shared';
 import {
@@ -313,42 +314,33 @@ export default function DashboardPage() {
           </StaggerItem>
         </StaggerContainer>
 
-        {/* Quick Insight Banner */}
+        {/* Quick Insight Banner - Refined */}
         <FadeIn>
           <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
             className={cn(
-              "relative overflow-hidden rounded-2xl p-4",
+              "relative overflow-hidden rounded-xl p-3 border-none flex items-center gap-3",
               {
-                'bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20': insight.type === 'warning',
-                'bg-gradient-to-r from-primary/10 to-emerald-500/10 border border-primary/20': insight.type === 'success',
-                'bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20': insight.type === 'info',
+                'bg-amber-500/10 text-amber-600 dark:text-amber-400': insight.type === 'warning',
+                'bg-primary/10 text-primary-600 dark:text-primary-400': insight.type === 'success',
+                'bg-blue-500/10 text-blue-600 dark:text-blue-400': insight.type === 'info',
               }
             )}
           >
-            <div className="flex items-start gap-3">
-              <div className={cn(
-                "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl",
-                {
-                  'bg-amber-500/20': insight.type === 'warning',
-                  'bg-primary/20': insight.type === 'success',
-                  'bg-blue-500/20': insight.type === 'info',
-                }
-              )}>
-                <insight.icon className={cn(
-                  "h-5 w-5",
-                  {
-                    'text-amber-500': insight.type === 'warning',
-                    'text-primary': insight.type === 'success',
-                    'text-blue-500': insight.type === 'info',
-                  }
-                )} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">{insight.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{insight.message}</p>
-              </div>
+            <div className={cn(
+              "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg",
+              {
+                'bg-amber-500/20 text-amber-600': insight.type === 'warning',
+                'bg-primary/20 text-primary': insight.type === 'success',
+                'bg-blue-500/20 text-blue-500': insight.type === 'info',
+              }
+            )}>
+              <insight.icon className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold leading-tight uppercase tracking-wider opacity-80 mb-0.5">{insight.title}</p>
+              <p className="text-sm font-medium leading-tight truncate">{insight.message}</p>
             </div>
           </motion.div>
         </FadeIn>
@@ -450,254 +442,307 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </FadeIn>
-
-        {/* Quick Stats Row */}
-        <div className="grid grid-cols-2 gap-3">
-          <FadeIn>
-            <Card className="overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-primary/10">
-                    <Zap className="h-4 w-4 text-primary" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">Avg/Day</span>
-                </div>
-                <p className="text-lg font-bold">
-                  {formatCurrency(currentMonthTransactions.length > 0
-                    ? totalSpent / new Date().getDate()
-                    : 0
-                  )}
-                </p>
-              </CardContent>
-            </Card>
-          </FadeIn>
-
-          <FadeIn>
-            <Card className="overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  {topCategory ? (
-                    <CategoryIcon
-                      icon={topCategory.category.icon}
-                      color={topCategory.category.color}
-                      size="sm"
-                    />
-                  ) : (
-                    <div className="p-1.5 rounded-lg bg-muted">
-                      <PiggyBank className="h-4 w-4 text-muted-foreground" />
+        {/* Quick Insights & Actions Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Quick Stats Integrated */}
+          <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+            <FadeIn>
+              <Card className="h-full border-none shadow-sm bg-muted/20">
+                <CardContent className="p-4 flex flex-col justify-center h-full">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1.5 rounded-lg bg-primary/20">
+                      <Zap className="h-4 w-4 text-primary" />
                     </div>
-                  )}
-                  <span className="text-xs text-muted-foreground font-medium truncate">
-                    {topCategory?.category.name || 'Top Category'}
-                  </span>
+                    <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Daily Avg</span>
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {formatCurrency(currentMonthTransactions.length > 0
+                      ? totalSpent / new Date().getDate()
+                      : 0
+                    )}
+                  </p>
+                </CardContent>
+              </Card>
+            </FadeIn>
+
+            <FadeIn>
+              <Card className="h-full border-none shadow-sm bg-muted/20">
+                <CardContent className="p-4 flex flex-col justify-center h-full">
+                  <div className="flex items-center gap-2 mb-2">
+                    {topCategory ? (
+                      <CategoryIcon
+                        icon={topCategory.category.icon}
+                        color={topCategory.category.color}
+                        size="sm"
+                      />
+                    ) : (
+                      <div className="p-1.5 rounded-lg bg-muted">
+                        <PiggyBank className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                    <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider truncate">
+                      {topCategory?.category.name || 'Top Spend'}
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {topCategory ? formatCurrency(topCategory.amount) : '-'}
+                  </p>
+                </CardContent>
+              </Card>
+            </FadeIn>
+          </div>
+
+          {/* Quick Actions Consolidated */}
+          <FadeIn className="lg:col-span-1">
+            <Card className="h-full border-none shadow-sm bg-primary/5">
+              <CardContent className="p-4 flex flex-col justify-between h-full">
+                <div className="grid grid-cols-2 gap-2">
+                  <Link href="/transactions">
+                    <Button variant="ghost" size="sm" className="w-full h-11 rounded-xl bg-background shadow-sm hover:shadow-md transition-all text-xs font-bold border-none">
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      Add
+                    </Button>
+                  </Link>
+                  <Link href="/budgets">
+                    <Button variant="ghost" size="sm" className="w-full h-11 rounded-xl bg-background shadow-sm hover:shadow-md transition-all text-xs font-bold border-none">
+                      <Target className="h-3.5 w-3.5 mr-1" />
+                      Budget
+                    </Button>
+                  </Link>
+                  <Link href="/insights">
+                    <Button variant="ghost" size="sm" className="w-full h-11 rounded-xl bg-background shadow-sm hover:shadow-md transition-all text-xs font-bold border-none">
+                      <Lightbulb className="h-3.5 w-3.5 mr-1" />
+                      Insights
+                    </Button>
+                  </Link>
+                  <Link href="/settings">
+                    <Button variant="ghost" size="sm" className="w-full h-11 rounded-xl bg-background shadow-sm hover:shadow-md transition-all text-xs font-bold border-none">
+                      <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                      Settings
+                    </Button>
+                  </Link>
                 </div>
-                <p className="text-lg font-bold">
-                  {topCategory ? formatCurrency(topCategory.amount) : '-'}
-                </p>
               </CardContent>
             </Card>
           </FadeIn>
         </div>
 
-        {/* NEW: Income vs Expenses Comparison */}
+        {/* NEW: Deep Dive Section (Consolidated) */}
         <FadeIn>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Wallet className="h-4 w-4" />
-                Income vs Expenses
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Income Bar */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <ArrowDownRight className="h-4 w-4 text-primary" />
-                      <span className="text-muted-foreground">Income</span>
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="trends">Trends</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-4 outline-none">
+              {/* Income vs Expenses Comparison */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Wallet className="h-4 w-4" />
+                    Income vs Expenses
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Income Bar */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <ArrowDownRight className="h-4 w-4 text-primary" />
+                          <span className="text-muted-foreground">Income</span>
+                        </div>
+                        <span className="font-semibold text-primary">
+                          {formatCurrency(incomeVsExpenses.income)}
+                        </span>
+                      </div>
+                      <div className="h-3 bg-muted/30 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: '100%' }}
+                          transition={{ duration: 0.8, ease: "easeOut" }}
+                          className="h-full bg-primary rounded-full"
+                        />
+                      </div>
                     </div>
-                    <span className="font-semibold text-primary">
-                      {formatCurrency(incomeVsExpenses.income)}
-                    </span>
+
+                    {/* Expenses Bar */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <ArrowUpRight className="h-4 w-4 text-destructive" />
+                          <span className="text-muted-foreground">Expenses</span>
+                        </div>
+                        <span className="font-semibold text-destructive">
+                          {formatCurrency(incomeVsExpenses.expenses)}
+                        </span>
+                      </div>
+                      <div className="h-3 bg-muted/30 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{
+                            width: incomeVsExpenses.income > 0
+                              ? `${Math.min((incomeVsExpenses.expenses / incomeVsExpenses.income) * 100, 100)}%`
+                              : '0%'
+                          }}
+                          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+                          className="h-full bg-destructive rounded-full"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Savings Summary */}
+                    <div className="pt-3 border-t border-border/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Net Savings</span>
+                        <div className="text-right">
+                          <p className={cn(
+                            "text-lg font-bold",
+                            incomeVsExpenses.savings >= 0 ? "text-primary" : "text-destructive"
+                          )}>
+                            {incomeVsExpenses.savings >= 0 ? '+' : ''}{formatCurrency(incomeVsExpenses.savings)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {incomeVsExpenses.savingsRate.toFixed(1)}% savings rate
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="h-3 bg-muted/30 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: '100%' }}
-                      transition={{ duration: 0.8, ease: "easeOut" }}
-                      className="h-full bg-primary rounded-full"
+                </CardContent>
+              </Card>
+
+              {/* Spending Velocity Gauge (only show if budget exists) */}
+              {hasBudget && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Gauge className="h-4 w-4" />
+                      Spending Pace
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Are you on track to stay within budget?
+                    </p>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <SpendingVelocityGauge
+                      currentSpending={totalSpent}
+                      budget={totalBudget}
+                      daysElapsed={daysElapsed}
+                      daysInMonth={daysInMonth}
                     />
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
-                {/* Expenses Bar */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <ArrowUpRight className="h-4 w-4 text-destructive" />
-                      <span className="text-muted-foreground">Expenses</span>
-                    </div>
-                    <span className="font-semibold text-destructive">
-                      {formatCurrency(incomeVsExpenses.expenses)}
-                    </span>
-                  </div>
-                  <div className="h-3 bg-muted/30 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{
-                        width: incomeVsExpenses.income > 0
-                          ? `${Math.min((incomeVsExpenses.expenses / incomeVsExpenses.income) * 100, 100)}%`
-                          : '0%'
-                      }}
-                      transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-                      className="h-full bg-destructive rounded-full"
-                    />
-                  </div>
-                </div>
-
-                {/* Savings Summary */}
-                <div className="pt-3 border-t border-border/50">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Net Savings</span>
-                    <div className="text-right">
-                      <p className={cn(
-                        "text-lg font-bold",
-                        incomeVsExpenses.savings >= 0 ? "text-primary" : "text-destructive"
-                      )}>
-                        {incomeVsExpenses.savings >= 0 ? '+' : ''}{formatCurrency(incomeVsExpenses.savings)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {incomeVsExpenses.savingsRate.toFixed(1)}% savings rate
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </FadeIn>
-
-        {/* NEW: Spending Velocity Gauge (only show if budget exists) */}
-        {hasBudget && (
-          <FadeIn>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Gauge className="h-4 w-4" />
-                  Spending Pace
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Are you on track to stay within budget?
-                </p>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <SpendingVelocityGauge
-                  currentSpending={totalSpent}
-                  budget={totalBudget}
-                  daysElapsed={daysElapsed}
-                  daysInMonth={daysInMonth}
-                />
-              </CardContent>
-            </Card>
-          </FadeIn>
-        )}
-
-        {/* NEW: Category Trends with Sparklines */}
-        {categoryTrends.length > 0 && (
-          <FadeIn>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Category Trends</CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Last 7 days spending patterns
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {categoryTrends.map((trend, index) => (
-                  <motion.div
-                    key={trend.category?.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center gap-3"
-                  >
-                    {trend.category && (
-                      <CategoryIcon
-                        icon={trend.category.icon}
-                        color={trend.category.color}
-                        size="sm"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {trend.category?.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatCurrency(trend.total)} this week
-                      </p>
-                    </div>
-                    <div className="w-20 h-8">
-                      <Sparkline
-                        data={trend.data}
-                        color={trend.category?.color}
-                        height={32}
-                      />
-                    </div>
-                  </motion.div>
-                ))}
-              </CardContent>
-            </Card>
-          </FadeIn>
-        )}
-
-        {/* NEW: Top Spending Days */}
-        {topSpendingDays.length > 0 && (
-          <FadeIn>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Top Spending Days
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Highest expense days this month
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {topSpendingDays.map((day, index) => (
-                  <motion.div
-                    key={day.date}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="space-y-2"
-                  >
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {format(new Date(day.date), 'EEEE, MMM d')}
-                      </span>
-                      <span className="font-semibold">
-                        {formatCurrency(day.amount)}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
+            <TabsContent value="trends" className="space-y-4 outline-none">
+              {/* Category Trends with Sparklines */}
+              {categoryTrends.length > 0 ? (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold">Category Trends</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Last 7 days spending patterns
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {categoryTrends.map((trend, index) => (
                       <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(day.amount / maxTopDaySpend) * 100}%` }}
-                        transition={{ duration: 0.6, delay: index * 0.1 + 0.2 }}
-                        className={cn(
-                          "h-full rounded-full",
-                          index === 0 ? "bg-destructive" : "bg-primary/60"
+                        key={trend.category?.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex items-center gap-3"
+                      >
+                        {trend.category && (
+                          <CategoryIcon
+                            icon={trend.category.icon}
+                            color={trend.category.color}
+                            size="sm"
+                          />
                         )}
-                      />
-                    </div>
-                  </motion.div>
-                ))}
-              </CardContent>
-            </Card>
-          </FadeIn>
-        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {trend.category?.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatCurrency(trend.total)} this week
+                          </p>
+                        </div>
+                        <div className="w-20 h-8">
+                          <Sparkline
+                            data={trend.data}
+                            color={trend.category?.color}
+                            height={32}
+                          />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="py-8">
+                  <div className="text-center text-muted-foreground text-sm">No trend data available</div>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="activity" className="space-y-4 outline-none">
+              {/* Top Spending Days */}
+              {topSpendingDays.length > 0 ? (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Top Spending Days
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Highest expense days this month
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {topSpendingDays.map((day, index) => (
+                      <motion.div
+                        key={day.date}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {format(new Date(day.date), 'EEEE, MMM d')}
+                          </span>
+                          <span className="font-semibold">
+                            {formatCurrency(day.amount)}
+                          </span>
+                        </div>
+                        <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(day.amount / maxTopDaySpend) * 100}%` }}
+                            transition={{ duration: 0.6, delay: index * 0.1 + 0.2 }}
+                            className={cn(
+                              "h-full rounded-full",
+                              index === 0 ? "bg-destructive" : "bg-primary/60"
+                            )}
+                          />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="py-8">
+                  <div className="text-center text-muted-foreground text-sm">No activity recorded for this month</div>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        </FadeIn>
 
         {/* Recent Transactions */}
         <StaggerItem>
@@ -727,40 +772,6 @@ export default function DashboardPage() {
               totalSpent={totalSpent}
             />
           </StaggerItem>
-        </div>
-
-        {/* Quick Actions - Desktop */}
-        <div className="hidden lg:block">
-          <FadeIn>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-3">
-                  <Link href="/transactions" className="flex-1">
-                    <Button variant="outline" className="w-full justify-start gap-2 h-12 rounded-xl">
-                      <Plus className="h-4 w-4" />
-                      Add Transaction
-                    </Button>
-                  </Link>
-                  <Link href="/budgets" className="flex-1">
-                    <Button variant="outline" className="w-full justify-start gap-2 h-12 rounded-xl">
-                      <Target className="h-4 w-4" />
-                      Manage Budget
-                    </Button>
-                  </Link>
-                  <Link href="/insights" className="flex-1">
-                    <Button variant="outline" className="w-full justify-start gap-2 h-12 rounded-xl">
-                      <Lightbulb className="h-4 w-4" />
-                      View Insights
-                      <ArrowRight className="h-4 w-4 ml-auto" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </FadeIn>
         </div>
       </div>
     </PageTransition>
