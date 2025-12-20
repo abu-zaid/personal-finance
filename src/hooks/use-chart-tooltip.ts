@@ -10,7 +10,7 @@ interface TooltipData {
 
 export function useChartTooltip() {
     const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-    const timeoutRef = useRef<NodeJS.Timeout>();
+    const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     const showTooltip = useCallback((x: number, y: number, content: any) => {
         if (timeoutRef.current) {
