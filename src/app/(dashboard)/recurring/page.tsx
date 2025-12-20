@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
     ArrowsClockwise,
     Plus,
@@ -16,11 +16,13 @@ import {
     StaggerContainer,
     StaggerItem
 } from '@/components/animations';
+import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
+import { RecurringModal } from '@/components/features/recurring/recurring-modal';
 import { CategoryIcon } from '@/components/features/categories';
 import { useCategories } from '@/context/categories-context';
 import { useRecurring } from '@/context/recurring-context';
@@ -28,16 +30,42 @@ import { useRecurring } from '@/context/recurring-context';
 export default function RecurringPage() {
     const { formatCurrency } = useCurrency();
     const { categories } = useCategories();
-    const { recurringTransactions, isLoading } = useRecurring();
+    const { recurringTransactions, isLoading, deleteRecurring } = useRecurring();
+
+    // Modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingRecurring, setEditingRecurring] = useState<any>(null);
+
+    const handleAdd = () => {
+        setEditingRecurring(null);
+        setModalOpen(true);
+    };
+
+    const handleEdit = (item: any) => {
+        setEditingRecurring(item);
+        setModalOpen(true);
+    };
+
+    const handleDelete = async (id: string) => {
+        if (confirm('Delete this recurring transaction?')) {
+            try {
+                await deleteRecurring(id);
+                toast.success('Deleted');
+            } catch (err) {
+                toast.error('Failed to delete');
+            }
+        }
+    };
 
     const monthlyCommitment = useMemo(() => {
         return recurringTransactions
             .filter(t => t.status === 'active')
             .reduce((sum, t) => {
-                if (t.frequency === 'monthly') return sum + t.amount;
-                if (t.frequency === 'weekly') return sum + (t.amount * 4);
-                if (t.frequency === 'yearly') return sum + (t.amount / 12);
-                return sum + t.amount;
+                const amount = Number(t.amount);
+                if (t.frequency === 'monthly') return sum + amount;
+                if (t.frequency === 'weekly') return sum + (amount * 4);
+                if (t.frequency === 'yearly') return sum + (amount / 12);
+                return sum + amount;
             }, 0);
     }, [recurringTransactions]);
 
@@ -56,7 +84,10 @@ export default function RecurringPage() {
                         <h1 className="text-2xl font-bold tracking-tight">Recurring</h1>
                         <p className="text-muted-foreground text-sm">Manage your subscriptions and fixed costs.</p>
                     </div>
-                    <Button className="rounded-xl h-11 px-6 shadow-lg shadow-primary/20">
+                    <Button
+                        onClick={handleAdd}
+                        className="rounded-xl h-11 px-6 shadow-lg shadow-primary/20"
+                    >
                         <Plus className="mr-2 h-5 w-5" weight="bold" />
                         Add New
                     </Button>
@@ -139,10 +170,20 @@ export default function RecurringPage() {
                                                     </div>
 
                                                     <div className="flex gap-1 group">
-                                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-9 w-9 rounded-lg"
+                                                            onClick={() => handleEdit(item)}
+                                                        >
                                                             <Pencil size={18} />
                                                         </Button>
-                                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive rounded-lg">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-9 w-9 text-destructive rounded-lg"
+                                                            onClick={() => handleDelete(item.id)}
+                                                        >
                                                             <Trash size={18} />
                                                         </Button>
                                                     </div>
@@ -170,6 +211,12 @@ export default function RecurringPage() {
                         </CardContent>
                     </Card>
                 </FadeIn>
+
+                <RecurringModal
+                    open={modalOpen}
+                    onOpenChange={setModalOpen}
+                    recurring={editingRecurring}
+                />
             </div>
         </PageTransition>
     );

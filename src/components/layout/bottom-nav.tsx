@@ -10,16 +10,34 @@ import {
   Plus,
   ChartBar,
   Wallet,
+  DotsThreeCircle,
+  ArrowsClockwise,
+  Flag,
+  Gear,
 } from 'phosphor-react';
 
 import { useHaptics } from '@/hooks/use-haptics';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 
 const navItems = [
   { href: '/dashboard', icon: House, id: 'home' },
   { href: '/transactions', icon: ListBullets, id: 'transactions' },
   { href: null, icon: Plus, id: 'add', highlight: true },
   { href: '/budgets', icon: Wallet, id: 'budgets' },
-  { href: '/insights', icon: ChartBar, id: 'insights' },
+  { href: null, icon: DotsThreeCircle, id: 'more' },
+];
+
+const secondaryNavItems = [
+  { href: '/insights', label: 'Insights', icon: ChartBar },
+  { href: '/recurring', label: 'Recurring', icon: ArrowsClockwise },
+  { href: '/goals', label: 'Goals', icon: Flag },
+  { href: '/settings', label: 'Settings', icon: Gear },
 ];
 
 interface BottomNavProps {
@@ -85,6 +103,44 @@ export const BottomNav = memo(function BottomNav({
                       <Icon size={26} weight="bold" className="text-[#101010]" />
                     </div>
                   </motion.button>
+                );
+              }
+
+              if (item.id === 'more') {
+                return (
+                  <Sheet key={item.id}>
+                    <SheetTrigger asChild>
+                      <motion.button
+                        whileTap={{ scale: reduceMotion ? 1 : 0.94 }}
+                        onClick={handleNavClick}
+                        className="flex items-center justify-center tap-target"
+                      >
+                        <div className="relative w-12 h-12 rounded-[16px] flex items-center justify-center text-muted-foreground/70">
+                          <Icon size={24} />
+                        </div>
+                      </motion.button>
+                    </SheetTrigger>
+                    <SheetContent side="bottom" className="rounded-t-[32px] p-6 pb-12 dark:bg-[#101010]">
+                      <SheetHeader className="mb-6">
+                        <SheetTitle className="text-xl font-bold">More Options</SheetTitle>
+                      </SheetHeader>
+                      <div className="grid grid-cols-2 gap-4">
+                        {secondaryNavItems.map((sItem) => (
+                          <Link
+                            key={sItem.href}
+                            href={sItem.href}
+                            onClick={handleNavClick}
+                            className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-background shadow-sm">
+                              <sItem.icon size={22} className="text-foreground" />
+                            </div>
+                            <span className="text-sm font-semibold">{sItem.label}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </SheetContent>
+                  </Sheet>
                 );
               }
 

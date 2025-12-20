@@ -14,6 +14,7 @@ import {
     House,
     Car
 } from 'phosphor-react';
+import { toast } from 'sonner';
 import {
     PageTransition,
     FadeIn,
@@ -25,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
+import { GoalModal } from '@/components/features/goals/goal-modal';
 
 import { useGoals } from '@/context/goals-context';
 
@@ -39,7 +41,32 @@ const ICON_MAP: Record<string, any> = {
 
 export default function GoalsPage() {
     const { formatCurrency } = useCurrency();
-    const { goals, isLoading } = useGoals();
+    const { goals, isLoading, deleteGoal } = useGoals();
+
+    // Modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingGoal, setEditingGoal] = useState<any>(null);
+
+    const handleAddGoal = () => {
+        setEditingGoal(null);
+        setModalOpen(true);
+    };
+
+    const handleEditGoal = (goal: any) => {
+        setEditingGoal(goal);
+        setModalOpen(true);
+    };
+
+    const handleDeleteGoal = async (id: string) => {
+        if (confirm('Are you sure you want to delete this goal?')) {
+            try {
+                await deleteGoal(id);
+                toast.success('Goal deleted');
+            } catch (err) {
+                toast.error('Failed to delete goal');
+            }
+        }
+    };
 
     // Sample goals data
     // const [goals, setGoals] = useState([
@@ -104,7 +131,10 @@ export default function GoalsPage() {
                         <h1 className="text-2xl font-bold tracking-tight">Savings Goals</h1>
                         <p className="text-muted-foreground text-sm">Visualize your future. One step at a time.</p>
                     </div>
-                    <Button className="rounded-xl h-11 px-6 shadow-lg shadow-primary/20">
+                    <Button
+                        onClick={handleAddGoal}
+                        className="rounded-xl h-11 px-6 shadow-lg shadow-primary/20"
+                    >
                         <Plus className="mr-2 h-5 w-5" weight="bold" />
                         New Goal
                     </Button>
@@ -153,10 +183,20 @@ export default function GoalsPage() {
                                                     <Icon size={24} weight="bold" style={{ color: goal.color }} />
                                                 </div>
                                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 rounded-lg"
+                                                        onClick={() => handleEditGoal(goal)}
+                                                    >
                                                         <Pencil size={16} />
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive rounded-lg">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-destructive rounded-lg"
+                                                        onClick={() => handleDeleteGoal(goal.id)}
+                                                    >
                                                         <Trash size={16} />
                                                     </Button>
                                                 </div>
@@ -208,6 +248,12 @@ export default function GoalsPage() {
                         </div>
                     </div>
                 </FadeIn>
+
+                <GoalModal
+                    open={modalOpen}
+                    onOpenChange={setModalOpen}
+                    goal={editingGoal}
+                />
             </div>
         </PageTransition>
     );

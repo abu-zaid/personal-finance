@@ -78,7 +78,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <Sidebar onAddExpense={() => setAddExpenseOpen(true)} />
         <div className="flex flex-1 flex-col min-h-0">
           <Header title={getPageTitle()} />
-          <main className="flex-1 overflow-auto p-4 pb-[100px] md:pb-6 lg:p-6 scrollbar-hide">
+          <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 pb-[120px] md:pb-6 lg:p-6 scrollbar-hide">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>

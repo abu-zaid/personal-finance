@@ -73,4 +73,29 @@ export const userPreferencesSchema = z.object({
   firstDayOfWeek: z.union([z.literal(0), z.literal(1)]),
 });
 
+
 export type UserPreferencesFormData = z.infer<typeof userPreferencesSchema>;
+
+// Goal schema
+export const goalSchema = z.object({
+  name: z.string().min(1, 'Goal name is required'),
+  target_amount: z.number().positive('Target amount must be greater than 0'),
+  current_amount: z.number().min(0, 'Current amount cannot be negative'),
+  icon: z.string().min(1, 'Please select an icon'),
+  color: z.string().min(1, 'Please select a color'),
+  deadline: z.string().optional().nullable(),
+});
+
+export type GoalFormData = z.infer<typeof goalSchema>;
+
+// Recurring Transaction schema
+export const recurringSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  amount: z.number().positive('Amount must be greater than 0'),
+  category_id: z.string().min(1, 'Please select a category'),
+  frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
+  next_date: z.date(),
+  status: z.enum(['active', 'paused']),
+});
+
+export type RecurringFormData = z.infer<typeof recurringSchema>;
