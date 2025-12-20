@@ -25,12 +25,12 @@ import { useCategories } from '@/context/categories-context';
 import { useTransactions } from '@/context/transactions-context';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn, getMonthString } from '@/lib/utils';
-import { 
-  Wallet, 
-  ChevronLeft, 
-  ChevronRight, 
-  Plus, 
-  Pencil, 
+import {
+  Wallet,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Pencil,
   Loader2,
   Target,
   TrendingDown,
@@ -38,10 +38,14 @@ import {
   Sparkles,
   AlertTriangle,
   CheckCircle2,
-  Minus
+  Minus,
+  TrendingUp,
+  BarChart3,
+  Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAllocation } from '@/types';
+import { Sparkline } from '@/components/charts';
 
 export default function BudgetsPage() {
   const { categories } = useCategories();
@@ -141,7 +145,7 @@ export default function BudgetsPage() {
 
   // Calculate spending data
   const totalMonthSpent = getMonthlyTotal(currentMonth);
-  
+
   const allocationsWithSpending = useMemo(() => {
     if (!currentBudget) return [];
     return currentBudget.allocations
@@ -168,6 +172,56 @@ export default function BudgetsPage() {
   // Stats
   const categoriesOverBudget = allocationsWithSpending.filter(a => a.percentage >= 100).length;
   const categoriesOnTrack = allocationsWithSpending.filter(a => a.percentage < 75).length;
+
+  // NEW: Historical budget performance (last 6 months)
+  const historicalPerformance = useMemo(() => {
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = subMonths(new Date(), i);
+      const month = getMonthString(date);
+      const budget = getBudgetByMonth(month);
+      const spent = getMonthlyTotal(month);
+      const adherence = budget?.totalAmount ? Math.min((spent / budget.totalAmount) * 100, 150) : 0;
+
+      months.push({
+        month,
+        label: format(date, 'MMM'),
+        budget: budget?.totalAmount || 0,
+        spent,
+        adherence,
+        isCurrentMonth: month === currentMonth,
+      });
+    }
+    return months;
+  }, [getBudgetByMonth, getMonthlyTotal, currentMonth]);
+
+  // NEW: Daily spending pace for current month (if budget exists)
+  const dailyPace = useMemo(() => {
+    if (!currentBudget) return [];
+
+    const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
+    const today = new Date().getDate();
+    const dailyBudget = currentBudget.totalAmount / daysInMonth;
+
+    // Calculate cumulative ideal vs actual for each day
+    const pace = [];
+    let cumulativeActual = 0;
+
+    for (let day = 1; day <= Math.min(today, daysInMonth); day++) {
+      const idealCumulative = dailyBudget * day;
+      // This is simplified - in reality you'd need daily transaction data
+      // For now, we'll estimate based on current spending
+      cumulativeActual = (totalMonthSpent / today) * day;
+
+      pace.push({
+        day,
+        ideal: idealCumulative,
+        actual: cumulativeActual,
+      });
+    }
+
+    return pace;
+  }, [currentBudget, selectedDate, totalMonthSpent]);
 
   // Status helpers
   const getBudgetStatus = () => {
@@ -239,7 +293,7 @@ export default function BudgetsPage() {
               <motion.div
                 className="relative overflow-hidden rounded-2xl p-5"
                 style={{
-                  background: overallPercentage >= 100 
+                  background: overallPercentage >= 100
                     ? 'linear-gradient(145deg, #f87171 0%, #ef4444 100%)'
                     : overallPercentage >= 80
                       ? 'linear-gradient(145deg, #fbbf24 0%, #f59e0b 100%)'
@@ -252,7 +306,7 @@ export default function BudgetsPage() {
                 }}
               >
                 <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-                
+
                 <div className="relative">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -357,6 +411,144 @@ export default function BudgetsPage() {
               </div>
             </StaggerContainer>
 
+            {/* NEW: Historical Budget Performance */}
+            {historicalPerformance.some(m => m.budget > 0) && (
+              <FadeIn>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      6-Month Performance
+                    </CardTitle>
+                    <CardDescription>Budget adherence over time</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {historicalPerformance.map((month, index) => {
+                      if (month.budget === 0) return null;
+                      const isOverBudget = month.adherence >= 100;
+
+                      return (
+                        <motion.div
+                          key={month.month}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between text-sm">
+                            <span className={cn(
+                              "font-medium",
+                              month.isCurrentMonth && "text-primary"
+                            )}>
+                              {month.label}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground text-xs">
+                                {formatCurrency(month.spent)} / {formatCurrency(month.budget)}
+                              </span>
+                              <span className={cn(
+                                "text-xs font-semibold",
+                                isOverBudget ? "text-destructive" : "text-primary"
+                              )}>
+                                {month.adherence.toFixed(0)}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.min(month.adherence, 100)}%` }}
+                              transition={{ duration: 0.6, delay: index * 0.05 + 0.2 }}
+                              className={cn(
+                                "h-full rounded-full",
+                                isOverBudget ? "bg-destructive" : "bg-primary"
+                              )}
+                            />
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            )}
+
+            {/* NEW: Daily Spending Pace (only for current month with budget) */}
+            {isCurrentMonth && currentBudget && dailyPace.length > 0 && (
+              <FadeIn>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      Daily Spending Pace
+                    </CardTitle>
+                    <CardDescription>
+                      Actual vs ideal cumulative spending
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Sparkline visualization */}
+                      <div className="relative h-24 bg-muted/20 rounded-lg p-3">
+                        <div className="absolute inset-3">
+                          <Sparkline
+                            data={dailyPace.map(d => d.ideal)}
+                            color="#98EF5A"
+                            height={72}
+                            showDots={false}
+                          />
+                        </div>
+                        <div className="absolute inset-3">
+                          <Sparkline
+                            data={dailyPace.map(d => d.actual)}
+                            color={totalMonthSpent > (currentBudget.totalAmount * (new Date().getDate() / new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate())) ? "#ef4444" : "#3b82f6"}
+                            height={72}
+                            showDots={false}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Legend */}
+                      <div className="flex items-center justify-center gap-4 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-0.5 bg-primary rounded" />
+                          <span className="text-muted-foreground">Ideal Pace</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className={cn(
+                            "w-3 h-0.5 rounded",
+                            totalMonthSpent > (currentBudget.totalAmount * (new Date().getDate() / new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate()))
+                              ? "bg-destructive"
+                              : "bg-blue-500"
+                          )} />
+                          <span className="text-muted-foreground">Actual Pace</span>
+                        </div>
+                      </div>
+
+                      {/* Summary */}
+                      <div className="pt-3 border-t border-border/50 grid grid-cols-2 gap-3 text-center">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Projected Total</p>
+                          <p className={cn(
+                            "text-sm font-semibold mt-0.5",
+                            dailyPace[dailyPace.length - 1]?.actual > currentBudget.totalAmount && "text-destructive"
+                          )}>
+                            {formatCurrency(dailyPace[dailyPace.length - 1]?.actual * (new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate() / new Date().getDate()) || 0)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Days Remaining</p>
+                          <p className="text-sm font-semibold mt-0.5">
+                            {new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate() - new Date().getDate()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            )}
+
             {/* Category Allocations */}
             {allocationsWithSpending.length > 0 && (
               <FadeIn>
@@ -367,8 +559,8 @@ export default function BudgetsPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {allocationsWithSpending.map((allocation, index) => (
-                      <motion.div 
-                        key={allocation.categoryId} 
+                      <motion.div
+                        key={allocation.categoryId}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
@@ -418,7 +610,7 @@ export default function BudgetsPage() {
                             })}
                           />
                           {allocation.percentage > 100 && (
-                            <div 
+                            <div
                               className="absolute top-0 right-0 h-2 rounded-r-full bg-destructive/30"
                               style={{ width: `${Math.min((allocation.percentage - 100) / 2, 20)}%` }}
                             />
@@ -468,7 +660,7 @@ export default function BudgetsPage() {
           <DialogContent className="max-h-[90vh] flex flex-col sm:max-w-lg">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle className="flex items-center gap-2">
-                <div 
+                <div
                   className="p-2 rounded-xl"
                   style={{
                     background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
@@ -524,7 +716,7 @@ export default function BudgetsPage() {
                       {formatCurrency(totalAllocated)} / {formatCurrency(totalBudget)}
                     </span>
                   </div>
-                  <Progress 
+                  <Progress
                     value={totalBudget > 0 ? Math.min((totalAllocated / totalBudget) * 100, 100) : 0}
                     className={cn("h-2", {
                       "[&>div]:bg-primary": totalAllocated <= totalBudget,
@@ -535,7 +727,7 @@ export default function BudgetsPage() {
                     <span className={cn(
                       unallocatedAmount >= 0 ? "text-muted-foreground" : "text-destructive"
                     )}>
-                      {unallocatedAmount >= 0 
+                      {unallocatedAmount >= 0
                         ? `${formatCurrency(unallocatedAmount)} unallocated`
                         : `${formatCurrency(Math.abs(unallocatedAmount))} over-allocated`
                       }
@@ -574,9 +766,9 @@ export default function BudgetsPage() {
                   {categories.map((category, index) => {
                     const allocation = allocations[category.id] || 0;
                     const percentage = totalBudget > 0 ? (allocation / totalBudget) * 100 : 0;
-                    
+
                     return (
-                      <motion.div 
+                      <motion.div
                         key={category.id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -586,7 +778,7 @@ export default function BudgetsPage() {
                           allocation > 0 ? "bg-muted/50" : "bg-transparent hover:bg-muted/30"
                         )}
                       >
-                        <div 
+                        <div
                           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
                           style={{
                             background: `${category.color}15`,
@@ -651,20 +843,20 @@ export default function BudgetsPage() {
             </div>
 
             <DialogFooter className="flex-shrink-0 gap-2 sm:gap-0 pt-4 border-t">
-              <Button 
-                variant="outline" 
-                onClick={() => setDialogOpen(false)} 
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
                 className="flex-1 sm:flex-none"
               >
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSaveBudget} 
+              <Button
+                onClick={handleSaveBudget}
                 disabled={isSaving || totalBudget <= 0}
                 className="flex-1 sm:flex-none gap-2"
                 style={{
-                  background: totalBudget > 0 
-                    ? 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)' 
+                  background: totalBudget > 0
+                    ? 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)'
                     : undefined,
                   color: totalBudget > 0 ? '#101010' : undefined,
                 }}

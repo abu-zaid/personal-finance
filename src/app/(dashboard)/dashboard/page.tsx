@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { format, subDays, startOfDay, isSameDay, subMonths } from 'date-fns';
+import { format, subDays, startOfDay, isSameDay, subMonths, getDaysInMonth } from 'date-fns';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { PageTransition, StaggerContainer, StaggerItem, FadeIn } from '@/components/animations';
@@ -19,19 +19,24 @@ import {
   RecentTransactions,
   SpendingByCategory,
 } from '@/components/features/dashboard';
+import { Sparkline, SpendingVelocityGauge } from '@/components/charts';
 import { getMonthString, cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
-import { 
-  Plus, 
-  TrendingUp, 
-  TrendingDown, 
-  Lightbulb, 
+import {
+  Plus,
+  TrendingUp,
+  TrendingDown,
+  Lightbulb,
   ArrowRight,
   Zap,
   Target,
   PiggyBank,
   Sparkles,
-  Wallet
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  Calendar,
+  Gauge
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -40,7 +45,7 @@ export default function DashboardPage() {
   const { transactions, isLoading: transactionsLoading, getMonthlyTotal, getMonthlyIncome, getMonthlyExpenses } = useTransactions();
   const { getBudgetByMonth, isLoading: budgetsLoading } = useBudgets();
   const { formatCurrency } = useCurrency();
-  
+
   // Combined loading state - show skeleton until all data is ready
   const isDataLoading = categoriesLoading || transactionsLoading || budgetsLoading;
 
@@ -162,9 +167,72 @@ export default function DashboardPage() {
     };
   }, [budgetUsage, monthChange, topCategory, totalSpent]);
 
+  // NEW: Additional calculations for enhanced visualizations
+
+  // Days in current month and elapsed days
+  const daysInMonth = getDaysInMonth(new Date());
+  const daysElapsed = new Date().getDate();
+
+  // Income vs Expenses breakdown
+  const incomeVsExpenses = useMemo(() => {
+    return {
+      income: totalIncome,
+      expenses: totalSpent,
+      savings: totalIncome - totalSpent,
+      savingsRate: totalIncome > 0 ? ((totalIncome - totalSpent) / totalIncome) * 100 : 0,
+    };
+  }, [totalIncome, totalSpent]);
+
+  // Category trends (last 7 days for top 5 categories)
+  const categoryTrends = useMemo(() => {
+    const topCategories = [...spendingByCategoryFiltered]
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+
+    return topCategories.map(({ categoryId }) => {
+      const category = categories.find(c => c.id === categoryId);
+      const last7Days = [];
+
+      for (let i = 6; i >= 0; i--) {
+        const date = startOfDay(subDays(new Date(), i));
+        const dayTotal = transactions
+          .filter(t =>
+            t.categoryId === categoryId &&
+            isSameDay(new Date(t.date), date) &&
+            t.type === 'expense'
+          )
+          .reduce((sum, t) => sum + t.amount, 0);
+        last7Days.push(dayTotal);
+      }
+
+      return {
+        category,
+        data: last7Days,
+        total: last7Days.reduce((sum, val) => sum + val, 0),
+      };
+    });
+  }, [spendingByCategoryFiltered, categories, transactions]);
+
+  // Top 3 spending days this month
+  const topSpendingDays = useMemo(() => {
+    const dailyTotals = new Map<string, number>();
+
+    currentMonthTransactions.forEach(t => {
+      const dateKey = format(new Date(t.date), 'yyyy-MM-dd');
+      dailyTotals.set(dateKey, (dailyTotals.get(dateKey) || 0) + t.amount);
+    });
+
+    return Array.from(dailyTotals.entries())
+      .map(([date, amount]) => ({ date, amount }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 3);
+  }, [currentMonthTransactions]);
+
+  const maxTopDaySpend = topSpendingDays[0]?.amount || 1;
+
   // Get greeting based on time of day - using state to ensure client-side rendering
   const [greeting, setGreeting] = useState('Hello');
-  
+
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) {
@@ -193,7 +261,7 @@ export default function DashboardPage() {
             </h1>
           </div>
           <Link href="/transactions">
-            <div 
+            <div
               className="flex h-9 w-9 items-center justify-center rounded-xl shadow-lg cursor-pointer"
               style={{
                 background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
@@ -216,7 +284,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <Link href="/transactions">
-            <button 
+            <button
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-[#101010] shadow-lg transition-transform hover:scale-105"
               style={{
                 background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
@@ -292,8 +360,8 @@ export default function DashboardPage() {
                   {monthChange !== 0 && (
                     <span className={cn(
                       "flex items-center text-xs font-medium px-2 py-0.5 rounded-full",
-                      monthChange > 0 
-                        ? "bg-red-500/10 text-red-500" 
+                      monthChange > 0
+                        ? "bg-red-500/10 text-red-500"
                         : "bg-primary/10 text-primary"
                     )}>
                       {monthChange > 0 ? (
@@ -318,12 +386,12 @@ export default function DashboardPage() {
                     className="flex-1 flex flex-col items-center gap-1"
                     style={{ originY: 1 }}
                   >
-                    <div 
+                    <div
                       className={cn(
                         "w-full rounded-t-md transition-all",
                         day.isToday ? "bg-primary" : "bg-primary/30 dark:bg-primary/40"
                       )}
-                      style={{ 
+                      style={{
                         height: day.total > 0 ? `${Math.max((day.total / maxDailySpend) * 56, 4)}px` : '4px',
                       }}
                     />
@@ -358,8 +426,8 @@ export default function DashboardPage() {
                   <span className="text-xs text-muted-foreground font-medium">Avg/Day</span>
                 </div>
                 <p className="text-lg font-bold">
-                  {formatCurrency(currentMonthTransactions.length > 0 
-                    ? totalSpent / new Date().getDate() 
+                  {formatCurrency(currentMonthTransactions.length > 0
+                    ? totalSpent / new Date().getDate()
                     : 0
                   )}
                 </p>
@@ -372,10 +440,10 @@ export default function DashboardPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   {topCategory ? (
-                    <CategoryIcon 
-                      icon={topCategory.category.icon} 
-                      color={topCategory.category.color} 
-                      size="sm" 
+                    <CategoryIcon
+                      icon={topCategory.category.icon}
+                      color={topCategory.category.color}
+                      size="sm"
                     />
                   ) : (
                     <div className="p-1.5 rounded-lg bg-muted">
@@ -393,6 +461,206 @@ export default function DashboardPage() {
             </Card>
           </FadeIn>
         </div>
+
+        {/* NEW: Income vs Expenses Comparison */}
+        <FadeIn>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Wallet className="h-4 w-4" />
+                Income vs Expenses
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Income Bar */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <ArrowDownRight className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground">Income</span>
+                    </div>
+                    <span className="font-semibold text-primary">
+                      {formatCurrency(incomeVsExpenses.income)}
+                    </span>
+                  </div>
+                  <div className="h-3 bg-muted/30 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: '100%' }}
+                      transition={{ duration: 0.8, ease: "easeOut" }}
+                      className="h-full bg-primary rounded-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Expenses Bar */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <ArrowUpRight className="h-4 w-4 text-destructive" />
+                      <span className="text-muted-foreground">Expenses</span>
+                    </div>
+                    <span className="font-semibold text-destructive">
+                      {formatCurrency(incomeVsExpenses.expenses)}
+                    </span>
+                  </div>
+                  <div className="h-3 bg-muted/30 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: incomeVsExpenses.income > 0
+                          ? `${Math.min((incomeVsExpenses.expenses / incomeVsExpenses.income) * 100, 100)}%`
+                          : '0%'
+                      }}
+                      transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+                      className="h-full bg-destructive rounded-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Savings Summary */}
+                <div className="pt-3 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Net Savings</span>
+                    <div className="text-right">
+                      <p className={cn(
+                        "text-lg font-bold",
+                        incomeVsExpenses.savings >= 0 ? "text-primary" : "text-destructive"
+                      )}>
+                        {incomeVsExpenses.savings >= 0 ? '+' : ''}{formatCurrency(incomeVsExpenses.savings)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {incomeVsExpenses.savingsRate.toFixed(1)}% savings rate
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </FadeIn>
+
+        {/* NEW: Spending Velocity Gauge (only show if budget exists) */}
+        {hasBudget && (
+          <FadeIn>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Gauge className="h-4 w-4" />
+                  Spending Pace
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Are you on track to stay within budget?
+                </p>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <SpendingVelocityGauge
+                  currentSpending={totalSpent}
+                  budget={totalBudget}
+                  daysElapsed={daysElapsed}
+                  daysInMonth={daysInMonth}
+                />
+              </CardContent>
+            </Card>
+          </FadeIn>
+        )}
+
+        {/* NEW: Category Trends with Sparklines */}
+        {categoryTrends.length > 0 && (
+          <FadeIn>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold">Category Trends</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Last 7 days spending patterns
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {categoryTrends.map((trend, index) => (
+                  <motion.div
+                    key={trend.category?.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center gap-3"
+                  >
+                    {trend.category && (
+                      <CategoryIcon
+                        icon={trend.category.icon}
+                        color={trend.category.color}
+                        size="sm"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {trend.category?.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatCurrency(trend.total)} this week
+                      </p>
+                    </div>
+                    <div className="w-20 h-8">
+                      <Sparkline
+                        data={trend.data}
+                        color={trend.category?.color}
+                        height={32}
+                      />
+                    </div>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </FadeIn>
+        )}
+
+        {/* NEW: Top Spending Days */}
+        {topSpendingDays.length > 0 && (
+          <FadeIn>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Top Spending Days
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Highest expense days this month
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {topSpendingDays.map((day, index) => (
+                  <motion.div
+                    key={day.date}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {format(new Date(day.date), 'EEEE, MMM d')}
+                      </span>
+                      <span className="font-semibold">
+                        {formatCurrency(day.amount)}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(day.amount / maxTopDaySpend) * 100}%` }}
+                        transition={{ duration: 0.6, delay: index * 0.1 + 0.2 }}
+                        className={cn(
+                          "h-full rounded-full",
+                          index === 0 ? "bg-destructive" : "bg-primary/60"
+                        )}
+                      />
+                    </div>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </FadeIn>
+        )}
 
         {/* Recent Transactions */}
         <StaggerItem>

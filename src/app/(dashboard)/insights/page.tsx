@@ -14,10 +14,10 @@ import { useCategories } from '@/context/categories-context';
 import { useBudgets } from '@/context/budgets-context';
 import { cn, getMonthString } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  BarChart3,
+  TrendingUp,
+  TrendingDown,
   Wallet,
   Calendar,
   Target,
@@ -25,8 +25,10 @@ import {
   PiggyBank,
   ArrowUpRight,
   ArrowDownRight,
-  Minus
+  Minus,
+  Clock
 } from 'lucide-react';
+import { DonutChart } from '@/components/charts';
 
 export default function InsightsPage() {
   const { transactions, getMonthlyTotal } = useTransactions();
@@ -91,7 +93,7 @@ export default function InsightsPage() {
       );
       const total = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
       const count = categoryTransactions.length;
-      
+
       // Previous month comparison
       const prevCategoryTransactions = previousMonthTransactions.filter(
         (t) => t.categoryId === category.id
@@ -111,7 +113,7 @@ export default function InsightsPage() {
 
   // Top spending category
   const topCategory = categoryBreakdown[0];
-  
+
   // Biggest increase/decrease categories
   const biggestIncrease = useMemo(() => {
     return categoryBreakdown
@@ -133,7 +135,7 @@ export default function InsightsPage() {
     const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
     return days.map(day => {
-      const dayTransactions = transactions.filter(t => 
+      const dayTransactions = transactions.filter(t =>
         isSameDay(new Date(t.date), day)
       );
       const total = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -164,7 +166,7 @@ export default function InsightsPage() {
     for (let i = 0; i < 30; i++) {
       const checkDate = new Date(today);
       checkDate.setDate(today.getDate() - i);
-      const hasTransaction = transactions.some(t => 
+      const hasTransaction = transactions.some(t =>
         isSameDay(new Date(t.date), checkDate)
       );
       if (hasTransaction) {
@@ -179,6 +181,29 @@ export default function InsightsPage() {
   // Transaction count stats
   const transactionCount = currentMonthTransactions.length;
   const avgTransactionAmount = transactionCount > 0 ? currentMonthTotal / transactionCount : 0;
+
+  // NEW: Day of week spending patterns
+  const dayOfWeekSpending = useMemo(() => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const totals = new Array(7).fill(0);
+    const counts = new Array(7).fill(0);
+
+    currentMonthTransactions.forEach(t => {
+      const dayIndex = new Date(t.date).getDay();
+      totals[dayIndex] += t.amount;
+      counts[dayIndex]++;
+    });
+
+    const maxTotal = Math.max(...totals, 1);
+
+    return days.map((day, index) => ({
+      day,
+      total: totals[index],
+      count: counts[index],
+      average: counts[index] > 0 ? totals[index] / counts[index] : 0,
+      intensity: (totals[index] / maxTotal) * 100,
+    }));
+  }, [currentMonthTransactions]);
 
   if (transactions.length === 0) {
     return (
@@ -336,8 +361,8 @@ export default function InsightsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Progress 
-                      value={Math.min(budgetUsage, 100)} 
+                    <Progress
+                      value={Math.min(budgetUsage, 100)}
                       className={cn("h-3", {
                         "[&>div]:bg-primary": budgetUsage < 80,
                         "[&>div]:bg-yellow-500": budgetUsage >= 80 && budgetUsage < 100,
@@ -352,7 +377,7 @@ export default function InsightsPage() {
                         "font-medium",
                         budgetRemaining >= 0 ? "text-primary" : "text-destructive"
                       )}>
-                        {budgetRemaining >= 0 
+                        {budgetRemaining >= 0
                           ? `${formatCurrency(budgetRemaining)} left`
                           : `${formatCurrency(Math.abs(budgetRemaining))} over`
                         }
@@ -383,12 +408,12 @@ export default function InsightsPage() {
                         className="flex-1 flex flex-col items-center gap-1"
                         style={{ originY: 1 }}
                       >
-                        <div 
+                        <div
                           className={cn(
                             "w-full rounded-t-md transition-all",
                             day.isToday ? "bg-primary" : "bg-primary/30 dark:bg-primary/40"
                           )}
-                          style={{ 
+                          style={{
                             height: day.total > 0 ? `${Math.max((day.total / maxDailySpend) * 60, 4)}px` : '4px',
                           }}
                         />
@@ -436,6 +461,61 @@ export default function InsightsPage() {
                 </Card>
               </FadeIn>
             )}
+
+            {/* NEW: Day of Week Spending Heatmap */}
+            <FadeIn>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Spending by Day of Week
+                  </CardTitle>
+                  <CardDescription>When do you spend the most?</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {dayOfWeekSpending.map((day, index) => (
+                      <motion.div
+                        key={day.day}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="space-y-1"
+                      >
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground w-24">{day.day}</span>
+                          <span className="font-semibold">{formatCurrency(day.total)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-8 bg-muted/30 rounded-lg overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${day.intensity}%` }}
+                              transition={{ duration: 0.6, delay: index * 0.05 + 0.2 }}
+                              className="h-full rounded-lg"
+                              style={{
+                                background: `linear-gradient(90deg, ${day.intensity > 80 ? '#ef4444' :
+                                    day.intensity > 60 ? '#f59e0b' :
+                                      day.intensity > 40 ? '#3b82f6' :
+                                        '#98EF5A'
+                                  } 0%, ${day.intensity > 80 ? '#dc2626' :
+                                    day.intensity > 60 ? '#d97706' :
+                                      day.intensity > 40 ? '#2563eb' :
+                                        '#7BEA3C'
+                                  } 100%)`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground w-16 text-right">
+                            {day.count} txns
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeIn>
           </TabsContent>
 
           {/* Trends Tab */}
@@ -565,9 +645,9 @@ export default function InsightsPage() {
                   <div className="mt-4 text-center">
                     <div className={cn(
                       "inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium",
-                      monthChange > 0 
-                        ? "bg-destructive/10 text-destructive" 
-                        : monthChange < 0 
+                      monthChange > 0
+                        ? "bg-destructive/10 text-destructive"
+                        : monthChange < 0
                           ? "bg-primary/10 text-primary"
                           : "bg-muted text-muted-foreground"
                     )}>
@@ -598,6 +678,25 @@ export default function InsightsPage() {
                 <CardContent>
                   {categoryBreakdown.length > 0 ? (
                     <>
+                      {/* NEW: Donut Chart */}
+                      <div className="flex justify-center mb-6">
+                        <DonutChart
+                          data={categoryBreakdown.slice(0, 6).map(item => ({
+                            value: item.total,
+                            color: item.category.color,
+                            label: item.category.name,
+                          }))}
+                          size={180}
+                          thickness={28}
+                          centerContent={
+                            <div className="text-center">
+                              <p className="text-xs text-muted-foreground">Total</p>
+                              <p className="text-lg font-bold">{formatCurrency(totalCurrentMonth)}</p>
+                            </div>
+                          }
+                        />
+                      </div>
+
                       {/* Visual bar representation */}
                       <div className="flex h-4 rounded-full overflow-hidden mb-4">
                         {categoryBreakdown.map((item, index) => {
@@ -688,7 +787,7 @@ export default function InsightsPage() {
                     <div className="p-3 rounded-xl bg-muted/30 dark:bg-white/[0.03]">
                       <p className="text-xs text-muted-foreground">Avg per Category</p>
                       <p className="text-2xl font-bold mt-1">
-                        {categoryBreakdown.length > 0 
+                        {categoryBreakdown.length > 0
                           ? formatCurrency(totalCurrentMonth / categoryBreakdown.length)
                           : symbol + '0'
                         }

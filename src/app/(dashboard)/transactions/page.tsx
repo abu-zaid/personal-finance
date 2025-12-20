@@ -49,6 +49,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { TransactionWithCategory } from '@/types';
+import { Sparkline } from '@/components/charts';
 
 export default function TransactionsPage() {
   const {
@@ -164,6 +165,23 @@ export default function TransactionsPage() {
     return format(d, 'EEEE, MMMM d');
   };
 
+  // NEW: Monthly spending trend (last 30 days)
+  const monthlyTrend = useMemo(() => {
+    const days = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayTotal = transactions
+        .filter(t => {
+          const tDate = new Date(t.date);
+          return tDate.toDateString() === date.toDateString();
+        })
+        .reduce((sum, t) => sum + t.amount, 0);
+      days.push(dayTotal);
+    }
+    return days;
+  }, [transactions]);
+
   return (
     <ErrorBoundary>
       <PageTransition>
@@ -188,6 +206,27 @@ export default function TransactionsPage() {
               <Plus className="h-4 w-4 text-[#101010]" />
             </button>
           </div>
+
+          {/* NEW: Monthly Trend Sparkline */}
+          {monthlyTrend.some(v => v > 0) && (
+            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground">30-Day Trend</p>
+                    <p className="text-lg font-bold">{formatCurrency(getMonthlyTotal(currentMonth))}</p>
+                  </div>
+                  <div className="w-32 h-12">
+                    <Sparkline
+                      data={monthlyTrend}
+                      color="#98EF5A"
+                      height={48}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* CATEGORY FILTERS */}
           <div className="relative -mx-4 px-4 overflow-x-auto">
