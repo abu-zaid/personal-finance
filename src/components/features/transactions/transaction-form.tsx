@@ -297,7 +297,7 @@ export function TransactionForm({
             </div>
 
             {/* Footer Actions */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-4 sticky bottom-0 bg-background pb-4 -mx-6 px-6 border-t mt-auto">
                 <Button type="button" variant="outline" className="flex-1 h-12" onClick={onCancel}>
                     Cancel
                 </Button>

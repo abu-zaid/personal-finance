@@ -492,7 +492,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* --- SCROLLABLE CONTENT AREA --- */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden md:px-6 pb-6 scrollbar-hide w-full">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 pb-6 scrollbar-hide w-full">
         {Object.keys(groupedTransactions).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
