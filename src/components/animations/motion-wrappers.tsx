@@ -63,7 +63,7 @@ interface StaggerContainerProps extends AnimationWrapperProps {
   staggerDelay?: number;
 }
 
-// Stagger container for list animations
+// Stagger container for list animations - Optimized
 export function StaggerContainer({ children, className, staggerDelay }: StaggerContainerProps) {
   return (
     <motion.div
@@ -71,8 +71,8 @@ export function StaggerContainer({ children, className, staggerDelay }: StaggerC
         initial: {},
         animate: {
           transition: {
-            staggerChildren: staggerDelay ?? 0.05,
-            delayChildren: 0.1,
+            staggerChildren: staggerDelay ?? 0.03, // Faster stagger for better feel
+            delayChildren: 0.05,
           },
         },
       }}

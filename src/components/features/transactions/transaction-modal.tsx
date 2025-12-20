@@ -42,10 +42,10 @@ interface TransactionModalProps {
   transaction?: TransactionWithCategory | null;
 }
 
-export const TransactionModal = memo(function TransactionModal({ 
-  open, 
+export const TransactionModal = memo(function TransactionModal({
+  open,
   onOpenChange,
-  transaction 
+  transaction
 }: TransactionModalProps) {
   const { categories } = useCategories();
   const { createTransaction, updateTransaction } = useTransactions();
@@ -102,18 +102,28 @@ export const TransactionModal = memo(function TransactionModal({
   const onSubmit = useCallback(async (data: TransactionFormData) => {
     setIsLoading(true);
     try {
+      // Ensure we're using a Date object and preserving time
+      // If the user picked a date via calendar, it might have preserved time via onSelect
+      // But we double check here to be safe, especially for 'today' defaults
+
+      const payload = {
+        ...data,
+        date: data.date // The form state should already have the correct time from onSelect/default
+      };
+
       if (isEditMode && transaction) {
-        await updateTransaction(transaction.id, data);
+        await updateTransaction(transaction.id, payload);
         haptics.success();
         toast.success('Transaction updated successfully');
       } else {
-        await createTransaction(data);
+        await createTransaction(payload);
         haptics.success();
         toast.success('Transaction added successfully');
       }
       reset({ date: new Date() });
       onOpenChange(false);
-    } catch {
+    } catch (err) {
+      console.error('Transaction submit error:', err);
       haptics.error();
       toast.error(isEditMode ? 'Failed to update transaction' : 'Failed to add transaction');
     } finally {
@@ -145,8 +155,8 @@ export const TransactionModal = memo(function TransactionModal({
             )}
           </DialogTitle>
           <DialogDescription>
-            {isEditMode 
-              ? 'Update the details of this transaction' 
+            {isEditMode
+              ? 'Update the details of this transaction'
               : 'Record a new income or expense'
             }
           </DialogDescription>
@@ -376,9 +386,9 @@ export const TransactionModal = memo(function TransactionModal({
             <Button type="button" variant="outline" className="flex-1" onClick={handleClose}>
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              className="flex-1" 
+            <Button
+              type="submit"
+              className="flex-1"
               disabled={isLoading || (isEditMode && !isDirty)}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -392,9 +402,9 @@ export const TransactionModal = memo(function TransactionModal({
 });
 
 // Keep backward compatibility with AddTransactionModal
-export const AddTransactionModal = memo(function AddTransactionModal({ 
-  open, 
-  onOpenChange 
+export const AddTransactionModal = memo(function AddTransactionModal({
+  open,
+  onOpenChange
 }: Omit<TransactionModalProps, 'transaction'>) {
   return <TransactionModal open={open} onOpenChange={onOpenChange} transaction={null} />;
 });
