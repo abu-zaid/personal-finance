@@ -19,6 +19,8 @@ import {
   BudgetOverview,
   RecentTransactions,
   SpendingByCategory,
+  FinancialHealthScore,
+  SmartInsights,
 } from '@/components/features/dashboard';
 import { Sparkline, SpendingVelocityGauge } from '@/components/charts';
 import { getMonthString, cn } from '@/lib/utils';
@@ -313,6 +315,16 @@ export default function DashboardPage() {
             />
           </StaggerItem>
         </StaggerContainer>
+
+        {/* Financial Health Score */}
+        <FadeIn>
+          <FinancialHealthScore />
+        </FadeIn>
+
+        {/* Smart Insights */}
+        <FadeIn>
+          <SmartInsights />
+        </FadeIn>
 
         {/* Quick Insight Banner - Modern */}
         <FadeIn>
