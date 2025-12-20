@@ -19,6 +19,7 @@ import {
 import { useHaptics } from '@/hooks/use-haptics';
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -125,17 +126,18 @@ export const BottomNav = memo(function BottomNav({
                       </SheetHeader>
                       <div className="grid grid-cols-2 gap-4">
                         {secondaryNavItems.map((sItem) => (
-                          <Link
-                            key={sItem.href}
-                            href={sItem.href}
-                            onClick={handleNavClick}
-                            className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors"
-                          >
-                            <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-background shadow-sm">
-                              <sItem.icon size={22} className="text-foreground" />
-                            </div>
-                            <span className="text-sm font-semibold">{sItem.label}</span>
-                          </Link>
+                          <SheetClose asChild key={sItem.href}>
+                            <Link
+                              href={sItem.href}
+                              onClick={handleNavClick}
+                              className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-background shadow-sm">
+                                <sItem.icon size={22} className="text-foreground" />
+                              </div>
+                              <span className="text-sm font-semibold">{sItem.label}</span>
+                            </Link>
+                          </SheetClose>
                         ))}
                       </div>
                     </SheetContent>

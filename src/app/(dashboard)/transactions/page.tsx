@@ -245,157 +245,218 @@ export default function TransactionsPage() {
     <PageTransition className="w-full pb-24 space-y-4">
 
       {/* --- HEADER --- */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between relative bg-background z-40 py-4 md:bg-transparent md:p-0 border-b md:border-none">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
-          <p className="text-muted-foreground text-sm">
-            {totalCount} entries • {formatCurrency(stats.expense)} expenses
-          </p>
+      <div className="flex flex-col gap-4 sticky top-0 bg-background/95 backdrop-blur-md z-40 py-4 border-b md:border-none duration-200 transition-all">
+
+        {/* Top Bar */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
+            <p className="text-muted-foreground text-sm">
+              {selectedCategoryIds.length > 0 ? (
+                <span>
+                  {selectedCategoryIds.length === 1
+                    ? categories.find(c => c.id === selectedCategoryIds[0])?.name
+                    : `${selectedCategoryIds.length} categories`}
+                  {' • '}
+                  <span className={cn(stats.expense > 0 ? "text-red-500" : "text-green-500")}>
+                    {stats.expense > 0 ? formatCurrency(stats.expense) : formatCurrency(stats.income)}
+                  </span>
+                  {' '}
+                  {stats.expense > 0 ? 'spent' : 'earned'}
+                </span>
+              ) : (
+                <span>{totalCount} entries • {formatCurrency(stats.expense)} expenses</span>
+              )}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Mobile: Filter Sheet Trigger */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="h-10 gap-2 relative">
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span className="hidden sm:inline">Filters</span>
+                  {activeFilterCount > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 ml-1 text-[10px] min-w-[1.25rem]">{activeFilterCount}</Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="flex flex-col max-h-[85vh] h-[85vh] sm:h-auto sm:side-right rounded-t-[20px] sm:rounded-none p-0 gap-0">
+                <div className="p-6 pb-2">
+                  <SheetHeader className="text-left">
+                    <SheetTitle>Filter & Sort</SheetTitle>
+                    <SheetDescription>Refine your transaction list</SheetDescription>
+                  </SheetHeader>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+                  {/* Search in Filter for Mobile */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Search</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search notes, categories..."
+                        defaultValue={searchQuery}
+                        onChange={(e) => {
+                          // Simple debounce
+                          const val = e.target.value;
+                          const timeoutId = setTimeout(() => setSearchQuery(val), 300);
+                          return () => clearTimeout(timeoutId);
+                        }}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sort */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Sort By</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant={sortConfig.field === 'date' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSortConfig({ field: 'date', order: sortConfig.order === 'asc' ? 'desc' : 'asc' })}
+                      >
+                        Date {sortConfig.field === 'date' && (sortConfig.order === 'asc' ? '↑' : '↓')}
+                      </Button>
+                      <Button
+                        variant={sortConfig.field === 'amount' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSortConfig({ field: 'amount', order: sortConfig.order === 'desc' ? 'asc' : 'desc' })}
+                      >
+                        Amount {sortConfig.field === 'amount' && (sortConfig.order === 'asc' ? '↑' : '↓')}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Type */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Type</label>
+                    <div className="flex p-1 bg-muted rounded-lg">
+                      {['all', 'expense', 'income'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setSelectedType(type as any)}
+                          className={cn(
+                            "flex-1 py-1.5 text-sm font-medium rounded-md capitalize transition-all",
+                            selectedType === type ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Categories */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Categories</label>
+                    <div className="flex flex-wrap gap-2">
+                      {categories.map(cat => {
+                        const isSelected = selectedCategoryIds.includes(cat.id);
+                        return (
+                          <Badge
+                            key={cat.id}
+                            variant={isSelected ? 'default' : 'outline'}
+                            className="cursor-pointer"
+                            style={isSelected ? { backgroundColor: cat.color, color: '#000' } : {}}
+                            onClick={() => {
+                              if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                              else setSelectedCategoryIds(prev => [...prev, cat.id]);
+                            }}
+                          >
+                            {cat.name}
+                          </Badge>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Date Range - Simplistic for now */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Timeframe</label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setDateRange({ from: undefined, to: undefined })}>All Time</Button>
+                      <Button variant="outline" size="sm" onClick={() => setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })}>This Month</Button>
+                      <Button variant="outline" size="sm" onClick={() => setDateRange({ from: subDays(new Date(), 30), to: new Date() })}>Last 30 Days</Button>
+                    </div>
+                  </div>
+
+                </div>
+
+                <div className="p-4 bg-background border-t">
+                  <SheetFooter className="flex-row gap-3 sm:justify-between w-full">
+                    <Button variant="outline" onClick={clearFilters} className="flex-1">Reset</Button>
+                    <SheetClose asChild>
+                      <Button className="flex-[2]">Show {filteredTransactions.length} Results</Button>
+                    </SheetClose>
+                  </SheetFooter>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <Button
+              variant={isBatchMode ? 'secondary' : 'outline'}
+              size="sm"
+              className="h-10"
+              onClick={() => {
+                setIsBatchMode(!isBatchMode);
+                setSelectedIds(new Set());
+              }}
+            >
+              {isBatchMode ? 'Done' : 'Select'}
+            </Button>
+
+            <Button
+              size="sm"
+              className="h-10 w-10 p-0 rounded-full shadow-lg bg-gradient-to-br from-[#98EF5A] to-[#7BEA3C] hover:shadow-xl hover:scale-105 transition-all text-[#101010]"
+              onClick={() => {
+                setEditingTransaction(null);
+                setModalOpen(true);
+              }}
+            >
+              <Plus className="h-5 w-5" strokeWidth={3} />
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Mobile: Filter Sheet Trigger */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="h-10 gap-2 relative">
-                <SlidersHorizontal className="w-4 h-4" />
-                <span className="hidden sm:inline">Filters</span>
-                {activeFilterCount > 0 && (
-                  <Badge variant="secondary" className="h-5 px-1.5 ml-1 text-[10px] min-w-[1.25rem]">{activeFilterCount}</Badge>
+        {/* Quick Category Filters */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide mask-fade-right">
+          <button
+            onClick={() => setSelectedCategoryIds([])}
+            className={cn(
+              "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+              selectedCategoryIds.length === 0
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-border"
+            )}
+          >
+            All
+          </button>
+          {categories.map(cat => {
+            const isSelected = selectedCategoryIds.includes(cat.id);
+            return (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                  else setSelectedCategoryIds(prev => [...prev, cat.id]);
+                }}
+                className={cn(
+                  "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5",
+                  isSelected
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-background text-muted-foreground border-border"
                 )}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[85vh] sm:h-auto sm:side-right rounded-t-[20px] sm:rounded-none">
-              <SheetHeader className="text-left mb-6">
-                <SheetTitle>Filter & Sort</SheetTitle>
-                <SheetDescription>Refine your transaction list</SheetDescription>
-              </SheetHeader>
-              <div className="space-y-6 pb-20">
-                {/* Search in Filter for Mobile */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Search</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search notes, categories..."
-                      defaultValue={searchQuery}
-                      onChange={(e) => {
-                        // Simple debounce
-                        const val = e.target.value;
-                        const timeoutId = setTimeout(() => setSearchQuery(val), 300);
-                        return () => clearTimeout(timeoutId);
-                      }}
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-
-                {/* Sort */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Sort By</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant={sortConfig.field === 'date' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSortConfig({ field: 'date', order: sortConfig.order === 'asc' ? 'desc' : 'asc' })}
-                    >
-                      Date {sortConfig.field === 'date' && (sortConfig.order === 'asc' ? '↑' : '↓')}
-                    </Button>
-                    <Button
-                      variant={sortConfig.field === 'amount' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSortConfig({ field: 'amount', order: sortConfig.order === 'desc' ? 'asc' : 'desc' })}
-                    >
-                      Amount {sortConfig.field === 'amount' && (sortConfig.order === 'asc' ? '↑' : '↓')}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Type */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Type</label>
-                  <div className="flex p-1 bg-muted rounded-lg">
-                    {['all', 'expense', 'income'].map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => setSelectedType(type as any)}
-                        className={cn(
-                          "flex-1 py-1.5 text-sm font-medium rounded-md capitalize transition-all",
-                          selectedType === type ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Categories */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Categories</label>
-                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                    {categories.map(cat => {
-                      const isSelected = selectedCategoryIds.includes(cat.id);
-                      return (
-                        <Badge
-                          key={cat.id}
-                          variant={isSelected ? 'default' : 'outline'}
-                          className="cursor-pointer"
-                          style={isSelected ? { backgroundColor: cat.color, color: '#000' } : {}}
-                          onClick={() => {
-                            if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
-                            else setSelectedCategoryIds(prev => [...prev, cat.id]);
-                          }}
-                        >
-                          {cat.name}
-                        </Badge>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Date Range - Simplistic for now */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Timeframe</label>
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setDateRange({ from: undefined, to: undefined })}>All Time</Button>
-                    <Button variant="outline" size="sm" onClick={() => setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })}>This Month</Button>
-                    <Button variant="outline" size="sm" onClick={() => setDateRange({ from: subDays(new Date(), 30), to: new Date() })}>Last 30 Days</Button>
-                  </div>
-                </div>
-
-              </div>
-              <SheetFooter className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
-                <Button variant="outline" onClick={clearFilters} className="w-1/3">Reset</Button>
-                <SheetClose asChild>
-                  <Button className="w-2/3">Show {filteredTransactions.length} Results</Button>
-                </SheetClose>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-
-          <Button
-            variant={isBatchMode ? 'secondary' : 'outline'}
-            size="sm"
-            className="h-10"
-            onClick={() => {
-              setIsBatchMode(!isBatchMode);
-              setSelectedIds(new Set());
-            }}
-          >
-            {isBatchMode ? 'Done' : 'Select'}
-          </Button>
-
-          <Button
-            size="sm"
-            className="h-10 w-10 p-0 rounded-full shadow-lg bg-gradient-to-br from-[#98EF5A] to-[#7BEA3C] hover:shadow-xl hover:scale-105 transition-all text-[#101010]"
-            onClick={() => {
-              setEditingTransaction(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="h-5 w-5" strokeWidth={3} />
-          </Button>
+                style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color, color: '#000' } : {}}
+              >
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: isSelected ? '#000' : cat.color }} />
+                {cat.name}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -442,8 +503,8 @@ export default function TransactionsPage() {
         ) : (
           Object.entries(groupedTransactions).map(([date, list]) => (
             <div key={date} className="relative">
-              {/* Sticky Date Header */}
-              <div className="sticky top-0 z-30 py-2 bg-background/95 backdrop-blur-sm flex items-center justify-between border-b border-border/40 mb-2">
+              {/* Sticky Date Header - Offset for main header */}
+              <div className="sticky top-[190px] md:top-[130px] z-30 py-2 bg-background/95 backdrop-blur-sm flex items-center justify-between border-b border-border/40 mb-2 transition-all">
                 <h3 className="text-sm font-semibold text-primary">{getDateLabel(new Date(date))}</h3>
                 <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
                   {formatCurrency(list.reduce((sum, t) => sum + (t.type === 'expense' ? -t.amount : t.amount), 0))}
@@ -548,20 +609,20 @@ export default function TransactionsPage() {
             exit={{ y: 100, opacity: 0 }}
             className="fixed bottom-24 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-auto md:min-w-[400px] z-50 origin-bottom"
           >
-            <div className="bg-foreground text-background rounded-2xl p-4 shadow-2xl flex items-center justify-between">
+            <div className="bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 rounded-2xl p-4 shadow-2xl flex items-center justify-between border border-border/10">
               <div className="flex items-center gap-3">
-                <div className="bg-background/20 px-3 py-1 rounded-lg text-sm font-bold">
+                <div className="bg-white/20 dark:bg-black/10 px-3 py-1 rounded-lg text-sm font-bold">
                   {selectedIds.size} selected
                 </div>
-                <p className="text-sm font-medium opacity-80 hidden sm:block">
+                <p className="text-sm font-medium opacity-90 hidden sm:block">
                   Select more or choose an action
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={() => setSelectedIds(new Set())}>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} className="text-current hover:bg-white/10 dark:hover:bg-black/10 hover:text-current">
                   Clear
                 </Button>
-                <Button variant="destructive" size="sm" onClick={handleBatchDelete} className="gap-2">
+                <Button variant="destructive" size="sm" onClick={handleBatchDelete} className="gap-2 shadow-sm">
                   <Trash2 className="w-4 h-4" />
                   Delete
                 </Button>
