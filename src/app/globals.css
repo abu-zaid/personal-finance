@@ -221,6 +221,17 @@
     -webkit-backdrop-filter: blur(12px) saturate(150%);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
+
+  /* Enhanced Glass Card for tooltips and overlays */
+  .glass-card {
+    background: rgba(26, 26, 26, 0.85);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
   
   /* Modern Card Styles */
   .card-modern {
@@ -248,6 +259,15 @@
   .glow-accent {
     box-shadow: 0 0 20px rgba(147, 90, 239, 0.15);
   }
+
+  .glow-hover {
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+  }
+
+  .glow-hover:hover {
+    box-shadow: 0 0 30px rgba(152, 239, 90, 0.25);
+    transform: translateY(-1px);
+  }
   
   /* Subtle hover lift */
   .hover-lift {
@@ -257,6 +277,20 @@
   .hover-lift:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Smooth scale animation */
+  .smooth-scale {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+
+  .smooth-scale:hover {
+    transform: scale(1.02);
+  }
+
+  .smooth-scale:active {
+    transform: scale(0.98);
   }
   
   /* Safe area for mobile bottom nav */
@@ -299,6 +333,25 @@
     );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
+  }
+
+  /* Micro animations */
+  @keyframes micro-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+
+  .micro-bounce {
+    animation: micro-bounce 0.6s ease-in-out;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(152, 239, 90, 0.2); }
+    50% { box-shadow: 0 0 30px rgba(152, 239, 90, 0.4); }
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
   }
 }
 

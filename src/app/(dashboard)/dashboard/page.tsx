@@ -55,6 +55,9 @@ export default function DashboardPage() {
   // Get current month budget
   const currentMonthBudget = getBudgetByMonth(currentMonth);
 
+  // State for interactive 7-day chart
+  const [hoveredDayIndex, setHoveredDayIndex] = useState<number | null>(null);
+
   // Calculate spending by category for current month (expenses only)
   const currentMonthTransactions = useMemo(() => {
     return transactions.filter((t) => {
@@ -377,32 +380,66 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between gap-1.5 h-20">
-                {last7DaysSpending.map((day, index) => (
-                  <motion.div
-                    key={day.label}
-                    initial={{ opacity: 0, scaleY: 0 }}
-                    animate={{ opacity: 1, scaleY: 1 }}
-                    transition={{ delay: index * 0.05, duration: 0.3 }}
-                    className="flex-1 flex flex-col items-center gap-1"
-                    style={{ originY: 1 }}
-                  >
-                    <div
-                      className={cn(
-                        "w-full rounded-t-md transition-all",
-                        day.isToday ? "bg-primary" : "bg-primary/30 dark:bg-primary/40"
+                {last7DaysSpending.map((day, index) => {
+                  const isHovered = hoveredDayIndex === index;
+
+                  return (
+                    <motion.div
+                      key={day.label}
+                      initial={{ opacity: 0, scaleY: 0 }}
+                      animate={{ opacity: 1, scaleY: 1 }}
+                      transition={{ delay: index * 0.05, duration: 0.3 }}
+                      className="flex-1 flex flex-col items-center gap-1 relative group"
+                      style={{ originY: 1 }}
+                      onMouseEnter={() => setHoveredDayIndex(index)}
+                      onMouseLeave={() => setHoveredDayIndex(null)}
+                    >
+                      <motion.div
+                        className={cn(
+                          "w-full rounded-t-md transition-all cursor-pointer relative overflow-hidden",
+                          day.isToday ? "bg-primary" : "bg-primary/30 dark:bg-primary/40"
+                        )}
+                        style={{
+                          height: day.total > 0 ? `${Math.max((day.total / maxDailySpend) * 56, 4)}px` : '4px',
+                        }}
+                        animate={{
+                          scale: isHovered ? 1.1 : 1,
+                          filter: isHovered ? 'drop-shadow(0 0 8px rgba(152, 239, 90, 0.5))' : 'none',
+                        }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {/* Shimmer effect on hover */}
+                        {isHovered && (
+                          <motion.div
+                            className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.2 }}
+                          />
+                        )}
+                      </motion.div>
+
+                      {/* Tooltip */}
+                      {isHovered && day.total > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="absolute bottom-full mb-2 px-2 py-1 rounded-lg glass-card text-[10px] font-semibold whitespace-nowrap z-10"
+                        >
+                          {formatCurrency(day.total)}
+                        </motion.div>
                       )}
-                      style={{
-                        height: day.total > 0 ? `${Math.max((day.total / maxDailySpend) * 56, 4)}px` : '4px',
-                      }}
-                    />
-                    <span className={cn(
-                      "text-[10px] font-medium",
-                      day.isToday ? "text-primary" : "text-muted-foreground"
-                    )}>
-                      {day.label}
-                    </span>
-                  </motion.div>
-                ))}
+
+                      <span className={cn(
+                        "text-[10px] font-medium transition-colors",
+                        day.isToday ? "text-primary" : "text-muted-foreground",
+                        isHovered && "text-primary font-semibold"
+                      )}>
+                        {day.label}
+                      </span>
+                    </motion.div>
+                  );
+                })}
               </div>
               <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Today</span>
