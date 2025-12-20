@@ -10,18 +10,16 @@ import {
   Plus,
   ChartBar,
   Wallet,
-  ArrowsClockwise,
-  Flag,
 } from 'phosphor-react';
 
 import { useHaptics } from '@/hooks/use-haptics';
 
 const navItems = [
   { href: '/dashboard', icon: House, id: 'home' },
-  { href: '/budgets', icon: Wallet, id: 'budgets' },
+  { href: '/transactions', icon: ListBullets, id: 'transactions' },
   { href: null, icon: Plus, id: 'add', highlight: true },
-  { href: '/recurring', icon: ArrowsClockwise, id: 'recurring' },
-  { href: '/goals', icon: Flag, id: 'goals' },
+  { href: '/budgets', icon: Wallet, id: 'budgets' },
+  { href: '/insights', icon: ChartBar, id: 'insights' },
 ];
 
 interface BottomNavProps {

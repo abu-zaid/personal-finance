@@ -1,17 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useMemo } from 'react';
 import {
     ArrowsClockwise,
     Plus,
     Trash,
     Pencil,
-    Bell,
     Calendar,
-    Wallet,
     CheckCircle,
-    Warning
+    Bell
 } from 'phosphor-react';
 import {
     PageTransition,
@@ -19,63 +16,34 @@ import {
     StaggerContainer,
     StaggerItem
 } from '@/components/animations';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
 import { CategoryIcon } from '@/components/features/categories';
 import { useCategories } from '@/context/categories-context';
+import { useRecurring } from '@/context/recurring-context';
 
 export default function RecurringPage() {
-    const { categories } = useCategories();
     const { formatCurrency } = useCurrency();
+    const { categories } = useCategories();
+    const { recurringTransactions, isLoading } = useRecurring();
 
-    // Sample recurring data
-    const [recurringTransactions, setRecurringTransactions] = useState([
-        {
-            id: '1',
-            name: 'Netflix Subscription',
-            amount: 15.99,
-            categoryId: categories.find(c => c.name.toLowerCase().includes('entertainment'))?.id || '1',
-            frequency: 'monthly',
-            nextDate: '2025-01-15',
-            status: 'active',
-        },
-        {
-            id: '2',
-            name: 'Apartment Rent',
-            amount: 1200,
-            categoryId: categories.find(c => c.name.toLowerCase().includes('housing'))?.id || '2',
-            frequency: 'monthly',
-            nextDate: '2025-01-01',
-            status: 'active',
-        },
-        {
-            id: '3',
-            name: 'Gym Membership',
-            amount: 45,
-            categoryId: categories.find(c => c.name.toLowerCase().includes('health'))?.id || '3',
-            frequency: 'monthly',
-            nextDate: '2025-01-12',
-            status: 'active',
-        },
-        {
-            id: '4',
-            name: 'Cloud Storage',
-            amount: 9.99,
-            categoryId: categories.find(c => c.name.toLowerCase().includes('services'))?.id || '4',
-            frequency: 'monthly',
-            nextDate: '2025-01-20',
-            status: 'paused',
-        }
-    ]);
-
-    const totalMonthlyRecurring = useMemo(() => {
+    const monthlyCommitment = useMemo(() => {
         return recurringTransactions
             .filter(t => t.status === 'active')
-            .reduce((sum, t) => sum + t.amount, 0);
+            .reduce((sum, t) => {
+                if (t.frequency === 'monthly') return sum + t.amount;
+                if (t.frequency === 'weekly') return sum + (t.amount * 4);
+                if (t.frequency === 'yearly') return sum + (t.amount / 12);
+                return sum + t.amount;
+            }, 0);
     }, [recurringTransactions]);
+
+    if (isLoading) {
+        return <div className="flex items-center justify-center min-h-[400px]">Loading...</div>;
+    }
 
     const getCategory = (id: string) => categories.find(c => c.id === id);
 
@@ -100,18 +68,23 @@ export default function RecurringPage() {
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Monthly Commitment</p>
-                                    <p className="text-3xl font-bold mt-1">{formatCurrency(totalMonthlyRecurring)}</p>
+                                    <p className="text-xs font-bold uppercase tracking-widest text-[#101010]/40">Monthly Commitment</p>
+                                    <p className="text-3xl font-bold mt-1 text-[#101010]">{formatCurrency(monthlyCommitment)}</p>
                                 </div>
-                                <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+                                <div className="h-12 w-12 rounded-2xl bg-[#101010]/5 flex items-center justify-center">
                                     <ArrowsClockwise size={28} weight="bold" className="text-[#101010]" />
                                 </div>
+                            </div>
+                            <div className="mt-4 flex items-center gap-2">
+                                <span className="text-xs font-bold px-2 py-1 rounded-lg bg-[#101010]/10 text-[#101010]">
+                                    {recurringTransactions.filter(t => t.status === 'active').length} Active Subscriptions
+                                </span>
                             </div>
                         </CardContent>
                     </Card>
                 </FadeIn>
 
-                {/* List Section */}
+                {/* Recurring List */}
                 <div className="space-y-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                         <Bell size={20} className="text-primary" />
@@ -120,7 +93,7 @@ export default function RecurringPage() {
 
                     <StaggerContainer className="grid gap-4">
                         {recurringTransactions.map((item) => {
-                            const category = getCategory(item.categoryId);
+                            const category = getCategory(item.category_id || '');
                             const isPaused = item.status === 'paused';
 
                             return (
@@ -150,13 +123,13 @@ export default function RecurringPage() {
                                                             <span>•</span>
                                                             <span className="flex items-center gap-1">
                                                                 <Calendar size={14} />
-                                                                Next: {item.nextDate}
+                                                                Next: {item.next_date}
                                                             </span>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div className="text-right flex items-center gap-4">
-                                                    <div>
+                                                    <div className="text-right">
                                                         <p className="text-lg font-bold">{formatCurrency(item.amount)}</p>
                                                         {isPaused ? (
                                                             <Badge variant="outline" className="text-[10px] uppercase">Paused</Badge>
@@ -166,10 +139,10 @@ export default function RecurringPage() {
                                                     </div>
 
                                                     <div className="flex gap-1 group">
-                                                        <Button variant="ghost" size="icon" className="h-9 w-9 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
                                                             <Pencil size={18} />
                                                         </Button>
-                                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive rounded-lg">
                                                             <Trash size={18} />
                                                         </Button>
                                                     </div>

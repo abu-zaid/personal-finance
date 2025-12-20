@@ -68,6 +68,34 @@ CREATE TABLE IF NOT EXISTS public.budget_allocations (
   UNIQUE (budget_id, category_id)
 );
 
+-- Goals
+CREATE TABLE IF NOT EXISTS public.goals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  target_amount NUMERIC(12,2) NOT NULL CHECK (target_amount > 0),
+  current_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+  icon TEXT NOT NULL DEFAULT 'Target',
+  color TEXT NOT NULL DEFAULT '#98EF5A',
+  deadline DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Recurring Transactions
+CREATE TABLE IF NOT EXISTS public.recurring_transactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+  category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+  frequency TEXT NOT NULL CHECK (frequency IN ('daily', 'weekly', 'monthly', 'yearly')),
+  next_date DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ---------- INDEXES ----------
 CREATE INDEX IF NOT EXISTS idx_categories_user_id ON public.categories(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
@@ -76,6 +104,8 @@ CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON public.transactions(c
 CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON public.budgets(user_id);
 CREATE INDEX IF NOT EXISTS idx_budgets_month ON public.budgets(month);
 CREATE INDEX IF NOT EXISTS idx_budget_allocations_budget_id ON public.budget_allocations(budget_id);
+CREATE INDEX IF NOT EXISTS idx_goals_user_id ON public.goals(user_id);
+CREATE INDEX IF NOT EXISTS idx_recurring_transactions_user_id ON public.recurring_transactions(user_id);
 
 -- ---------- ROW LEVEL SECURITY ----------
 ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
@@ -83,6 +113,8 @@ ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.budget_allocations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recurring_transactions ENABLE ROW LEVEL SECURITY;
 
 -- User Preferences
 CREATE POLICY "prefs_all"
@@ -125,6 +157,20 @@ CREATE POLICY "budget_allocations_all"
     )
   );
 
+-- Goals
+CREATE POLICY "goals_all"
+  ON public.goals
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Recurring Transactions
+CREATE POLICY "recurring_all"
+  ON public.recurring_transactions
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- ---------- UPDATED_AT TRIGGER ----------
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -158,6 +204,16 @@ FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 DROP TRIGGER IF EXISTS trg_budget_allocations_updated_at ON public.budget_allocations;
 CREATE TRIGGER trg_budget_allocations_updated_at
 BEFORE UPDATE ON public.budget_allocations
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_goals_updated_at ON public.goals;
+CREATE TRIGGER trg_goals_updated_at
+BEFORE UPDATE ON public.goals
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_recurring_transactions_updated_at ON public.recurring_transactions;
+CREATE TRIGGER trg_recurring_transactions_updated_at
+BEFORE UPDATE ON public.recurring_transactions
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ---------- AUTH USER BOOTSTRAP ----------

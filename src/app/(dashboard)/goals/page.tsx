@@ -26,58 +26,74 @@ import { Progress } from '@/components/ui/progress';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
 
+import { useGoals } from '@/context/goals-context';
+
+const ICON_MAP: Record<string, any> = {
+    Target,
+    Rocket,
+    Airplane,
+    House,
+    Car,
+    Flag
+};
+
 export default function GoalsPage() {
     const { formatCurrency } = useCurrency();
+    const { goals, isLoading } = useGoals();
 
     // Sample goals data
-    const [goals, setGoals] = useState([
-        {
-            id: '1',
-            name: 'Emergency Fund',
-            targetAmount: 10000,
-            currentAmount: 6500,
-            icon: House,
-            color: '#3B82F6', // Blue
-            deadline: '2025-06-30',
-        },
-        {
-            id: '2',
-            name: 'New Laptop',
-            targetAmount: 2500,
-            currentAmount: 2100,
-            icon: Rocket,
-            color: '#98EF5A', // Primary
-            deadline: '2025-02-15',
-        },
-        {
-            id: '3',
-            name: 'Summer Vacation',
-            targetAmount: 5000,
-            currentAmount: 1200,
-            icon: Airplane,
-            color: '#F59E0B', // Amber
-            deadline: '2025-08-01',
-        },
-        {
-            id: '4',
-            name: 'Tesla Model 3',
-            targetAmount: 45000,
-            currentAmount: 5000,
-            icon: Car,
-            color: '#EF4444', // Red
-            deadline: '2026-12-31',
-        }
-    ]);
+    // const [goals, setGoals] = useState([
+    //     {
+    //         id: '1',
+    //         name: 'Emergency Fund',
+    //         targetAmount: 10000,
+    //         currentAmount: 6500,
+    //         icon: House,
+    //         color: '#3B82F6', // Blue
+    //         deadline: '2025-06-30',
+    //     },
+    //     {
+    //         id: '2',
+    //         name: 'New Laptop',
+    //         targetAmount: 2500,
+    //         currentAmount: 2100,
+    //         icon: Rocket,
+    //         color: '#98EF5A', // Primary
+    //         deadline: '2025-02-15',
+    //     },
+    //     {
+    //         id: '3',
+    //         name: 'Summer Vacation',
+    //         targetAmount: 5000,
+    //         currentAmount: 1200,
+    //         icon: Airplane,
+    //         color: '#F59E0B', // Amber
+    //         deadline: '2025-08-01',
+    //     },
+    //     {
+    //         id: '4',
+    //         name: 'Tesla Model 3',
+    //         targetAmount: 45000,
+    //         currentAmount: 5000,
+    //         icon: Car,
+    //         color: '#EF4444', // Red
+    //         deadline: '2026-12-31',
+    //     }
+    // ]);
 
     const totalSaved = useMemo(() => {
-        return goals.reduce((sum, g) => sum + g.currentAmount, 0);
+        return goals.reduce((sum, g) => sum + g.current_amount, 0);
     }, [goals]);
 
     const totalTarget = useMemo(() => {
-        return goals.reduce((sum, g) => sum + g.targetAmount, 0);
+        return goals.reduce((sum, g) => sum + g.target_amount, 0);
     }, [goals]);
 
-    const overallProgress = (totalSaved / totalTarget) * 100;
+    const overallProgress = totalTarget > 0 ? (totalSaved / totalTarget) * 100 : 0;
+
+    if (isLoading) {
+        return <div className="flex items-center justify-center min-h-[400px]">Loading...</div>;
+    }
 
     return (
         <PageTransition>
@@ -122,8 +138,8 @@ export default function GoalsPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                     <StaggerContainer className="contents">
                         {goals.map((goal) => {
-                            const progress = (goal.currentAmount / goal.targetAmount) * 100;
-                            const Icon = goal.icon;
+                            const progress = (goal.current_amount / goal.target_amount) * 100;
+                            const Icon = ICON_MAP[goal.icon] || ICON_MAP.Target;
 
                             return (
                                 <StaggerItem key={goal.id}>
@@ -150,14 +166,14 @@ export default function GoalsPage() {
                                                 <h3 className="font-bold text-lg leading-tight">{goal.name}</h3>
                                                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                                                     <Flag size={14} />
-                                                    Target Date: {goal.deadline}
+                                                    Target Date: {goal.deadline || 'No deadline'}
                                                 </p>
                                             </div>
 
                                             <div className="mt-6 space-y-3">
                                                 <div className="flex justify-between items-baseline">
-                                                    <p className="text-xl font-bold">{formatCurrency(goal.currentAmount)}</p>
-                                                    <p className="text-xs text-muted-foreground font-medium">of {formatCurrency(goal.targetAmount)}</p>
+                                                    <p className="text-xl font-bold">{formatCurrency(goal.current_amount)}</p>
+                                                    <p className="text-xs text-muted-foreground font-medium">of {formatCurrency(goal.target_amount)}</p>
                                                 </div>
                                                 <Progress
                                                     value={progress}
@@ -167,7 +183,7 @@ export default function GoalsPage() {
                                                 />
                                                 <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                                                     <span>{progress.toFixed(0)}% Done</span>
-                                                    <span style={{ color: goal.color }}>{formatCurrency(goal.targetAmount - goal.currentAmount)} To go</span>
+                                                    <span style={{ color: goal.color }}>{formatCurrency(goal.target_amount - goal.current_amount)} To go</span>
                                                 </div>
                                             </div>
                                         </CardContent>
