@@ -245,7 +245,7 @@ export default function TransactionsPage() {
     <PageTransition className="w-full pb-24 space-y-4">
 
       {/* --- HEADER --- */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between sticky top-0 bg-background/95 backdrop-blur-md z-20 -mx-4 px-4 py-4 md:static md:bg-transparent md:p-0 border-b md:border-none">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between relative bg-background z-40 py-4 md:bg-transparent md:p-0 border-b md:border-none">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
           <p className="text-muted-foreground text-sm">
@@ -278,8 +278,13 @@ export default function TransactionsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search notes, categories..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      defaultValue={searchQuery}
+                      onChange={(e) => {
+                        // Simple debounce
+                        const val = e.target.value;
+                        const timeoutId = setTimeout(() => setSearchQuery(val), 300);
+                        return () => clearTimeout(timeoutId);
+                      }}
                       className="pl-9"
                     />
                   </div>
@@ -400,8 +405,12 @@ export default function TransactionsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search transactions..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            defaultValue={searchQuery}
+            onChange={(e) => {
+              const val = e.target.value;
+              const timeoutId = setTimeout(() => setSearchQuery(val), 300);
+              return () => clearTimeout(timeoutId);
+            }}
             className="pl-9 bg-muted/40"
           />
         </div>
@@ -434,7 +443,7 @@ export default function TransactionsPage() {
           Object.entries(groupedTransactions).map(([date, list]) => (
             <div key={date} className="relative">
               {/* Sticky Date Header */}
-              <div className="sticky top-[72px] md:top-0 z-10 py-2 bg-background/95 backdrop-blur-sm -mx-4 px-4 md:mx-0 md:px-0 flex items-center justify-between border-b border-border/40 mb-2">
+              <div className="sticky top-0 z-30 py-2 bg-background/95 backdrop-blur-sm flex items-center justify-between border-b border-border/40 mb-2">
                 <h3 className="text-sm font-semibold text-primary">{getDateLabel(new Date(date))}</h3>
                 <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
                   {formatCurrency(list.reduce((sum, t) => sum + (t.type === 'expense' ? -t.amount : t.amount), 0))}

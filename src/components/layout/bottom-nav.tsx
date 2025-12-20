@@ -73,13 +73,12 @@ export const BottomNav = memo(function BottomNav({
       <div className="mx-4 flex justify-center pointer-events-auto">
         <div
           className="
-            relative
             w-full
             max-w-md
             rounded-[28px]
-            bg-white/60 dark:bg-[#101010]/60
-            backdrop-blur-xl
-            shadow-[0_12px_32px_rgba(0,0,0,0.16)]
+            bg-white/80 dark:bg-[#101010]/80
+            backdrop-blur-md
+            shadow-[0_8px_16px_rgba(0,0,0,0.1)]
             overflow-hidden
           "
         >
