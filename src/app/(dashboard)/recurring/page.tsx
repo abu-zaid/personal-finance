@@ -99,15 +99,15 @@ export default function RecurringPage() {
                         <CardContent className="p-5 md:p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#101010]/40">Monthly Commitment</p>
-                                    <p className="text-2xl md:text-3xl font-bold mt-1 text-[#101010]">{formatCurrency(monthlyCommitment)}</p>
+                                    <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground">Monthly Commitment</p>
+                                    <p className="text-2xl md:text-3xl font-bold mt-1 text-foreground">{formatCurrency(monthlyCommitment)}</p>
                                 </div>
-                                <div className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-[#101010]/5 flex items-center justify-center">
-                                    <ArrowsClockwise size={24} weight="bold" className="text-[#101010] md:w-7 md:h-7" />
+                                <div className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-foreground/5 flex items-center justify-center">
+                                    <ArrowsClockwise size={24} weight="bold" className="text-foreground md:w-7 md:h-7" />
                                 </div>
                             </div>
                             <div className="mt-4 flex items-center gap-2">
-                                <span className="text-[10px] md:text-xs font-bold px-2 py-1 rounded-lg bg-[#101010]/10 text-[#101010]">
+                                <span className="text-[10px] md:text-xs font-bold px-2 py-1 rounded-lg bg-foreground/5 text-foreground">
                                     {recurringTransactions.filter(t => t.status === 'active').length} Active Subscriptions
                                 </span>
                             </div>

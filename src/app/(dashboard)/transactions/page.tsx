@@ -288,11 +288,11 @@ export default function TransactionsPage() {
             <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-xs text-muted-foreground">30-Day Trend</p>
-                    <p className="text-lg font-bold">{formatCurrency(getMonthlyTotal(currentMonth))}</p>
+                  <div className="min-w-0 pr-4">
+                    <p className="text-xs text-muted-foreground truncate">30-Day Trend</p>
+                    <p className="text-lg font-bold truncate">{formatCurrency(getMonthlyTotal(currentMonth))}</p>
                   </div>
-                  <div className="w-32 h-12">
+                  <div className="w-32 h-12 flex-shrink-0">
                     <Sparkline
                       data={monthlyTrend}
                       color="#98EF5A"
@@ -363,12 +363,12 @@ export default function TransactionsPage() {
           <div className="space-y-4 overflow-hidden">
             {Object.entries(groupedTransactions).map(([date, list]) => (
               <div key={date}>
-                <div className="sticky top-0 z-10 py-2 -mx-4 px-5 bg-background/95 backdrop-blur-sm flex justify-between items-center border-b border-border/10">
-                  <span className="text-sm font-bold text-primary flex items-center gap-2">
-                    <Calendar className="h-4 w-4 opacity-50" />
-                    {getDateLabel(date)}
+                <div className="sticky top-0 z-10 py-2 -mx-4 px-4 bg-background/95 backdrop-blur-sm flex justify-between items-center border-b border-border/10">
+                  <span className="text-sm font-bold text-primary flex items-center gap-2 truncate min-w-0">
+                    <Calendar className="h-4 w-4 opacity-50 flex-shrink-0" />
+                    <span className="truncate">{getDateLabel(date)}</span>
                   </span>
-                  <span className="text-xs font-semibold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-semibold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md whitespace-nowrap ml-2">
                     {formatCurrency(
                       list.reduce((s, t) => s + t.amount, 0)
                     )}

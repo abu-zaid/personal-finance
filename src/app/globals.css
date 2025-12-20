@@ -211,19 +211,19 @@
 
   /* Glass Effect - Optimized for Mobile */
   .glass {
-    background: rgba(26, 26, 26, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: #1A1A1A;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .glass-light {
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #ffffff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   .glass-card {
-    background: rgba(26, 26, 26, 0.95);
+    background: #1A1A1A;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    /* No shadow on mobile for performance */
   }
 
   @media (min-width: 768px) {
@@ -231,12 +231,16 @@
       background: rgba(26, 26, 26, 0.7);
       backdrop-filter: blur(20px) saturate(180%);
       -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 0;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .glass-light {
       background: rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(12px) saturate(150%);
       -webkit-backdrop-filter: blur(12px) saturate(150%);
+      border-bottom: 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .glass-card {
@@ -253,7 +257,7 @@
   .card-modern {
     background: #1A1A1A;
     border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    /* Minimal shadow on mobile */
   }
 
   @media (min-width: 768px) {
