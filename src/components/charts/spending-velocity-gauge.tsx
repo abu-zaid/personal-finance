@@ -69,9 +69,9 @@ export function SpendingVelocityGauge({
     const needleAngle = (metrics.displayVelocity / 200) * 180;
 
     return (
-        <div className={cn("flex flex-col items-center", className)}>
-            <div className="relative" style={{ width: size, height: size / 2 + 20 }}>
-                <svg width={size} height={size / 2 + 20} className="overflow-visible">
+        <div className={cn("flex flex-col items-center w-full", className)}>
+            <div className="relative w-full max-w-[160px] aspect-[2/1.2]">
+                <svg viewBox={`0 0 ${size} ${size / 2 + 20}`} className="w-full h-full overflow-visible">
                     {/* Background arc */}
                     <path
                         d={`M ${strokeWidth / 2} ${center} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${center}`}

@@ -339,8 +339,8 @@ export default function DashboardPage() {
               <insight.icon className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold leading-tight uppercase tracking-wider opacity-80 mb-0.5">{insight.title}</p>
-              <p className="text-sm font-medium leading-tight truncate">{insight.message}</p>
+              <p className="text-[10px] md:text-xs font-bold leading-tight uppercase tracking-wider opacity-80 mb-0.5">{insight.title}</p>
+              <p className="text-xs md:text-sm font-medium leading-tight truncate">{insight.message}</p>
             </div>
           </motion.div>
         </FadeIn>
@@ -443,7 +443,7 @@ export default function DashboardPage() {
           </Card>
         </FadeIn>
         {/* Quick Insights & Actions Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Quick Stats Integrated */}
           <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FadeIn>
@@ -530,11 +530,13 @@ export default function DashboardPage() {
         {/* NEW: Deep Dive Section (Consolidated) */}
         <FadeIn>
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="trends">Trends</TabsTrigger>
-              <TabsTrigger value="activity">Activity</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto pb-2 -mb-2 scrollbar-hide">
+              <TabsList className="grid w-full min-w-[300px] grid-cols-3 mb-4">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="trends">Trends</TabsTrigger>
+                <TabsTrigger value="activity">Activity</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="overview" className="space-y-4 outline-none">
               {/* Income vs Expenses Comparison */}

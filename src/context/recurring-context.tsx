@@ -112,6 +112,14 @@ export function RecurringProvider({ children }: { children: ReactNode }) {
                 .single();
 
             if (insertError) throw new Error(insertError.message);
+
+            // Optimistic update
+            if (data) {
+                setRecurringTransactions(prev => [...prev, data].sort((a, b) =>
+                    new Date(a.next_date).getTime() - new Date(b.next_date).getTime()
+                ));
+            }
+
             return data;
         },
         [user, supabase]
@@ -130,6 +138,17 @@ export function RecurringProvider({ children }: { children: ReactNode }) {
                 .single();
 
             if (updateError) throw new Error(updateError.message);
+
+            // Optimistic update
+            if (data) {
+                setRecurringTransactions(prev => {
+                    const updated = prev.map(r => r.id === id ? data : r);
+                    return updated.sort((a, b) =>
+                        new Date(a.next_date).getTime() - new Date(b.next_date).getTime()
+                    );
+                });
+            }
+
             return data;
         },
         [user, supabase]
@@ -139,15 +158,22 @@ export function RecurringProvider({ children }: { children: ReactNode }) {
         async (id: string): Promise<void> => {
             if (!user || !supabase) throw new Error('User not authenticated');
 
+            // Optimistic update
+            setRecurringTransactions(prev => prev.filter(r => r.id !== id));
+
             const { error: deleteError } = await supabase
                 .from('recurring_transactions')
                 .delete()
                 .eq('id', id)
                 .eq('user_id', user.id);
 
-            if (deleteError) throw new Error(deleteError.message);
+            if (deleteError) {
+                // Revert if failed
+                fetchRecurring();
+                throw new Error(deleteError.message);
+            }
         },
-        [user, supabase]
+        [user, supabase, fetchRecurring]
     );
 
     return (

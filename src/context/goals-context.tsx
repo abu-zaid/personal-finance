@@ -115,6 +115,12 @@ export function GoalsProvider({ children }: { children: ReactNode }) {
                 .single();
 
             if (insertError) throw new Error(insertError.message);
+
+            // Optimistic update
+            if (data) {
+                setGoals(prev => [data, ...prev]);
+            }
+
             return data;
         },
         [user, supabase]
@@ -133,6 +139,12 @@ export function GoalsProvider({ children }: { children: ReactNode }) {
                 .single();
 
             if (updateError) throw new Error(updateError.message);
+
+            // Optimistic update
+            if (data) {
+                setGoals(prev => prev.map(g => g.id === id ? data : g));
+            }
+
             return data;
         },
         [user, supabase]
@@ -142,15 +154,22 @@ export function GoalsProvider({ children }: { children: ReactNode }) {
         async (id: string): Promise<void> => {
             if (!user || !supabase) throw new Error('User not authenticated');
 
+            // Optimistic update
+            setGoals(prev => prev.filter(g => g.id !== id));
+
             const { error: deleteError } = await supabase
                 .from('goals')
                 .delete()
                 .eq('id', id)
                 .eq('user_id', user.id);
 
-            if (deleteError) throw new Error(deleteError.message);
+            if (deleteError) {
+                // Revert if failed (fetch from server to be safe)
+                fetchGoals();
+                throw new Error(deleteError.message);
+            }
         },
-        [user, supabase]
+        [user, supabase, fetchGoals]
     );
 
     return (
