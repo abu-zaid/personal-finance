@@ -242,13 +242,13 @@ export default function TransactionsPage() {
   ].filter(Boolean).length;
 
   return (
-    <PageTransition className="w-full pb-24 space-y-4">
+    <PageTransition className="w-full pb-24 space-y-4 overflow-x-hidden">
 
       {/* --- HEADER --- */}
-      <div className="flex flex-col gap-4 sticky top-0 bg-background/95 backdrop-blur-md z-40 py-4 border-b md:border-none duration-200 transition-all">
+      <div className="flex flex-col gap-2 sticky top-0 bg-background/95 backdrop-blur-md z-40 py-3 border-b md:border-none duration-200 transition-all">
 
         {/* Top Bar */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
             <p className="text-muted-foreground text-sm">
@@ -423,7 +423,7 @@ export default function TransactionsPage() {
         </div>
 
         {/* Quick Category Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide mask-fade-right">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide mask-fade-right w-[calc(100%+2rem)] md:w-full">
           <button
             onClick={() => setSelectedCategoryIds([])}
             className={cn(
@@ -504,7 +504,7 @@ export default function TransactionsPage() {
           Object.entries(groupedTransactions).map(([date, list]) => (
             <div key={date} className="relative">
               {/* Sticky Date Header - Offset for main header */}
-              <div className="sticky top-[190px] md:top-[130px] z-30 py-2 bg-background/95 backdrop-blur-sm flex items-center justify-between border-b border-border/40 mb-2 transition-all">
+              <div className="sticky top-[152px] md:top-[112px] z-30 py-2 bg-background/95 backdrop-blur-sm flex items-center justify-between border-b border-border/40 mb-2 transition-all">
                 <h3 className="text-sm font-semibold text-primary">{getDateLabel(new Date(date))}</h3>
                 <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
                   {formatCurrency(list.reduce((sum, t) => sum + (t.type === 'expense' ? -t.amount : t.amount), 0))}
