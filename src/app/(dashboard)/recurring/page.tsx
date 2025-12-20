@@ -134,58 +134,77 @@ export default function RecurringPage() {
                                         isPaused && "opacity-60"
                                     )}>
                                         <CardContent className="p-0">
-                                            <div className="flex items-center justify-between p-3 md:p-4">
-                                                <div className="flex items-center gap-3 md:gap-4">
-                                                    <div
-                                                        className="h-10 w-10 md:h-12 md:w-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                                                        style={{ backgroundColor: `${category?.color || '#ccc'}22` }}
-                                                    >
-                                                        <CategoryIcon
-                                                            icon={category?.icon || 'Package'}
-                                                            color={category?.color || '#ccc'}
-                                                            size="sm"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-semibold text-base">{item.name}</h3>
-                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                                            <span className="flex items-center gap-1 uppercase tracking-widest font-bold">
-                                                                {item.frequency}
-                                                            </span>
-                                                            <span>•</span>
-                                                            <span className="flex items-center gap-1">
-                                                                <Calendar size={14} />
-                                                                Next: {item.next_date}
-                                                            </span>
-                                                        </div>
-                                                    </div>
+                                            <div className="grid grid-cols-[auto_1fr_auto] gap-3 p-3 md:p-4 items-center">
+                                                {/* Icon */}
+                                                <div
+                                                    className="h-10 w-10 md:h-12 md:w-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                                                    style={{ backgroundColor: `${category?.color || '#ccc'}22` }}
+                                                >
+                                                    <CategoryIcon
+                                                        icon={category?.icon || 'Package'}
+                                                        color={category?.color || '#ccc'}
+                                                        size="sm"
+                                                    />
                                                 </div>
-                                                <div className="text-right flex items-center gap-4">
-                                                    <div className="text-right">
-                                                        <p className="text-lg font-bold">{formatCurrency(item.amount)}</p>
-                                                        {isPaused ? (
-                                                            <Badge variant="outline" className="text-[10px] uppercase">Paused</Badge>
-                                                        ) : (
-                                                            <Badge className="bg-primary/20 text-primary border-none text-[10px] uppercase font-bold">Active</Badge>
+
+                                                {/* Main Content */}
+                                                <div className="min-w-0 flex flex-col gap-0.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-semibold text-sm md:text-base truncate">
+                                                            {item.name}
+                                                        </h3>
+                                                        {isPaused && (
+                                                            <Badge variant="outline" className="text-[10px] h-5 px-1.5 uppercase hidden sm:flex">Paused</Badge>
                                                         )}
                                                     </div>
 
-                                                    <div className="flex gap-1 group">
+                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                        <span className="flex items-center gap-1 uppercase tracking-wider font-medium text-[10px] md:text-xs">
+                                                            {item.frequency}
+                                                        </span>
+                                                        <span className="text-border">•</span>
+                                                        <span className="flex items-center gap-1 truncate">
+                                                            <Calendar size={12} className="md:w-3.5 md:h-3.5" />
+                                                            {/* Ideally date would be formatted nicely here if it's a full date string */}
+                                                            Next: {item.next_date}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Right Side: Amount & Actions */}
+                                                <div className="flex items-center gap-3 md:gap-4 pl-2">
+                                                    <div className="text-right">
+                                                        <p className="text-base md:text-lg font-bold whitespace-nowrap">{formatCurrency(item.amount)}</p>
+                                                        <div className="flex justify-end sm:hidden mt-0.5">
+                                                            {isPaused ? (
+                                                                <span className="text-[10px] uppercase text-muted-foreground font-medium">Paused</span>
+                                                            ) : (
+                                                                <span className="text-[10px] uppercase text-primary font-bold">Active</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="hidden sm:block">
+                                                            {!isPaused && (
+                                                                <Badge className="bg-primary/20 text-primary border-none text-[10px] uppercase font-bold hover:bg-primary/30">Active</Badge>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex gap-1">
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-9 w-9 rounded-lg"
+                                                            className="h-8 w-8 md:h-9 md:w-9 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                                                             onClick={() => handleEdit(item)}
                                                         >
-                                                            <Pencil size={18} />
+                                                            <Pencil size={16} className="md:w-[18px] md:h-[18px]" />
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-9 w-9 text-destructive rounded-lg"
+                                                            className="h-8 w-8 md:h-9 md:w-9 text-destructive rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                                                             onClick={() => handleDelete(item.id)}
                                                         >
-                                                            <Trash size={18} />
+                                                            <Trash size={16} className="md:w-[18px] md:h-[18px]" />
                                                         </Button>
                                                     </div>
                                                 </div>
