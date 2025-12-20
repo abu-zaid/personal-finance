@@ -427,7 +427,7 @@ export default function TransactionsPage() {
             </div>
 
             {/* Quick Category Filters */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 mt-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide mask-fade-right w-full">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 mt-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide mask-fade-right w-[100vw] md:w-full">
               <button
                 onClick={() => setSelectedCategoryIds([])}
                 className={cn(
@@ -492,7 +492,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* --- SCROLLABLE CONTENT AREA --- */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:px-6 pb-32 md:pb-6 scrollbar-hide w-full">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden md:px-6 pb-6 scrollbar-hide w-full">
         {Object.keys(groupedTransactions).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">

@@ -204,7 +204,7 @@ export function TransactionForm({
                                         transform: isSelected ? 'scale(1.1)' : 'scale(1)'
                                     }}
                                 >
-                                    <CategoryIcon icon={category.icon} className="w-5 h-5 text-current" />
+                                    <CategoryIcon icon={category.icon} color="currentColor" className="w-5 h-5 text-current" />
                                 </div>
                                 <span className={cn(
                                     "text-[10px] font-medium truncate w-full text-center",
