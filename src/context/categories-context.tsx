@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useCallback, useEffect, useState, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, useMemo, useRef, ReactNode } from 'react';
 import { Category, CreateCategoryInput, UpdateCategoryInput } from '@/types';
 import { useAuth } from '@/context/auth-context';
 import { createClient } from '@/lib/supabase/client';
@@ -50,19 +50,28 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const supabase = createClient();
 
+  // Track initialization and prevent duplicate fetches
+  const hasInitialized = useRef(false);
+  const fetchInProgress = useRef(false);
 
   // Fetch categories from Supabase with timeout
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async (force = false) => {
     if (!user || !supabase) {
       setCategories([]);
       setIsLoading(false);
       return;
     }
 
+    // Prevent duplicate simultaneous requests
+    if (fetchInProgress.current && !force) {
+      return;
+    }
+
     try {
+      fetchInProgress.current = true;
       setIsLoading(true);
       setError(null);
 
@@ -84,13 +93,13 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       }
 
       const mappedCategories = (data || []).map(mapDbToCategory);
-      
+
       // If no categories exist, just set empty (default categories handled by Supabase trigger)
       if (mappedCategories.length === 0) {
         setCategories([]);
         return;
       }
-      
+
       setCategories(mappedCategories);
     } catch (err) {
       console.error('Error fetching categories:', err);
@@ -98,14 +107,17 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       setCategories([]);
     } finally {
       setIsLoading(false);
+      fetchInProgress.current = false;
     }
   }, [user, supabase]);
 
-  // Load categories when user changes
+  // Load categories when user changes - lazy initialization
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !hasInitialized.current) {
+      hasInitialized.current = true;
       fetchCategories();
-    } else {
+    } else if (!isAuthenticated || !user) {
+      hasInitialized.current = false;
       setCategories([]);
       setIsLoading(false);
     }

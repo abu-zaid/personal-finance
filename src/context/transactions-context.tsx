@@ -84,21 +84,25 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const currentPage = useRef(0);
-  
+
   // Track pending operations for undo
   const pendingDeletes = useRef<Map<string, Transaction>>(new Map());
-  
+
+  // Track initialization and prevent duplicate fetches
+  const hasInitialized = useRef(false);
+  const fetchInProgress = useRef(false);
+
   const supabase = createClient();
 
   // Fetch transactions count
   const fetchCount = useCallback(async () => {
     if (!user || !supabase) return 0;
-    
+
     const { count } = await supabase
       .from('transactions')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id);
-    
+
     return count || 0;
   }, [user, supabase]);
 
@@ -110,7 +114,13 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Prevent duplicate simultaneous requests (unless appending for pagination)
+    if (fetchInProgress.current && !append) {
+      return;
+    }
+
     try {
+      fetchInProgress.current = true;
       if (!append) {
         setIsLoading(true);
       }
@@ -138,15 +148,15 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       }
 
       const mappedTransactions = (data || []).map(mapDbToTransaction);
-      
+
       if (append) {
         setRawTransactions((prev) => [...prev, ...mappedTransactions]);
       } else {
         setRawTransactions(mappedTransactions);
         // Fetch total count on initial load (don't block on this)
-        fetchCount().then(count => setTotalCount(count)).catch(() => {});
+        fetchCount().then(count => setTotalCount(count)).catch(() => { });
       }
-      
+
       setHasMore(mappedTransactions.length === PAGE_SIZE);
       currentPage.current = page;
     } catch (err) {
@@ -157,6 +167,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       setIsLoading(false);
+      fetchInProgress.current = false;
     }
   }, [user, supabase, fetchCount]);
 
@@ -166,11 +177,13 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     await fetchTransactions(currentPage.current + 1, true);
   }, [fetchTransactions, hasMore, isLoading]);
 
-  // Load transactions when user changes
+  // Load transactions when user changes - lazy initialization
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !hasInitialized.current) {
+      hasInitialized.current = true;
       fetchTransactions(0, false);
-    } else {
+    } else if (!isAuthenticated || !user) {
+      hasInitialized.current = false;
       setRawTransactions([]);
       setIsLoading(false);
     }
@@ -201,7 +214,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
             });
           } else if (payload.eventType === 'UPDATE') {
             const updatedTx = mapDbToTransaction(payload.new as Parameters<typeof mapDbToTransaction>[0]);
-            setRawTransactions((prev) => 
+            setRawTransactions((prev) =>
               prev.map(t => t.id === updatedTx.id ? updatedTx : t)
             );
           } else if (payload.eventType === 'DELETE') {
@@ -225,17 +238,17 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         ...t,
         category: category
           ? {
-              id: category.id,
-              name: category.name,
-              icon: category.icon,
-              color: category.color,
-            }
+            id: category.id,
+            name: category.name,
+            icon: category.icon,
+            color: category.color,
+          }
           : {
-              id: t.categoryId,
-              name: 'Unknown',
-              icon: 'more-horizontal',
-              color: '#6b7280',
-            },
+            id: t.categoryId,
+            name: 'Unknown',
+            icon: 'more-horizontal',
+            color: '#6b7280',
+          },
       };
     });
   }, [rawTransactions, categoriesMap]);
@@ -268,7 +281,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         const localDate = `${input.date.getFullYear()}-${String(input.date.getMonth() + 1).padStart(2, '0')}-${String(input.date.getDate()).padStart(2, '0')}`;
         const localTime = `${String(input.date.getHours()).padStart(2, '0')}:${String(input.date.getMinutes()).padStart(2, '0')}:00`;
         const dateTimeString = `${localDate}T${localTime}`;
-        
+
         const { data, error: insertError } = await supabase
           .from('transactions')
           .insert({
@@ -287,12 +300,12 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         }
 
         const newTransaction = mapDbToTransaction(data);
-        
+
         // Replace optimistic transaction with real one
         setRawTransactions((prev) =>
           prev.map((t) => (t.id === tempId ? newTransaction : t))
         );
-        
+
         return newTransaction;
       } catch (err) {
         // Rollback optimistic update
@@ -400,7 +413,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         setRawTransactions((prev) => {
           // Insert in correct position based on date
           const newList = [...prev, deletedTransaction];
-          return newList.sort((a, b) => 
+          return newList.sort((a, b) =>
             new Date(b.date).getTime() - new Date(a.date).getTime()
           );
         });
@@ -457,7 +470,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         // Rollback optimistic delete
         setRawTransactions((prev) => {
           const newList = [...prev, transactionToDelete];
-          return newList.sort((a, b) => 
+          return newList.sort((a, b) =>
             new Date(b.date).getTime() - new Date(a.date).getTime()
           );
         });

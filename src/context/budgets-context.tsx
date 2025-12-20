@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, useRef, ReactNode } from 'react';
 import { Budget, BudgetAllocation, BudgetWithSpending, CreateBudgetInput, UpdateBudgetInput } from '@/types';
 import { useAuth } from '@/context/auth-context';
 import { useTransactions } from '@/context/transactions-context';
@@ -66,18 +66,28 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const supabase = createClient();
 
+  // Track initialization and prevent duplicate fetches
+  const hasInitialized = useRef(false);
+  const fetchInProgress = useRef(false);
+
   // Fetch budgets from Supabase
-  const fetchBudgets = useCallback(async () => {
+  const fetchBudgets = useCallback(async (force = false) => {
     if (!user || !supabase) {
       setBudgets([]);
       setIsLoading(false);
       return;
     }
 
+    // Prevent duplicate simultaneous requests
+    if (fetchInProgress.current && !force) {
+      return;
+    }
+
     try {
+      fetchInProgress.current = true;
       setIsLoading(true);
       setError(null);
 
@@ -124,14 +134,17 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
       setBudgets([]);
     } finally {
       setIsLoading(false);
+      fetchInProgress.current = false;
     }
   }, [user, supabase]);
 
-  // Load budgets when user changes
+  // Load budgets when user changes - lazy initialization
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !hasInitialized.current) {
+      hasInitialized.current = true;
       fetchBudgets();
-    } else {
+    } else if (!isAuthenticated || !user) {
+      hasInitialized.current = false;
       setBudgets([]);
       setIsLoading(false);
     }
