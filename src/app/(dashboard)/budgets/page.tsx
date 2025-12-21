@@ -361,10 +361,7 @@ export default function BudgetsPage() {
           </div>
           <Button
             onClick={openCreateDialog}
-            className="rounded-full px-5 shadow-sm hover:shadow-md transition-all"
-            style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', // Emerald gradient
-            }}
+            className="rounded-full px-5 shadow-sm hover:shadow-md transition-all bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {currentBudget ? (
               <>
@@ -401,14 +398,12 @@ export default function BudgetsPage() {
             {/* Hero Card */}
             <FadeIn>
               <div
-                className="relative overflow-hidden rounded-[2rem] p-6 text-white shadow-xl"
-                style={{
-                  background: overallPercentage >= 100
-                    ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)'
-                    : overallPercentage >= 80
-                      ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                      : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                }}
+                className={cn(
+                  "relative overflow-hidden rounded-[2rem] p-6 text-white shadow-xl bg-gradient-to-br",
+                  overallPercentage >= 100 ? "from-destructive to-destructive/80" :
+                    overallPercentage >= 80 ? "from-amber-500 to-amber-600" :
+                      "from-primary to-primary/80"
+                )}
               >
                 <div className="absolute -right-4 -top-4 h-32 w-32 rounded-full bg-white/10 blur-3xl opacity-50" />
 
