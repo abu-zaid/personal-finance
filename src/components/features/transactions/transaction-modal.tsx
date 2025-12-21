@@ -37,21 +37,19 @@ export function TransactionModal({
     onOpenChange(false);
   };
 
-  const title = isEditMode ? 'Edit Transaction' : 'Add Transaction';
-  const description = isEditMode ? 'Update the details of this transaction' : 'Record a new income or expense';
-
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[480px] p-0 bg-card border-border shadow-2xl">
+          <DialogTitle className="sr-only">
+            {isEditMode ? 'Edit Transaction' : 'Add Transaction'}
+          </DialogTitle>
           <TransactionForm
             transaction={transaction}
             onSuccess={handleClose}
             onCancel={handleClose}
+            variant="desktop"
+            className="h-auto px-6 py-8"
           />
         </DialogContent>
       </Dialog>
@@ -60,20 +58,23 @@ export function TransactionModal({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[85vh] overflow-hidden rounded-t-[20px] p-0 flex flex-col">
-        <div className="px-5 pt-5 pb-2 shrink-0">
-          <SheetHeader className="text-left">
-            <SheetTitle>{title}</SheetTitle>
-            <SheetDescription>{description}</SheetDescription>
-          </SheetHeader>
+      <SheetContent
+        side="bottom"
+        className="h-[90vh] max-h-[90vh] rounded-t-[2rem] p-0 gap-0 border-t-0 bg-zinc-950 text-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.3)] flex flex-col after:hidden"
+      >
+        <SheetTitle className="sr-only">
+          {isEditMode ? 'Edit Transaction' : 'Add Transaction'}
+        </SheetTitle>
+        <div className="flex items-center justify-center pt-3 pb-2 shrink-0">
+          <div className="w-12 h-1.5 bg-zinc-800 rounded-full" />
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-2">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           <TransactionForm
             transaction={transaction}
             onSuccess={handleClose}
             onCancel={handleClose}
-            className="pb-safe-area"
+            className="h-full"
           />
         </div>
       </SheetContent>

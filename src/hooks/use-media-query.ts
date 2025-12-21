@@ -9,10 +9,10 @@ export function useMediaQuery(query: string) {
             setMatches(media.matches);
         }
 
-        const listener = () => setMatches(media.matches);
-        window.addEventListener('resize', listener);
-        return () => window.removeEventListener('resize', listener);
-    }, [matches, query]);
+        const listener = (e: MediaQueryListEvent) => setMatches(e.matches);
+        media.addEventListener('change', listener);
+        return () => media.removeEventListener('change', listener);
+    }, [query]);
 
     return matches;
 }

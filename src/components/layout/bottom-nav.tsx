@@ -52,7 +52,7 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
   }, [pathname]);
 
   return (
-    <div className="fixed bottom-6 inset-x-0 z-50 flex justify-center pointer-events-none px-4">
+    <div className="fixed bottom-6 inset-x-0 z-50 flex justify-center pointer-events-none px-4 md:hidden">
       <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <nav className="pointer-events-auto">
           <div
