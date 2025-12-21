@@ -528,18 +528,20 @@ export default function InsightsPage() {
                   <CardTitle className="text-base font-semibold">Daily Spending - {format(new Date(), 'MMMM')}</CardTitle>
                   <CardDescription>Day-by-day breakdown</CardDescription>
                 </CardHeader>
-                <CardContent className="overflow-x-auto">
-                  <div className="min-w-[600px]">
-                    <BarChart
-                      data={dailySpendingData.map(d => ({
-                        label: d.label,
-                        value: d.value,
-                        color: '#98EF5A',
-                      }))}
-                      height={180}
-                      formatValue={formatCurrency}
-                      showValues={false}
-                    />
+                <CardContent>
+                  <div className="overflow-x-auto -mx-2 px-2">
+                    <div style={{ minWidth: `${Math.max(dailySpendingData.length * 20, 300)}px` }}>
+                      <BarChart
+                        data={dailySpendingData.map(d => ({
+                          label: d.label,
+                          value: d.value,
+                          color: '#98EF5A',
+                        }))}
+                        height={180}
+                        formatValue={formatCurrency}
+                        showValues={false}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -816,7 +818,7 @@ export default function InsightsPage() {
 
             {/* Category Trend (when selected) */}
             {selectedCategory && categoryTrendData.length > 0 && (
-              <FadeIn>
+              <FadeIn key={`category-trend-${selectedCategory}`}>
                 <Card>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -825,7 +827,7 @@ export default function InsightsPage() {
                       </CardTitle>
                       <button
                         onClick={() => setSelectedCategory(null)}
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                       >
                         Clear
                       </button>
@@ -833,11 +835,19 @@ export default function InsightsPage() {
                     <CardDescription>Spending over time</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <LineChart
-                      series={categoryTrendData}
-                      height={180}
-                      formatValue={formatCurrency}
-                    />
+                    {categoryTrendData[0].data.some(d => d.value > 0) ? (
+                      <LineChart
+                        series={categoryTrendData}
+                        height={180}
+                        formatValue={formatCurrency}
+                        showGrid={true}
+                        showDots={true}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-[180px] text-sm text-muted-foreground">
+                        No spending data for this category in the last 6 months
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </FadeIn>
