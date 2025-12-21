@@ -399,10 +399,12 @@ export default function BudgetsPage() {
             <FadeIn>
               <div
                 className={cn(
-                  "relative overflow-hidden rounded-[2rem] p-6 text-white shadow-xl bg-gradient-to-br",
-                  overallPercentage >= 100 ? "from-destructive to-destructive/80" :
-                    overallPercentage >= 80 ? "from-amber-500 to-amber-600" :
-                      "from-primary to-primary/80"
+                  "relative overflow-hidden rounded-[2rem] p-6 shadow-xl bg-gradient-to-br",
+                  overallPercentage >= 100
+                    ? "from-destructive to-destructive/80 text-destructive-foreground"
+                    : overallPercentage >= 80
+                      ? "from-amber-500 to-amber-600 text-white"
+                      : "from-primary to-primary/80 text-primary-foreground"
                 )}
               >
                 <div className="absolute -right-4 -top-4 h-32 w-32 rounded-full bg-white/10 blur-3xl opacity-50" />
@@ -410,21 +412,21 @@ export default function BudgetsPage() {
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-6">
                     <div>
-                      <p className="text-white/80 text-xs font-semibold uppercase tracking-wider mb-1">
+                      <p className="opacity-90 text-xs font-semibold uppercase tracking-wider mb-1">
                         {overallRemaining >= 0 ? 'Remaining Budget' : 'Over Budget'}
                       </p>
                       <h2 className="text-4xl font-bold tracking-tight">
                         {overallRemaining < 0 && '-'}{formatCurrency(Math.abs(overallRemaining))}
                       </h2>
                     </div>
-                    <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5">
+                    <div className="bg-black/10 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5">
                       {budgetStatus && <budgetStatus.icon className="h-3.5 w-3.5" />}
                       <span className="text-xs font-bold">{Math.round(overallPercentage)}%</span>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-white/80 font-medium">
+                    <div className="flex justify-between text-xs opacity-90 font-medium">
                       <span>{formatCurrency(totalMonthSpent)} spent</span>
                       <span>{formatCurrency(currentBudget.totalAmount)} limit</span>
                     </div>
@@ -433,7 +435,7 @@ export default function BudgetsPage() {
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.min(overallPercentage, 100)}%` }}
                         transition={{ duration: 1, ease: "easeOut" }}
-                        className="h-full bg-white rounded-full shadow-sm"
+                        className="h-full bg-white/90 rounded-full shadow-sm"
                       />
                     </div>
                   </div>
