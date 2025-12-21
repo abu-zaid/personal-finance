@@ -3,10 +3,12 @@
 import { useMemo, useState } from 'react';
 import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 import { motion } from 'framer-motion';
+import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, RadialBarChart, RadialBar } from 'recharts';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem, AnimatedNumber } from '@/components/animations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { EmptyState } from '@/components/shared';
 import { CategoryIcon } from '@/components/features/categories';
 import { SmartInsights } from '@/components/features/dashboard/smart-insights';
@@ -31,7 +33,7 @@ import {
   Award,
   AlertCircle,
 } from 'lucide-react';
-import { DonutChart, LineChart, BarChart, SpendingVelocityGauge } from '@/components/charts';
+import { LineChart, DonutChart, BarChart as CustomBarChart, SpendingVelocityGauge } from '@/components/charts';
 
 export default function InsightsPage() {
   const { transactions, getMonthlyTotal, getMonthlyExpenses } = useTransactions();
@@ -532,15 +534,68 @@ export default function InsightsPage() {
                   <CardDescription>Track your spending over time</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <LineChart
-                    series={[{
-                      name: 'Total Spending',
-                      data: monthlyTrendData,
-                      color: '#98EF5A',
-                    }]}
-                    height={200}
-                    formatValue={formatCurrency}
-                  />
+                  <ChartContainer
+                    config={{
+                      spending: {
+                        label: "Spending",
+                        color: "hsl(var(--chart-1))",
+                      },
+                    }}
+                    className="h-[200px]"
+                  >
+                    <AreaChart
+                      data={monthlyTrendData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="fillSpending" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.05} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                      <XAxis
+                        dataKey="label"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        className="text-xs"
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        className="text-xs"
+                        tickFormatter={(value) => formatCurrency(value)}
+                      />
+                      <ChartTooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          return (
+                            <div className="rounded-lg border bg-background p-2 shadow-sm">
+                              <div className="grid gap-2">
+                                <div className="flex flex-col">
+                                  <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                    {payload[0].payload.label}
+                                  </span>
+                                  <span className="font-bold text-foreground">
+                                    {formatCurrency(payload[0].value as number)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="hsl(var(--chart-1))"
+                        fill="url(#fillSpending)"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ChartContainer>
                 </CardContent>
               </Card>
             </FadeIn>
@@ -586,17 +641,62 @@ export default function InsightsPage() {
                   <CardDescription>Day-by-day breakdown</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <BarChart
-                    data={dailySpendingData.map(d => ({
-                      label: d.label,
-                      value: d.value,
-                      color: '#98EF5A',
-                    }))}
-                    height={Math.min(dailySpendingData.length * 35, 600)}
-                    orientation="horizontal"
-                    formatValue={formatCurrency}
-                    showValues={true}
-                  />
+                  <ChartContainer
+                    config={{
+                      spending: {
+                        label: "Amount",
+                        color: "hsl(var(--chart-1))",
+                      },
+                    }}
+                    className="h-[400px]"
+                  >
+                    <BarChart
+                      data={dailySpendingData}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                      <XAxis
+                        type="number"
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => formatCurrency(value)}
+                        className="text-xs"
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="label"
+                        tickLine={false}
+                        axisLine={false}
+                        className="text-xs"
+                        width={30}
+                      />
+                      <ChartTooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          return (
+                            <div className="rounded-lg border bg-background p-2 shadow-sm">
+                              <div className="grid gap-2">
+                                <div className="flex flex-col">
+                                  <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                    Day {payload[0].payload.label}
+                                  </span>
+                                  <span className="font-bold text-foreground">
+                                    {formatCurrency(payload[0].value as number)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar
+                        dataKey="value"
+                        fill="hsl(var(--chart-1))"
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
+                  </ChartContainer>
                 </CardContent>
               </Card>
             </FadeIn>
@@ -806,83 +906,82 @@ export default function InsightsPage() {
 
           {/* Categories Tab */}
           <TabsContent value="categories" className="space-y-4 mt-4">
-            {/* Category Breakdown with Donut Chart */}
+            {/* Category Breakdown */}
             <FadeIn>
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">Spending Breakdown</CardTitle>
-                  <CardDescription>{format(new Date(), 'MMMM yyyy')}</CardDescription>
+                  <CardTitle className="text-base font-semibold">Category Breakdown</CardTitle>
+                  <CardDescription>Top spending categories</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {categoryBreakdown.length > 0 ? (
-                    <>
-                      <div className="flex justify-center mb-6">
-                        <DonutChart
-                          data={categoryBreakdown.slice(0, 6).map(item => ({
-                            value: item.total,
-                            color: item.category.color,
+                    <ChartContainer
+                      config={Object.fromEntries(
+                        categoryBreakdown.slice(0, 6).map((item, index) => [
+                          item.category.id,
+                          {
                             label: item.category.name,
-                          }))}
-                          size={200}
-                          thickness={32}
-                          centerContent={
-                            <div className="text-center">
-                              <p className="text-xs text-muted-foreground">Total</p>
-                              <p className="text-lg font-bold">{formatCurrency(totalCurrentMonth)}</p>
-                            </div>
-                          }
-                          onSegmentClick={(segment, index) => {
-                            const category = categoryBreakdown[index];
-                            setSelectedCategory(category.category.id);
-                            setActiveTab('categories');
-                          }}
-                        />
-                      </div>
-
-                      {/* Category List */}
-                      <div className="space-y-3">
-                        {categoryBreakdown.map((item, index) => (
-                          <motion.button
-                            key={item.category.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            className={cn(
-                              "w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-muted/50",
-                              selectedCategory === item.category.id && "bg-muted/50 ring-2 ring-primary/20"
-                            )}
-                            onClick={() => setSelectedCategory(
-                              selectedCategory === item.category.id ? null : item.category.id
-                            )}
-                          >
-                            <CategoryIcon
-                              icon={item.category.icon}
-                              color={item.category.color}
-                              size="md"
-                            />
-                            <div className="flex-1 min-w-0 text-left">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium truncate">{item.category.name}</span>
-                                <span className="font-semibold">{formatCurrency(item.total)}</span>
-                              </div>
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{item.count} transactions</span>
-                                <div className="flex items-center gap-2">
-                                  <span>{((item.total / totalCurrentMonth) * 100).toFixed(1)}%</span>
-                                  {item.prevTotal > 0 && (
-                                    <span className={cn(
-                                      item.change > 0 ? "text-destructive" : item.change < 0 ? "text-primary" : ""
-                                    )}>
-                                      {item.change > 0 ? '+' : ''}{item.change.toFixed(0)}%
+                            color: `hsl(var(--chart-${(index % 5) + 1}))`,
+                          },
+                        ])
+                      )}
+                      className="h-[300px]"
+                    >
+                      <PieChart>
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null;
+                            const data = payload[0].payload;
+                            return (
+                              <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                <div className="grid gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="h-3 w-3 rounded-full"
+                                      style={{ backgroundColor: data.fill }}
+                                    />
+                                    <span className="font-semibold">{data.name}</span>
+                                  </div>
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-sm font-bold">
+                                      {formatCurrency(data.value)}
                                     </span>
-                                  )}
+                                    <span className="text-xs text-muted-foreground">
+                                      {data.percentage}% of total
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </motion.button>
-                        ))}
-                      </div>
-                    </>
+                            );
+                          }}
+                        />
+                        <Pie
+                          data={categoryBreakdown.slice(0, 6).map((item, index) => ({
+                            name: item.category.name,
+                            value: item.total,
+                            percentage: ((item.total / totalCurrentMonth) * 100).toFixed(1),
+                            fill: `hsl(var(--chart-${(index % 5) + 1}))`,
+                            categoryId: item.category.id,
+                          }))}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          paddingAngle={2}
+                          dataKey="value"
+                          onClick={(data) => setSelectedCategory(data.categoryId)}
+                          className="cursor-pointer"
+                        >
+                          {categoryBreakdown.slice(0, 6).map((item, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              className="stroke-background hover:opacity-80 transition-opacity"
+                              strokeWidth={2}
+                            />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ChartContainer>
                   ) : (
                     <div className="text-muted-foreground py-8 text-center text-sm">
                       No spending data for this month
@@ -931,6 +1030,6 @@ export default function InsightsPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </PageTransition>
+    </PageTransition >
   );
 }
