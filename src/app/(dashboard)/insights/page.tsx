@@ -1011,13 +1011,68 @@ export default function InsightsPage() {
                   </CardHeader>
                   <CardContent>
                     {categoryTrendData[0].data.some(d => d.value > 0) ? (
-                      <LineChart
-                        series={categoryTrendData}
-                        height={180}
-                        formatValue={formatCurrency}
-                        showGrid={true}
-                        showDots={true}
-                      />
+                      <ChartContainer
+                        config={{
+                          spending: {
+                            label: "Spending",
+                            color: categoryTrendData[0].color || "hsl(var(--chart-1))",
+                          },
+                        }}
+                        className="h-[180px]"
+                      >
+                        <AreaChart
+                          data={categoryTrendData[0].data}
+                          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                        >
+                          <defs>
+                            <linearGradient id="fillCategoryTrend" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={categoryTrendData[0].color || "hsl(var(--chart-1))"} stopOpacity={0.3} />
+                              <stop offset="95%" stopColor={categoryTrendData[0].color || "hsl(var(--chart-1))"} stopOpacity={0.05} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                          <XAxis
+                            dataKey="label"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            className="text-xs"
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            className="text-xs"
+                            tickFormatter={(value) => formatCurrency(value)}
+                          />
+                          <ChartTooltip
+                            content={({ active, payload }) => {
+                              if (!active || !payload?.length) return null;
+                              return (
+                                <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                  <div className="grid gap-2">
+                                    <div className="flex flex-col">
+                                      <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                        {payload[0].payload.label}
+                                      </span>
+                                      <span className="font-bold text-foreground">
+                                        {formatCurrency(payload[0].value as number)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="value"
+                            stroke={categoryTrendData[0].color || "hsl(var(--chart-1))"}
+                            fill="url(#fillCategoryTrend)"
+                            strokeWidth={2}
+                          />
+                        </AreaChart>
+                      </ChartContainer>
                     ) : (
                       <div className="flex items-center justify-center h-[180px] text-sm text-muted-foreground">
                         No spending data for this category in the last 6 months
