@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { format, subDays, startOfDay, isSameDay, subMonths, getDaysInMonth } from 'date-fns';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import {
   TrendingUp,
@@ -20,6 +20,7 @@ import {
   BarChart3,
   Wallet,
   PieChart,
+  DollarSign,
 } from 'lucide-react';
 
 import { PageTransition, FadeIn, AnimatedNumber } from '@/components/animations';
@@ -37,7 +38,7 @@ import { DashboardSkeleton } from '@/components/shared';
 import { useSmartInsights } from '@/hooks/use-smart-insights';
 import { getMonthString, cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -302,116 +303,189 @@ export default function DashboardPage() {
 
             {/* Cash Flow */}
             <TabsContent value="flow" className="mt-4">
-              <Card className="border-border/40 shadow-lg">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm md:text-base">Cash Flow</CardTitle>
-                  <CardDescription className="text-xs">Last 30 days</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <ResponsiveContainer width="100%" height={180}>
-                    <AreaChart data={cashFlowData}>
-                      <defs>
-                        <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="expensesGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 10 }}
-                        tickLine={false}
-                        interval={4}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10 }}
-                        tickLine={false}
-                        width={35}
-                        tickFormatter={(value) => `${symbol}${value}`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--background))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                        }}
-                        formatter={(value: number) => formatCurrency(value)}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="income"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        fill="url(#incomeGradient)"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="expenses"
-                        stroke="#ef4444"
-                        strokeWidth={2}
-                        fill="url(#expensesGradient)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key="flow"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card className="border-border/40 shadow-lg">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-sm md:text-base">Cash Flow</CardTitle>
+                          <CardDescription className="text-xs">Last 30 days trend</CardDescription>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          30D
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-4">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <AreaChart data={cashFlowData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0.05} />
+                            </linearGradient>
+                            <linearGradient id="expensesGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
+                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
+                          <XAxis
+                            dataKey="date"
+                            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                            tickLine={false}
+                            axisLine={false}
+                            interval={5}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                            tickLine={false}
+                            axisLine={false}
+                            width={40}
+                            tickFormatter={(value) => `${symbol}${value}`}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: 'hsl(var(--background))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              padding: '8px 12px',
+                            }}
+                            formatter={(value: number, name: string) => [
+                              formatCurrency(value),
+                              name === 'income' ? 'Income' : 'Expenses'
+                            ]}
+                            labelFormatter={(label) => `Day ${label}`}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="income"
+                            stroke="#10b981"
+                            strokeWidth={2.5}
+                            fill="url(#incomeGradient)"
+                            dot={false}
+                            activeDot={{ r: 4, fill: '#10b981' }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="expenses"
+                            stroke="#ef4444"
+                            strokeWidth={2.5}
+                            fill="url(#expensesGradient)"
+                            dot={false}
+                            activeDot={{ r: 4, fill: '#ef4444' }}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+
+                      {/* Summary Stats */}
+                      <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/50">
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <TrendingUp className="h-3 w-3 text-green-500" />
+                            <span className="text-[10px] text-muted-foreground">Income</span>
+                          </div>
+                          <p className="text-xs font-bold text-green-500 tabular-nums">
+                            {symbol}<AnimatedNumber value={cashFlowData.reduce((sum, d) => sum + d.income, 0)} />
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <TrendingDown className="h-3 w-3 text-destructive" />
+                            <span className="text-[10px] text-muted-foreground">Expenses</span>
+                          </div>
+                          <p className="text-xs font-bold text-destructive tabular-nums">
+                            {symbol}<AnimatedNumber value={cashFlowData.reduce((sum, d) => sum + d.expenses, 0)} />
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <DollarSign className="h-3 w-3 text-primary" />
+                            <span className="text-[10px] text-muted-foreground">Net</span>
+                          </div>
+                          <p className={cn(
+                            "text-xs font-bold tabular-nums",
+                            cashFlowData.reduce((sum, d) => sum + d.net, 0) >= 0 ? "text-green-500" : "text-destructive"
+                          )}>
+                            {symbol}<AnimatedNumber value={cashFlowData.reduce((sum, d) => sum + d.net, 0)} />
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </AnimatePresence>
             </TabsContent>
 
             {/* Top Categories */}
             <TabsContent value="categories" className="mt-4">
-              <Card className="border-border/40 shadow-lg">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm md:text-base">Top Categories</CardTitle>
-                  <CardDescription className="text-xs">Where money goes</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="space-y-3">
-                    {topCategories.map((item, index) => (
-                      <motion.div
-                        key={item.category.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div
-                              className="p-1.5 rounded-lg flex-shrink-0"
-                              style={{ backgroundColor: `${item.category.color}20` }}
-                            >
-                              <CategoryIcon
-                                icon={item.category.icon}
-                                color={item.category.color}
-                                size="sm"
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-xs truncate">{item.category.name}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                <AnimatedNumber value={item.percentage} />% of total
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key="categories"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card className="border-border/40 shadow-lg">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm md:text-base">Top Categories</CardTitle>
+                      <CardDescription className="text-xs">Where money goes</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pb-4">
+                      <div className="space-y-3">
+                        {topCategories.map((item, index) => (
+                          <motion.div
+                            key={item.category.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="space-y-1.5"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <div
+                                  className="p-1.5 rounded-lg flex-shrink-0"
+                                  style={{ backgroundColor: `${item.category.color}20` }}
+                                >
+                                  <CategoryIcon
+                                    icon={item.category.icon}
+                                    color={item.category.color}
+                                    size="sm"
+                                  />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-semibold text-xs truncate">{item.category.name}</p>
+                                  <p className="text-[10px] text-muted-foreground tabular-nums">
+                                    <AnimatedNumber value={item.percentage} />% of total
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="font-bold text-xs ml-2 tabular-nums">
+                                {symbol}<AnimatedNumber value={item.amount} />
                               </p>
                             </div>
-                          </div>
-                          <p className="font-bold text-xs ml-2 tabular-nums">
-                            {symbol}<AnimatedNumber value={item.amount} />
-                          </p>
-                        </div>
-                        {item.budget > 0 && (
-                          <Progress
-                            value={Math.min((item.amount / item.budget) * 100, 100)}
-                            className="h-1.5"
-                          />
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                            {item.budget > 0 && (
+                              <Progress
+                                value={Math.min((item.amount / item.budget) * 100, 100)}
+                                className="h-1.5"
+                              />
+                            )}
+                          </motion.div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </AnimatePresence>
             </TabsContent>
           </Tabs>
         </div>
