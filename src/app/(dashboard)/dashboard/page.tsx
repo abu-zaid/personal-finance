@@ -38,7 +38,8 @@ import { DashboardSkeleton } from '@/components/shared';
 import { useSmartInsights } from '@/hooks/use-smart-insights';
 import { getMonthString, cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -107,13 +108,6 @@ export default function DashboardPage() {
     }
     return days;
   }, [currentMonthTransactions, totalBudget, daysInMonth, daysElapsed]);
-
-  // Get chart text color for dark mode support
-  const chartTextColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--muted-foreground').trim()
-      ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--muted-foreground').trim()})`
-      : '#888888'
-    : '#888888';
 
   // Top spending categories
   const topCategories = useMemo(() => {
@@ -338,55 +332,58 @@ export default function DashboardPage() {
                     <CardContent className="pb-4">
                       {spendingTrendData.length > 0 ? (
                         <>
-                          <ResponsiveContainer width="100%" height={200}>
+                          <ChartContainer
+                            config={{
+                              spending: {
+                                label: "Spending",
+                                color: "hsl(var(--destructive))",
+                              },
+                              budgetPace: {
+                                label: "Budget Pace",
+                                color: "hsl(var(--chart-2))",
+                              },
+                            } satisfies ChartConfig}
+                            className="h-[200px] w-full"
+                          >
                             <AreaChart data={spendingTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                               <defs>
                                 <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05} />
+                                  <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
+                                  <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0.05} />
                                 </linearGradient>
                                 <linearGradient id="budgetGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.05} />
+                                  <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2} />
+                                  <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.05} />
                                 </linearGradient>
                               </defs>
-                              <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} />
                               <XAxis
                                 dataKey="date"
-                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                                stroke={chartTextColor}
                                 tickLine={false}
                                 axisLine={false}
+                                tickMargin={8}
                                 interval={Math.floor(spendingTrendData.length / 6)}
                               />
                               <YAxis
-                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                                stroke={chartTextColor}
                                 tickLine={false}
                                 axisLine={false}
+                                tickMargin={8}
                                 width={50}
                                 tickFormatter={(value) => `${symbol}${value}`}
                               />
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: 'hsl(var(--background))',
-                                  border: '1px solid hsl(var(--border))',
-                                  borderRadius: '8px',
-                                  fontSize: '12px',
-                                  padding: '8px 12px',
-                                  color: 'hsl(var(--foreground))',
-                                }}
-                                formatter={(value: number, name: string) => [
-                                  formatCurrency(value),
-                                  name === 'spending' ? 'Total Spent' : 'Budget Pace'
-                                ]}
-                                labelFormatter={(label) => `Day ${label}`}
+                              <ChartTooltip
+                                content={
+                                  <ChartTooltipContent
+                                    labelFormatter={(label) => `Day ${label}`}
+                                    formatter={(value) => formatCurrency(Number(value))}
+                                  />
+                                }
                               />
                               {totalBudget > 0 && (
                                 <Area
                                   type="monotone"
                                   dataKey="budgetPace"
-                                  stroke="#10b981"
+                                  stroke="hsl(var(--chart-2))"
                                   strokeWidth={2}
                                   strokeDasharray="5 5"
                                   fill="url(#budgetGradient)"
@@ -396,14 +393,14 @@ export default function DashboardPage() {
                               <Area
                                 type="monotone"
                                 dataKey="spending"
-                                stroke="#ef4444"
+                                stroke="hsl(var(--destructive))"
                                 strokeWidth={2.5}
                                 fill="url(#spendingGradient)"
                                 dot={false}
-                                activeDot={{ r: 4, fill: '#ef4444' }}
+                                activeDot={{ r: 4 }}
                               />
                             </AreaChart>
-                          </ResponsiveContainer>
+                          </ChartContainer>
 
                           {/* Summary Stats */}
                           <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/50">
@@ -547,56 +544,70 @@ export default function DashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
+                  <ChartContainer
+                    config={{
+                      spending: {
+                        label: "Spending",
+                        color: "hsl(var(--destructive))",
+                      },
+                      budgetPace: {
+                        label: "Budget Pace",
+                        color: "hsl(var(--chart-2))",
+                      },
+                    } satisfies ChartConfig}
+                    className="h-[250px] w-full"
+                  >
                     <AreaChart data={spendingTrendData}>
                       <defs>
-                        <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        <linearGradient id="desktopSpendingGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
                         </linearGradient>
-                        <linearGradient id="expensesGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        <linearGradient id="desktopBudgetGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <XAxis
                         dataKey="date"
-                        className="text-xs"
-                        stroke={chartTextColor}
                         tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
                       />
                       <YAxis
-                        className="text-xs"
-                        stroke={chartTextColor}
                         tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
                         width={50}
                         tickFormatter={(value) => `${symbol}${value}`}
                       />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--background))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          color: 'hsl(var(--foreground))',
-                        }}
-                        formatter={(value: number) => formatCurrency(value)}
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            labelFormatter={(label) => `Day ${label}`}
+                            formatter={(value) => formatCurrency(Number(value))}
+                          />
+                        }
                       />
+                      {totalBudget > 0 && (
+                        <Area
+                          type="monotone"
+                          dataKey="budgetPace"
+                          stroke="hsl(var(--chart-2))"
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          fill="url(#desktopBudgetGradient)"
+                        />
+                      )}
                       <Area
                         type="monotone"
-                        dataKey="income"
-                        stroke="#10b981"
+                        dataKey="spending"
+                        stroke="hsl(var(--destructive))"
                         strokeWidth={2}
-                        fill="url(#incomeGradient)"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="expenses"
-                        stroke="#ef4444"
-                        strokeWidth={2}
-                        fill="url(#expensesGradient)"
+                        fill="url(#desktopSpendingGradient)"
                       />
                     </AreaChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
               </Card>
             </FadeIn>
