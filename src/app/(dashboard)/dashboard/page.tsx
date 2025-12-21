@@ -329,10 +329,10 @@ export default function DashboardPage() {
                         </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent className="pb-4">
+                    <CardContent className="pb-4 max-w-full overflow-hidden">
                       {spendingTrendData.length > 0 ? (
                         <>
-                          <div className="w-full overflow-hidden">
+                          <div className="w-full overflow-hidden min-w-0">
                             <ChartContainer
                               config={{
                                 spending: {
@@ -349,12 +349,12 @@ export default function DashboardPage() {
                               <AreaChart data={spendingTrendData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
                                 <defs>
                                   <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0.05} />
+                                    <stop offset="5%" stopColor="var(--color-spending)" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="var(--color-spending)" stopOpacity={0.05} />
                                   </linearGradient>
                                   <linearGradient id="budgetGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2} />
-                                    <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.05} />
+                                    <stop offset="5%" stopColor="var(--color-budgetPace)" stopOpacity={0.2} />
+                                    <stop offset="95%" stopColor="var(--color-budgetPace)" stopOpacity={0.05} />
                                   </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -384,7 +384,7 @@ export default function DashboardPage() {
                                   <Area
                                     type="monotone"
                                     dataKey="budgetPace"
-                                    stroke="hsl(var(--chart-2))"
+                                    stroke="var(--color-budgetPace)"
                                     strokeWidth={2}
                                     strokeDasharray="5 5"
                                     fill="url(#budgetGradient)"
@@ -394,7 +394,7 @@ export default function DashboardPage() {
                                 <Area
                                   type="monotone"
                                   dataKey="spending"
-                                  stroke="hsl(var(--destructive))"
+                                  stroke="var(--color-spending)"
                                   strokeWidth={2.5}
                                   fill="url(#spendingGradient)"
                                   dot={false}
@@ -545,8 +545,8 @@ export default function DashboardPage() {
                     Last 30 days income vs expenses
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="w-full overflow-hidden">
+                <CardContent className="max-w-full overflow-hidden">
+                  <div className="w-full overflow-hidden min-w-0">
                     <ChartContainer
                       config={{
                         spending: {
@@ -563,12 +563,12 @@ export default function DashboardPage() {
                       <AreaChart data={spendingTrendData}>
                         <defs>
                           <linearGradient id="desktopSpendingGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
+                            <stop offset="5%" stopColor="var(--color-spending)" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="var(--color-spending)" stopOpacity={0} />
                           </linearGradient>
                           <linearGradient id="desktopBudgetGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                            <stop offset="5%" stopColor="var(--color-budgetPace)" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="var(--color-budgetPace)" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -597,7 +597,7 @@ export default function DashboardPage() {
                           <Area
                             type="monotone"
                             dataKey="budgetPace"
-                            stroke="hsl(var(--chart-2))"
+                            stroke="var(--color-budgetPace)"
                             strokeWidth={2}
                             strokeDasharray="5 5"
                             fill="url(#desktopBudgetGradient)"
@@ -606,7 +606,7 @@ export default function DashboardPage() {
                         <Area
                           type="monotone"
                           dataKey="spending"
-                          stroke="hsl(var(--destructive))"
+                          stroke="var(--color-spending)"
                           strokeWidth={2}
                           fill="url(#desktopSpendingGradient)"
                         />
