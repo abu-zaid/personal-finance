@@ -106,6 +106,30 @@ export default function InsightsPage() {
       .sort((a, b) => b.total - a.total);
   }, [currentMonthTransactions, transactions, categories, previousMonth]);
 
+  // Category changes (biggest increase/decrease)
+  const { biggestIncrease, biggestDecrease } = useMemo(() => {
+    const changes = categoryBreakdown.map(item => {
+      const prevTotal = transactions
+        .filter(t => t.categoryId === item.category.id &&
+          getMonthString(new Date(t.date)) === previousMonth &&
+          t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      if (prevTotal === 0) return null;
+
+      const change = ((item.total - prevTotal) / prevTotal) * 100;
+      return { ...item, prevTotal, change };
+    }).filter(Boolean);
+
+    const increases = changes.filter(c => c && c.change > 0).sort((a, b) => b!.change - a!.change);
+    const decreases = changes.filter(c => c && c.change < 0).sort((a, b) => a!.change - b!.change);
+
+    return {
+      biggestIncrease: increases.length > 0 ? increases[0] : null,
+      biggestDecrease: decreases.length > 0 ? decreases[0] : null,
+    };
+  }, [categoryBreakdown, transactions, previousMonth]);
+
   const totalCurrentMonth = categoryBreakdown.reduce((sum, item) => sum + item.total, 0);
 
   // Category spending over time (last 6 months)
@@ -521,33 +545,7 @@ export default function InsightsPage() {
               </Card>
             </FadeIn>
 
-            {/* Daily Spending This Month */}
-            <FadeIn>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">Daily Spending - {format(new Date(), 'MMMM')}</CardTitle>
-                  <CardDescription>Day-by-day breakdown</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto -mx-2 px-2">
-                    <div style={{ minWidth: `${Math.max(dailySpendingData.length * 20, 300)}px` }}>
-                      <BarChart
-                        data={dailySpendingData.map(d => ({
-                          label: d.label,
-                          value: d.value,
-                          color: '#98EF5A',
-                        }))}
-                        height={180}
-                        formatValue={formatCurrency}
-                        showValues={false}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </FadeIn>
-
-            {/* Comparison Cards */}
+            {/* Month Comparison */}
             <div className="grid gap-3 grid-cols-2">
               <FadeIn>
                 <Card>
@@ -579,6 +577,84 @@ export default function InsightsPage() {
                 </Card>
               </FadeIn>
             </div>
+
+            {/* Daily Spending - Horizontal Bars */}
+            <FadeIn>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold">Daily Spending - {format(new Date(), 'MMMM')}</CardTitle>
+                  <CardDescription>Day-by-day breakdown</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <BarChart
+                    data={dailySpendingData.map(d => ({
+                      label: d.label,
+                      value: d.value,
+                      color: '#98EF5A',
+                    }))}
+                    height={Math.min(dailySpendingData.length * 35, 600)}
+                    orientation="horizontal"
+                    formatValue={formatCurrency}
+                    showValues={true}
+                  />
+                </CardContent>
+              </Card>
+            </FadeIn>
+
+            {/* Spending Insights */}
+            {(biggestIncrease || biggestDecrease) && (
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                {biggestIncrease && (
+                  <FadeIn>
+                    <Card className="border-red-500/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-1.5 text-destructive mb-2">
+                          <TrendingUp className="h-4 w-4" />
+                          <span className="text-xs font-medium">Biggest Increase</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <CategoryIcon
+                            icon={biggestIncrease.category.icon}
+                            color={biggestIncrease.category.color}
+                            size="sm"
+                          />
+                          <span className="font-medium text-sm">{biggestIncrease.category.name}</span>
+                        </div>
+                        <p className="text-destructive font-semibold text-lg">
+                          +{biggestIncrease.change.toFixed(0)}%
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">vs last month</p>
+                      </CardContent>
+                    </Card>
+                  </FadeIn>
+                )}
+
+                {biggestDecrease && (
+                  <FadeIn>
+                    <Card className="border-primary/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-1.5 text-primary mb-2">
+                          <TrendingDown className="h-4 w-4" />
+                          <span className="text-xs font-medium">Biggest Decrease</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <CategoryIcon
+                            icon={biggestDecrease.category.icon}
+                            color={biggestDecrease.category.color}
+                            size="sm"
+                          />
+                          <span className="font-medium text-sm">{biggestDecrease.category.name}</span>
+                        </div>
+                        <p className="text-primary font-semibold text-lg">
+                          {biggestDecrease.change.toFixed(0)}%
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">vs last month</p>
+                      </CardContent>
+                    </Card>
+                  </FadeIn>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           {/* Budget Tab */}
