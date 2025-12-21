@@ -12,16 +12,18 @@ import {
 interface AnimationWrapperProps {
   children: ReactNode;
   className?: string;
+  delay?: number;
 }
 
 // Page transition wrapper
-export function PageTransition({ children, className }: AnimationWrapperProps) {
+export function PageTransition({ children, className, delay }: AnimationWrapperProps) {
   return (
     <motion.div
       variants={pageVariants}
       initial="initial"
       animate="animate"
       exit="exit"
+      transition={delay ? { delay } : undefined}
       className={className}
     >
       {children}
@@ -30,13 +32,14 @@ export function PageTransition({ children, className }: AnimationWrapperProps) {
 }
 
 // Fade in wrapper
-export function FadeIn({ children, className }: AnimationWrapperProps) {
+export function FadeIn({ children, className, delay }: AnimationWrapperProps) {
   return (
     <motion.div
       variants={fadeVariants}
       initial="initial"
       animate="animate"
       exit="exit"
+      transition={delay ? { delay } : undefined}
       className={className}
     >
       {children}

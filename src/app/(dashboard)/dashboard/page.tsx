@@ -58,10 +58,9 @@ function DashboardSkeleton() {
     );
 }
 
-// Animated number component
-function AnimatedNumber({ value }: { value: number }) {
-    return <span>{Math.round(value).toLocaleString()}</span>;
-}
+import { AnimatedNumber } from '@/components/animations';
+
+// Loading skeleton component
 
 export default function DashboardPage() {
     const { user } = useAuth();

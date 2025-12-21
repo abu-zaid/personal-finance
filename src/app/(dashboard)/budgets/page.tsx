@@ -235,7 +235,7 @@ export default function BudgetsPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-4 pb-20 lg:pb-4">
+      <div className="space-y-4 p-4 pb-24 md:p-6 lg:p-8">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
