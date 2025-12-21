@@ -358,6 +358,7 @@ export default function DashboardPage() {
                               borderRadius: '8px',
                               fontSize: '12px',
                               padding: '8px 12px',
+                              color: 'hsl(var(--foreground))',
                             }}
                             formatter={(value: number, name: string) => [
                               formatCurrency(value),
@@ -536,6 +537,7 @@ export default function DashboardPage() {
                           backgroundColor: 'hsl(var(--background))',
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px',
+                          color: 'hsl(var(--foreground))',
                         }}
                         formatter={(value: number) => formatCurrency(value)}
                       />
