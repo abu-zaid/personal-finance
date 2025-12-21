@@ -18,9 +18,11 @@ import {
   CheckCircle2,
   Activity,
   BarChart3,
+  Wallet,
+  PieChart,
 } from 'lucide-react';
 
-import { PageTransition, FadeIn } from '@/components/animations';
+import { PageTransition, FadeIn, AnimatedNumber } from '@/components/animations';
 import { useAuth } from '@/context/auth-context';
 import { useCategories } from '@/context/categories-context';
 import { useTransactions } from '@/context/transactions-context';
@@ -32,11 +34,10 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoryIcon } from '@/components/features/categories';
 import { DashboardSkeleton } from '@/components/shared';
-import { SpendingVelocityGauge } from '@/components/charts';
 import { useSmartInsights } from '@/hooks/use-smart-insights';
 import { getMonthString, cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -55,10 +56,9 @@ export default function DashboardPage() {
   // Calculate key metrics
   const totalIncome = getMonthlyIncome(currentMonth);
   const totalExpenses = getMonthlyExpenses(currentMonth);
-  const netPosition = totalIncome - totalExpenses;
-  const savingsRate = totalIncome > 0 ? ((netPosition / totalIncome) * 100) : 0;
   const totalBudget = currentMonthBudget?.totalAmount ?? 0;
   const budgetRemaining = totalBudget - totalExpenses;
+  const budgetUsage = totalBudget > 0 ? (totalExpenses / totalBudget) * 100 : 0;
 
   const previousMonthExpenses = getMonthlyExpenses(previousMonth);
   const monthOverMonthChange = previousMonthExpenses > 0
@@ -68,7 +68,6 @@ export default function DashboardPage() {
   const daysInMonth = getDaysInMonth(new Date());
   const daysElapsed = new Date().getDate();
   const daysRemaining = daysInMonth - daysElapsed;
-  const monthProgress = (daysElapsed / daysInMonth) * 100;
 
   // Current month transactions
   const currentMonthTransactions = useMemo(() => {
@@ -191,54 +190,96 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* Hero - Financial Overview */}
+        {/* Hero - Budget Overview */}
         <FadeIn>
           <Card className="border-border/40 shadow-xl overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
             <CardContent className="p-4 md:p-6 relative">
-              <div className="grid grid-cols-1 gap-4 md:gap-6">
-                {/* Net Position */}
+              <div className="space-y-4 md:space-y-6">
+                {/* Main Budget Display */}
                 <div>
                   <p className="text-[10px] md:text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1 md:mb-2">
-                    Net Position
+                    {totalBudget > 0 ? 'Budget Remaining' : 'Total Spent This Month'}
                   </p>
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className={cn(
-                      "text-2xl md:text-4xl font-bold",
-                      netPosition >= 0 ? "text-green-500" : "text-destructive"
+                      "text-2xl md:text-4xl font-bold tabular-nums",
+                      totalBudget > 0
+                        ? (budgetRemaining >= 0 ? "text-green-500" : "text-destructive")
+                        : "text-foreground"
                     )}>
-                      {netPosition >= 0 ? '+' : ''}{formatCurrency(netPosition)}
+                      {symbol}<AnimatedNumber value={totalBudget > 0 ? Math.abs(budgetRemaining) : totalExpenses} />
                     </span>
-                    {savingsRate > 0 && (
-                      <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] md:text-xs">
-                        {savingsRate.toFixed(0)}% saved
+                    {totalBudget > 0 && budgetUsage > 0 && (
+                      <Badge variant="outline" className={cn(
+                        "text-[10px] md:text-xs",
+                        budgetUsage >= 100 ? "bg-red-500/10 text-red-600 border-red-500/20" :
+                          budgetUsage >= 80 ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                            "bg-green-500/10 text-green-600 border-green-500/20"
+                      )}>
+                        <AnimatedNumber value={budgetUsage} />% used
                       </Badge>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-6">
-                    <div>
-                      <div className="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
-                        <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                        <span className="text-[10px] md:text-xs text-muted-foreground font-medium">Income</span>
-                      </div>
-                      <p className="text-sm md:text-2xl font-bold text-green-500">{formatCurrency(totalIncome)}</p>
+                  {/* Budget Progress Bar */}
+                  {totalBudget > 0 && (
+                    <div className="mt-3 md:mt-4">
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                      >
+                        <Progress
+                          value={Math.min(budgetUsage, 100)}
+                          className="h-2 md:h-3"
+                        />
+                      </motion.div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
-                        <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-destructive" />
-                        <span className="text-[10px] md:text-xs text-muted-foreground font-medium">Expenses</span>
-                      </div>
-                      <p className="text-sm md:text-2xl font-bold text-destructive">{formatCurrency(totalExpenses)}</p>
+                  )}
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-2 md:gap-4">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    <div className="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
+                      <Wallet className="h-3 w-3 md:h-4 md:w-4 text-primary" />
+                      <span className="text-[10px] md:text-xs text-muted-foreground font-medium">Budget</span>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
-                        <Calendar className="h-3 w-3 md:h-4 md:w-4 text-primary" />
-                        <span className="text-[10px] md:text-xs text-muted-foreground font-medium">Days Left</span>
-                      </div>
-                      <p className="text-sm md:text-2xl font-bold">{daysRemaining}</p>
+                    <p className="text-sm md:text-2xl font-bold tabular-nums">
+                      {symbol}<AnimatedNumber value={totalBudget} />
+                    </p>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <div className="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
+                      <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-destructive" />
+                      <span className="text-[10px] md:text-xs text-muted-foreground font-medium">Spent</span>
                     </div>
-                  </div>
+                    <p className="text-sm md:text-2xl font-bold text-destructive tabular-nums">
+                      {symbol}<AnimatedNumber value={totalExpenses} />
+                    </p>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <div className="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
+                      <Calendar className="h-3 w-3 md:h-4 md:w-4 text-blue-500" />
+                      <span className="text-[10px] md:text-xs text-muted-foreground font-medium">Days Left</span>
+                    </div>
+                    <p className="text-sm md:text-2xl font-bold tabular-nums">
+                      <AnimatedNumber value={daysRemaining} />
+                    </p>
+                  </motion.div>
                 </div>
               </div>
             </CardContent>
@@ -247,60 +288,17 @@ export default function DashboardPage() {
 
         {/* Mobile: Tabs for Charts */}
         <div className="lg:hidden">
-          <Tabs defaultValue="velocity" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-auto">
-              <TabsTrigger value="velocity" className="text-xs py-2">
-                <Zap className="h-3 w-3 mr-1" />
-                Velocity
-              </TabsTrigger>
+          <Tabs defaultValue="flow" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 h-auto">
               <TabsTrigger value="flow" className="text-xs py-2">
                 <Activity className="h-3 w-3 mr-1" />
-                Flow
+                Cash Flow
               </TabsTrigger>
               <TabsTrigger value="categories" className="text-xs py-2">
                 <BarChart3 className="h-3 w-3 mr-1" />
                 Categories
               </TabsTrigger>
             </TabsList>
-
-            {/* Spending Velocity */}
-            {totalBudget > 0 && (
-              <TabsContent value="velocity" className="mt-4">
-                <Card className="border-border/40 shadow-lg">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm md:text-base">Spending Velocity</CardTitle>
-                    <CardDescription className="text-xs">Your spending pace vs budget</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pb-4">
-                    <SpendingVelocityGauge
-                      currentSpending={totalExpenses}
-                      budget={totalBudget}
-                      daysElapsed={daysElapsed}
-                      daysInMonth={daysInMonth}
-                    />
-                    <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/50">
-                      <div className="text-center">
-                        <p className="text-[10px] text-muted-foreground mb-0.5">Budget</p>
-                        <p className="text-xs font-bold">{formatCurrency(totalBudget)}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-[10px] text-muted-foreground mb-0.5">Spent</p>
-                        <p className="text-xs font-bold">{formatCurrency(totalExpenses)}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-[10px] text-muted-foreground mb-0.5">Left</p>
-                        <p className={cn(
-                          "text-xs font-bold",
-                          budgetRemaining >= 0 ? "text-green-500" : "text-destructive"
-                        )}>
-                          {formatCurrency(budgetRemaining)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
 
             {/* Cash Flow */}
             <TabsContent value="flow" className="mt-4">
@@ -373,7 +371,13 @@ export default function DashboardPage() {
                 <CardContent className="pb-4">
                   <div className="space-y-3">
                     {topCategories.map((item, index) => (
-                      <div key={item.category.id} className="space-y-1.5">
+                      <motion.div
+                        key={item.category.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="space-y-1.5"
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             <div
@@ -389,11 +393,13 @@ export default function DashboardPage() {
                             <div className="min-w-0 flex-1">
                               <p className="font-semibold text-xs truncate">{item.category.name}</p>
                               <p className="text-[10px] text-muted-foreground">
-                                {item.percentage.toFixed(0)}% of total
+                                <AnimatedNumber value={item.percentage} />% of total
                               </p>
                             </div>
                           </div>
-                          <p className="font-bold text-xs ml-2">{formatCurrency(item.amount)}</p>
+                          <p className="font-bold text-xs ml-2 tabular-nums">
+                            {symbol}<AnimatedNumber value={item.amount} />
+                          </p>
                         </div>
                         {item.budget > 0 && (
                           <Progress
@@ -401,7 +407,7 @@ export default function DashboardPage() {
                             className="h-1.5"
                           />
                         )}
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 </CardContent>
@@ -414,56 +420,12 @@ export default function DashboardPage() {
         <div className="hidden lg:grid lg:grid-cols-3 gap-6">
           {/* Left Column - 2/3 width */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Spending Velocity */}
-            {totalBudget > 0 && (
-              <FadeIn>
-                <Card className="border-border/40 shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Zap className="h-5 w-5 text-primary" />
-                      Spending Velocity
-                    </CardTitle>
-                    <CardDescription>
-                      Your spending pace compared to budget
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <SpendingVelocityGauge
-                      currentSpending={totalExpenses}
-                      budget={totalBudget}
-                      daysElapsed={daysElapsed}
-                      daysInMonth={daysInMonth}
-                    />
-                    <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-border/50">
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-1">Budget</p>
-                        <p className="text-sm font-bold">{formatCurrency(totalBudget)}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-1">Spent</p>
-                        <p className="text-sm font-bold">{formatCurrency(totalExpenses)}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-1">Remaining</p>
-                        <p className={cn(
-                          "text-sm font-bold",
-                          budgetRemaining >= 0 ? "text-green-500" : "text-destructive"
-                        )}>
-                          {formatCurrency(budgetRemaining)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </FadeIn>
-            )}
-
             {/* Cash Flow Chart */}
             <FadeIn>
               <Card className="border-border/40 shadow-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <Activity className="h-5 w-5 text-primary" />
                     Cash Flow Trend
                   </CardTitle>
                   <CardDescription>
@@ -483,7 +445,6 @@ export default function DashboardPage() {
                           <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" />
                       <XAxis
                         dataKey="date"
                         className="text-xs"
@@ -560,16 +521,18 @@ export default function DashboardPage() {
                             </div>
                             <div>
                               <p className="font-semibold text-sm">{item.category.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {item.percentage.toFixed(0)}% of total
+                              <p className="text-xs text-muted-foreground tabular-nums">
+                                <AnimatedNumber value={item.percentage} />% of total
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold">{formatCurrency(item.amount)}</p>
+                            <p className="font-bold tabular-nums">
+                              {symbol}<AnimatedNumber value={item.amount} />
+                            </p>
                             {item.budget > 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                of {formatCurrency(item.budget)}
+                              <p className="text-xs text-muted-foreground tabular-nums">
+                                of {symbol}<AnimatedNumber value={item.budget} />
                               </p>
                             )}
                           </div>
@@ -617,8 +580,8 @@ export default function DashboardPage() {
                                 {item.category.name}
                               </span>
                             </div>
-                            <span className="text-xs font-bold">
-                              {item.usage.toFixed(0)}%
+                            <span className="text-xs font-bold tabular-nums">
+                              <AnimatedNumber value={item.usage} />%
                             </span>
                           </div>
                           <Progress
@@ -646,13 +609,15 @@ export default function DashboardPage() {
                   <div className="space-y-4">
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">This Month</p>
-                      <p className="text-2xl font-bold">{formatCurrency(totalExpenses)}</p>
+                      <p className="text-2xl font-bold tabular-nums">
+                        {symbol}<AnimatedNumber value={totalExpenses} />
+                      </p>
                     </div>
                     <Separator />
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Last Month</p>
-                      <p className="text-xl font-semibold text-muted-foreground">
-                        {formatCurrency(previousMonthExpenses)}
+                      <p className="text-xl font-semibold text-muted-foreground tabular-nums">
+                        {symbol}<AnimatedNumber value={previousMonthExpenses} />
                       </p>
                     </div>
                     <div className={cn(
@@ -665,10 +630,10 @@ export default function DashboardPage() {
                         <ArrowDownRight className="h-4 w-4 text-green-500" />
                       )}
                       <span className={cn(
-                        "text-sm font-bold",
+                        "text-sm font-bold tabular-nums",
                         monthOverMonthChange > 0 ? "text-destructive" : "text-green-500"
                       )}>
-                        {monthOverMonthChange > 0 ? '+' : ''}{monthOverMonthChange.toFixed(1)}%
+                        {monthOverMonthChange > 0 ? '+' : ''}<AnimatedNumber value={Math.abs(monthOverMonthChange)} />%
                       </span>
                       <span className="text-xs text-muted-foreground">vs last month</span>
                     </div>
@@ -684,13 +649,15 @@ export default function DashboardPage() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Transactions</span>
-                      <span className="text-lg font-bold">{currentMonthTransactions.length}</span>
+                      <span className="text-lg font-bold tabular-nums">
+                        <AnimatedNumber value={currentMonthTransactions.length} />
+                      </span>
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Daily Average</span>
-                      <span className="text-lg font-bold">
-                        {formatCurrency(daysElapsed > 0 ? totalExpenses / daysElapsed : 0)}
+                      <span className="text-lg font-bold tabular-nums">
+                        {symbol}<AnimatedNumber value={daysElapsed > 0 ? totalExpenses / daysElapsed : 0} />
                       </span>
                     </div>
                   </div>
