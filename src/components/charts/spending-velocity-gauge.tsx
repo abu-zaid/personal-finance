@@ -59,8 +59,8 @@ export function SpendingVelocityGauge({
     };
 
     // Calculate arc path for gauge
-    const size = 160;
-    const strokeWidth = 12;
+    const size = 200;
+    const strokeWidth = 16;
     const center = size / 2;
     const radius = (size - strokeWidth) / 2;
     const circumference = Math.PI * radius; // Half circle
@@ -70,8 +70,8 @@ export function SpendingVelocityGauge({
 
     return (
         <div className={cn("flex flex-col items-center w-full", className)}>
-            <div className="relative w-full max-w-[160px] aspect-[2/1.2]">
-                <svg viewBox={`0 0 ${size} ${size / 2 + 20}`} className="w-full h-full overflow-visible">
+            <div className="relative w-full max-w-[200px] mx-auto aspect-[2/1.1]">
+                <svg viewBox={`0 0 ${size} ${size / 2 + 30}`} className="w-full h-full">
                     {/* Background arc */}
                     <path
                         d={`M ${strokeWidth / 2} ${center} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${center}`}
@@ -123,10 +123,10 @@ export function SpendingVelocityGauge({
                     <motion.line
                         x1={center}
                         y1={center}
-                        x2={center + (radius - 10) * Math.cos((needleAngle - 90) * Math.PI / 180)}
-                        y2={center + (radius - 10) * Math.sin((needleAngle - 90) * Math.PI / 180)}
+                        x2={center + (radius - 15) * Math.cos((needleAngle - 90) * Math.PI / 180)}
+                        y2={center + (radius - 15) * Math.sin((needleAngle - 90) * Math.PI / 180)}
                         stroke={getStatusColor()}
-                        strokeWidth="3"
+                        strokeWidth="4"
                         strokeLinecap="round"
                         initial={{ rotate: -90 }}
                         animate={{ rotate: needleAngle - 90 }}
@@ -138,37 +138,19 @@ export function SpendingVelocityGauge({
                     <circle
                         cx={center}
                         cy={center}
-                        r="6"
+                        r="8"
                         fill={getStatusColor()}
+                        className="drop-shadow-lg"
                     />
                 </svg>
 
                 {/* Center text */}
-                <div className="absolute bottom-0 left-0 right-0 text-center">
-                    <p className="text-2xl font-bold" style={{ color: getStatusColor() }}>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <p className="text-3xl font-bold" style={{ color: getStatusColor() }}>
                         {metrics.velocityRatio.toFixed(0)}%
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-1 font-medium">
                         {getStatusLabel()}
-                    </p>
-                </div>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                <div className="text-center p-2 rounded-lg bg-muted/30">
-                    <p className="text-xs text-muted-foreground">Daily Rate</p>
-                    <p className="text-sm font-semibold mt-0.5">
-                        {formatCurrency(metrics.actualRate)}
-                    </p>
-                </div>
-                <div className="text-center p-2 rounded-lg bg-muted/30">
-                    <p className="text-xs text-muted-foreground">Projected</p>
-                    <p className={cn(
-                        "text-sm font-semibold mt-0.5",
-                        metrics.projectedTotal > budget && "text-destructive"
-                    )}>
-                        {formatCurrency(metrics.projectedTotal)}
                     </p>
                 </div>
             </div>

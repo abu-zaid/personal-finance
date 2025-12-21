@@ -528,17 +528,19 @@ export default function InsightsPage() {
                   <CardTitle className="text-base font-semibold">Daily Spending - {format(new Date(), 'MMMM')}</CardTitle>
                   <CardDescription>Day-by-day breakdown</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <BarChart
-                    data={dailySpendingData.map(d => ({
-                      label: d.label,
-                      value: d.value,
-                      color: '#98EF5A',
-                    }))}
-                    height={180}
-                    formatValue={formatCurrency}
-                    showValues={false}
-                  />
+                <CardContent className="overflow-x-auto">
+                  <div className="min-w-[600px]">
+                    <BarChart
+                      data={dailySpendingData.map(d => ({
+                        label: d.label,
+                        value: d.value,
+                        color: '#98EF5A',
+                      }))}
+                      height={180}
+                      formatValue={formatCurrency}
+                      showValues={false}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </FadeIn>
