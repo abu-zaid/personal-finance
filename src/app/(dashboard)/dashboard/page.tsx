@@ -1,67 +1,74 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { format, subDays, startOfDay, isSameDay, subMonths, getDaysInMonth } from 'date-fns';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { PageTransition, StaggerContainer, StaggerItem, FadeIn } from '@/components/animations';
+import {
+  TrendingUp,
+  TrendingDown,
+  Plus,
+  Zap,
+  Target,
+  Calendar,
+  ArrowUpRight,
+  ArrowDownRight,
+  Sparkles,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+} from 'lucide-react';
+
+import { PageTransition, FadeIn } from '@/components/animations';
 import { useAuth } from '@/context/auth-context';
 import { useCategories } from '@/context/categories-context';
 import { useTransactions } from '@/context/transactions-context';
 import { useBudgets } from '@/context/budgets-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { CategoryIcon } from '@/components/features/categories';
 import { DashboardSkeleton } from '@/components/shared';
-import {
-  BalanceCard,
-  BudgetOverview,
-  RecentTransactions,
-  SpendingByCategory,
-  FinancialHealthScore,
-  SmartInsights,
-} from '@/components/features/dashboard';
-import { Sparkline, SpendingVelocityGauge } from '@/components/charts';
+import { SpendingVelocityGauge } from '@/components/charts';
+import { useSmartInsights } from '@/hooks/use-smart-insights';
 import { getMonthString, cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
-import {
-  Plus,
-  TrendingUp,
-  TrendingDown,
-  Lightbulb,
-  ArrowRight,
-  Zap,
-  Target,
-  PiggyBank,
-  Sparkles,
-  Wallet,
-  ArrowUpRight,
-  ArrowDownRight,
-  Calendar,
-  Gauge
-} from 'lucide-react';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { categories, isLoading: categoriesLoading } = useCategories();
   const { transactions, isLoading: transactionsLoading, getMonthlyTotal, getMonthlyIncome, getMonthlyExpenses } = useTransactions();
   const { getBudgetByMonth, isLoading: budgetsLoading } = useBudgets();
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, symbol } = useCurrency();
+  const insights = useSmartInsights();
 
-  // Combined loading state - show skeleton until all data is ready
   const isDataLoading = categoriesLoading || transactionsLoading || budgetsLoading;
 
   const currentMonth = getMonthString(new Date());
   const previousMonth = getMonthString(subMonths(new Date(), 1));
-
-  // Get current month budget
   const currentMonthBudget = getBudgetByMonth(currentMonth);
 
-  // State for interactive 7-day chart
-  const [hoveredDayIndex, setHoveredDayIndex] = useState<number | null>(null);
+  // Calculate key metrics
+  const totalIncome = getMonthlyIncome(currentMonth);
+  const totalExpenses = getMonthlyExpenses(currentMonth);
+  const netPosition = totalIncome - totalExpenses;
+  const savingsRate = totalIncome > 0 ? ((netPosition / totalIncome) * 100) : 0;
+  const totalBudget = currentMonthBudget?.totalAmount ?? 0;
+  const budgetRemaining = totalBudget - totalExpenses;
 
-  // Calculate spending by category for current month (expenses only)
+  const previousMonthExpenses = getMonthlyExpenses(previousMonth);
+  const monthOverMonthChange = previousMonthExpenses > 0
+    ? ((totalExpenses - previousMonthExpenses) / previousMonthExpenses) * 100
+    : 0;
+
+  const daysInMonth = getDaysInMonth(new Date());
+  const daysElapsed = new Date().getDate();
+  const daysRemaining = daysInMonth - daysElapsed;
+  const monthProgress = (daysElapsed / daysInMonth) * 100;
+
+  // Current month transactions
   const currentMonthTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const transactionMonth = getMonthString(new Date(t.date));
@@ -69,188 +76,92 @@ export default function DashboardPage() {
     });
   }, [transactions, currentMonth]);
 
-  const spendingByCategory = useMemo(() => {
-    return categories.map((category) => {
-      const categoryTransactions = currentMonthTransactions.filter(
-        (t) => t.categoryId === category.id
-      );
-      const amount = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
-      return { categoryId: category.id, amount };
-    });
-  }, [categories, currentMonthTransactions]);
-
-  // Filter for display (only categories with spending)
-  const spendingByCategoryFiltered = useMemo(() => {
-    return spendingByCategory.filter((item) => item.amount > 0);
-  }, [spendingByCategory]);
-
-  // Calculate totals
-  const totalBudget = currentMonthBudget?.totalAmount ?? 0;
-  const totalSpent = getMonthlyExpenses(currentMonth);
-  const totalIncome = getMonthlyIncome(currentMonth);
-  const previousMonthSpent = getMonthlyExpenses(previousMonth);
-  const budgetRemaining = totalBudget - totalSpent;
-  const budgetUsage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
-  const hasBudget = totalBudget > 0;
-  const netBalance = totalIncome - totalSpent;
-
-  // Month-over-month change
-  const monthChange = previousMonthSpent > 0
-    ? ((totalSpent - previousMonthSpent) / previousMonthSpent) * 100
-    : 0;
-
-  // Last 7 days spending (expenses only)
-  const last7DaysSpending = useMemo(() => {
+  // Last 30 days cash flow data
+  const cashFlowData = useMemo(() => {
     const days = [];
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 29; i >= 0; i--) {
       const date = startOfDay(subDays(new Date(), i));
-      const dayTransactions = transactions.filter((t) =>
-        isSameDay(new Date(t.date), date) && t.type === 'expense'
-      );
-      const total = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
+      const dateStr = format(date, 'MMM dd');
+
+      const dayIncome = transactions
+        .filter(t => isSameDay(new Date(t.date), date) && t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const dayExpenses = transactions
+        .filter(t => isSameDay(new Date(t.date), date) && t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+
       days.push({
-        date,
-        label: format(date, 'EEE'),
-        total,
-        isToday: i === 0,
+        date: dateStr,
+        income: dayIncome,
+        expenses: dayExpenses,
+        net: dayIncome - dayExpenses,
       });
     }
     return days;
   }, [transactions]);
 
-  const maxDailySpend = Math.max(...last7DaysSpending.map((d) => d.total), 1);
-  const todaySpent = last7DaysSpending[6]?.total ?? 0;
+  // Top spending categories
+  const topCategories = useMemo(() => {
+    const categoryTotals = categories.map(cat => {
+      const amount = currentMonthTransactions
+        .filter(t => t.categoryId === cat.id)
+        .reduce((sum, t) => sum + t.amount, 0);
 
-  // Top spending category
-  const topCategory = useMemo(() => {
-    if (spendingByCategoryFiltered.length === 0) return null;
-    const sorted = [...spendingByCategoryFiltered].sort((a, b) => b.amount - a.amount);
-    const topItem = sorted[0];
-    const category = categories.find((c) => c.id === topItem.categoryId);
-    return category ? { category, amount: topItem.amount } : null;
-  }, [spendingByCategoryFiltered, categories]);
+      const budgetAllocation = currentMonthBudget?.allocations.find(
+        (a: { categoryId: string }) => a.categoryId === cat.id
+      );
 
-  // Smart insight based on spending patterns
-  const insight = useMemo(() => {
-    if (budgetUsage >= 90) {
       return {
-        type: 'warning' as const,
-        icon: Target,
-        title: 'Budget Alert',
-        message: `You've used ${budgetUsage.toFixed(0)}% of your budget. Consider slowing down spending.`,
+        category: cat,
+        amount,
+        budget: budgetAllocation?.amount ?? 0,
+        percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0,
       };
-    }
-    if (monthChange > 20) {
-      return {
-        type: 'warning' as const,
-        icon: TrendingUp,
-        title: 'Spending Up',
-        message: `You're spending ${monthChange.toFixed(0)}% more than last month.`,
-      };
-    }
-    if (monthChange < -10) {
-      return {
-        type: 'success' as const,
-        icon: Sparkles,
-        title: 'Great Progress!',
-        message: `You're spending ${Math.abs(monthChange).toFixed(0)}% less than last month. Keep it up!`,
-      };
-    }
-    if (topCategory && totalSpent > 0) {
-      const percentage = ((topCategory.amount / totalSpent) * 100).toFixed(0);
-      return {
-        type: 'info' as const,
-        icon: Lightbulb,
-        title: 'Top Category',
-        message: `${topCategory.category.name} makes up ${percentage}% of your spending this month.`,
-      };
-    }
-    return {
-      type: 'info' as const,
-      icon: PiggyBank,
-      title: 'Stay on Track',
-      message: 'Log your expenses daily to build better financial habits.',
-    };
-  }, [budgetUsage, monthChange, topCategory, totalSpent]);
-
-  // NEW: Additional calculations for enhanced visualizations
-
-  // Days in current month and elapsed days
-  const daysInMonth = getDaysInMonth(new Date());
-  const daysElapsed = new Date().getDate();
-
-  // Income vs Expenses breakdown
-  const incomeVsExpenses = useMemo(() => {
-    return {
-      income: totalIncome,
-      expenses: totalSpent,
-      savings: totalIncome - totalSpent,
-      savingsRate: totalIncome > 0 ? ((totalIncome - totalSpent) / totalIncome) * 100 : 0,
-    };
-  }, [totalIncome, totalSpent]);
-
-  // Category trends (last 7 days for top 5 categories)
-  const categoryTrends = useMemo(() => {
-    const topCategories = [...spendingByCategoryFiltered]
+    })
+      .filter(c => c.amount > 0)
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
 
-    return topCategories.map(({ categoryId }) => {
-      const category = categories.find(c => c.id === categoryId);
-      const last7Days = [];
+    return categoryTotals;
+  }, [categories, currentMonthTransactions, totalExpenses, currentMonthBudget]);
 
-      for (let i = 6; i >= 0; i--) {
-        const date = startOfDay(subDays(new Date(), i));
-        const dayTotal = transactions
-          .filter(t =>
-            t.categoryId === categoryId &&
-            isSameDay(new Date(t.date), date) &&
-            t.type === 'expense'
-          )
-          .reduce((sum, t) => sum + t.amount, 0);
-        last7Days.push(dayTotal);
-      }
+  // Budget health by category
+  const budgetHealth = useMemo(() => {
+    if (!currentMonthBudget) return [];
+
+    return currentMonthBudget.allocations.map((allocation: { categoryId: string; amount: number }) => {
+      const category = categories.find(c => c.id === allocation.categoryId);
+      if (!category) return null;
+
+      const spent = currentMonthTransactions
+        .filter(t => t.categoryId === allocation.categoryId)
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const remaining = allocation.amount - spent;
+      const usage = allocation.amount > 0 ? (spent / allocation.amount) * 100 : 0;
+
+      let status: 'safe' | 'warning' | 'danger' = 'safe';
+      if (usage >= 100) status = 'danger';
+      else if (usage >= 80) status = 'warning';
 
       return {
         category,
-        data: last7Days,
-        total: last7Days.reduce((sum, val) => sum + val, 0),
+        allocated: allocation.amount,
+        spent,
+        remaining,
+        usage,
+        status,
       };
-    });
-  }, [spendingByCategoryFiltered, categories, transactions]);
+    }).filter(Boolean);
+  }, [currentMonthBudget, categories, currentMonthTransactions]);
 
-  // Top 3 spending days this month
-  const topSpendingDays = useMemo(() => {
-    const dailyTotals = new Map<string, number>();
-
-    currentMonthTransactions.forEach(t => {
-      const dateKey = format(new Date(t.date), 'yyyy-MM-dd');
-      dailyTotals.set(dateKey, (dailyTotals.get(dateKey) || 0) + t.amount);
-    });
-
-    return Array.from(dailyTotals.entries())
-      .map(([date, amount]) => ({ date, amount }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 3);
-  }, [currentMonthTransactions]);
-
-  const maxTopDaySpend = topSpendingDays[0]?.amount || 1;
-
-  // Get greeting based on time of day - using state to ensure client-side rendering
-  const [greeting, setGreeting] = useState('Hello');
-
-  useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) {
-      setGreeting('Good morning');
-    } else if (hour < 17) {
-      setGreeting('Good afternoon');
-    } else {
-      setGreeting('Good evening');
-    }
+  // Upcoming recurring expenses (mock - would need recurring expenses feature)
+  const upcomingBills = useMemo(() => {
+    // This is a placeholder - in a real app, you'd have a recurring expenses table
+    return [];
   }, []);
 
-  // Show skeleton while data is loading
   if (isDataLoading) {
     return <DashboardSkeleton />;
   }
@@ -258,278 +169,478 @@ export default function DashboardPage() {
   return (
     <PageTransition>
       <div className="space-y-6 px-4 md:px-0">
-        {/* Welcome Message - Mobile */}
-        <div className="lg:hidden flex items-start justify-between">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-muted-foreground/60 text-[11px] font-medium uppercase tracking-wide">{greeting},</p>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mt-0.5">
-              {user?.name?.split(' ')[0] || 'there'} 👋
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Welcome back, {user?.name?.split(' ')[0] || 'there'}!
             </h1>
-          </div>
-          <Link href="/transactions">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-lg cursor-pointer hover:scale-105 transition-transform"
-              style={{
-                background: 'linear-gradient(135deg, #98EF5A 0%, #7BEA3C 100%)',
-                boxShadow: '0 4px 20px rgba(152, 239, 90, 0.3)',
-              }}
-            >
-              <Plus className="h-5 w-5 text-[#101010]" strokeWidth={2.5} />
-            </div>
-          </Link>
-        </div>
-
-        {/* Desktop Welcome */}
-        <div className="hidden lg:flex lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-              {greeting}, {user?.name?.split(' ')[0] || 'there'}!
-            </h2>
-            <p className="text-muted-foreground/70 mt-2 text-base">
-              Here&apos;s what&apos;s happening with your finances this month.
+            <p className="text-muted-foreground mt-1">
+              Here's your financial overview for {format(new Date(), 'MMMM yyyy')}
             </p>
           </div>
           <Link href="/transactions">
-            <button
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-[#101010] shadow-lg transition-all hover:scale-105 hover:shadow-xl"
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-[#101010] shadow-lg"
               style={{
                 background: 'linear-gradient(135deg, #98EF5A 0%, #7BEA3C 100%)',
                 boxShadow: '0 8px 24px rgba(152, 239, 90, 0.35)',
               }}
             >
               <Plus className="h-5 w-5" strokeWidth={2.5} />
-              Add Expense
-            </button>
+              <span className="hidden sm:inline">Add Transaction</span>
+            </motion.button>
           </Link>
         </div>
 
-        {/* Hero Balance Card */}
-        <StaggerContainer>
-          <StaggerItem>
-            <BalanceCard
-              balance={budgetRemaining}
-              income={totalBudget}
-              expenses={totalSpent}
-              transactionCount={currentMonthTransactions.length}
-              budgetUsage={budgetUsage}
-            />
-          </StaggerItem>
-        </StaggerContainer>
-
-        {/* Financial Health Score */}
+        {/* Hero - Financial Overview */}
         <FadeIn>
-          <FinancialHealthScore />
-        </FadeIn>
-
-        {/* Smart Insights */}
-        <FadeIn>
-          <SmartInsights />
-        </FadeIn>
-
-        {/* Quick Insight Banner - Modern */}
-        <FadeIn>
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={cn(
-              "relative overflow-hidden rounded-2xl p-4 border flex items-center gap-3 backdrop-blur-sm",
-              {
-                'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400': insight.type === 'warning',
-                'bg-primary/10 border-primary/20 text-primary-600 dark:text-primary-400': insight.type === 'success',
-                'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400': insight.type === 'info',
-              }
-            )}
-          >
-            <div className={cn(
-              "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl",
-              {
-                'bg-amber-500/20 text-amber-600': insight.type === 'warning',
-                'bg-primary/20 text-primary': insight.type === 'success',
-                'bg-blue-500/20 text-blue-500': insight.type === 'info',
-              }
-            )}>
-              <insight.icon className="h-5 w-5" strokeWidth={2} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold leading-tight uppercase tracking-wider opacity-90 mb-1">{insight.title}</p>
-              <p className="text-sm font-medium leading-snug">{insight.message}</p>
-            </div>
-          </motion.div>
-        </FadeIn>
-
-        {/* 7-Day Spending Chart */}
-        <FadeIn>
-          <Card className="border-border/40 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold">Last 7 Days</CardTitle>
-                <div className="flex items-center gap-2">
-                  {monthChange !== 0 && (
+          <Card className="border-border/40 shadow-xl overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
+            <CardContent className="p-6 relative">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Net Position */}
+                <div className="md:col-span-2">
+                  <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                    Net Position This Month
+                  </p>
+                  <div className="flex items-baseline gap-2">
                     <span className={cn(
-                      "flex items-center text-xs font-medium px-2 py-0.5 rounded-full",
-                      monthChange > 0
-                        ? "bg-red-500/10 text-red-500"
-                        : "bg-primary/10 text-primary"
+                      "text-4xl font-bold",
+                      netPosition >= 0 ? "text-green-500" : "text-destructive"
                     )}>
-                      {monthChange > 0 ? (
-                        <TrendingUp className="h-3 w-3 mr-0.5" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 mr-0.5" />
-                      )}
-                      {monthChange > 0 ? '+' : ''}{monthChange.toFixed(0)}%
+                      {netPosition >= 0 ? '+' : ''}{formatCurrency(netPosition)}
                     </span>
-                  )}
+                    {savingsRate > 0 && (
+                      <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+                        {savingsRate.toFixed(0)}% savings rate
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-6">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <TrendingUp className="h-4 w-4 text-green-500" />
+                        <span className="text-xs text-muted-foreground font-medium">Income</span>
+                      </div>
+                      <p className="text-2xl font-bold text-green-500">{formatCurrency(totalIncome)}</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <TrendingDown className="h-4 w-4 text-destructive" />
+                        <span className="text-xs text-muted-foreground font-medium">Expenses</span>
+                      </div>
+                      <p className="text-2xl font-bold text-destructive">{formatCurrency(totalExpenses)}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-end justify-between gap-1.5 h-20">
-                {last7DaysSpending.map((day, index) => {
-                  const isHovered = hoveredDayIndex === index;
 
-                  return (
-                    <motion.div
-                      key={day.label}
-                      initial={{ opacity: 0, scaleY: 0 }}
-                      animate={{ opacity: 1, scaleY: 1 }}
-                      transition={{ delay: index * 0.05, duration: 0.3 }}
-                      className="flex-1 flex flex-col items-center gap-1 relative group"
-                      style={{ originY: 1 }}
-                      onMouseEnter={() => setHoveredDayIndex(index)}
-                      onMouseLeave={() => setHoveredDayIndex(null)}
-                    >
-                      <motion.div
-                        className={cn(
-                          "w-full rounded-t-md transition-all cursor-pointer relative overflow-hidden",
-                          day.isToday ? "bg-primary" : "bg-primary/30 dark:bg-primary/40"
-                        )}
-                        style={{
-                          height: day.total > 0 ? `${Math.max((day.total / maxDailySpend) * 56, 4)}px` : '4px',
-                        }}
-                        animate={{
-                          scale: isHovered ? 1.1 : 1,
-                          filter: isHovered ? 'drop-shadow(0 0 8px rgba(152, 239, 90, 0.5))' : 'none',
-                        }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {/* Shimmer effect on hover */}
-                        {isHovered && (
-                          <motion.div
-                            className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.2 }}
-                          />
-                        )}
-                      </motion.div>
-
-                      {/* Tooltip */}
-                      {isHovered && day.total > 0 && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="absolute bottom-full mb-2 px-2 py-1 rounded-lg glass-card text-[10px] font-semibold whitespace-nowrap z-10"
-                        >
-                          {formatCurrency(day.total)}
-                        </motion.div>
-                      )}
-
-                      <span className={cn(
-                        "text-[10px] font-medium transition-colors",
-                        day.isToday ? "text-primary" : "text-muted-foreground",
-                        isHovered && "text-primary font-semibold"
-                      )}>
-                        {day.label}
-                      </span>
-                    </motion.div>
-                  );
-                })}
-              </div>
-              <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Today</span>
-                <span className="text-sm font-semibold">
-                  {formatCurrency(todaySpent)}
-                </span>
+                {/* Month Progress Ring */}
+                <div className="flex flex-col items-center justify-center">
+                  <div className="relative w-32 h-32">
+                    <svg className="w-full h-full -rotate-90">
+                      <circle
+                        cx="64"
+                        cy="64"
+                        r="56"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        fill="none"
+                        className="text-muted/20"
+                      />
+                      <motion.circle
+                        cx="64"
+                        cy="64"
+                        r="56"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={2 * Math.PI * 56}
+                        className="text-primary"
+                        initial={{ strokeDashoffset: 2 * Math.PI * 56 }}
+                        animate={{ strokeDashoffset: (2 * Math.PI * 56) - (monthProgress / 100) * (2 * Math.PI * 56) }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-bold">{daysElapsed}</span>
+                      <span className="text-xs text-muted-foreground">of {daysInMonth} days</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">{daysRemaining} days remaining</p>
+                </div>
               </div>
             </CardContent>
           </Card>
         </FadeIn>
-        {/* Quick Stats Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FadeIn>
-            <Card className="h-full border-border/40 shadow-sm hover:shadow-md transition-all bg-gradient-to-br from-primary/5 to-primary/10">
-              <CardContent className="p-5 flex flex-col justify-center h-full">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="p-2 rounded-xl bg-primary/20">
-                    <Zap className="h-5 w-5 text-primary" strokeWidth={2} />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Daily Average</span>
-                </div>
-                <p className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  {formatCurrency(currentMonthTransactions.length > 0
-                    ? totalSpent / new Date().getDate()
-                    : 0
-                  )}
-                </p>
-              </CardContent>
-            </Card>
-          </FadeIn>
 
-          <FadeIn>
-            <Card className="h-full border-border/40 shadow-sm hover:shadow-md transition-all bg-gradient-to-br from-muted/30 to-muted/50">
-              <CardContent className="p-5 flex flex-col justify-center h-full">
-                <div className="flex items-center gap-2.5 mb-3">
-                  {topCategory ? (
-                    <div className="p-2 rounded-xl" style={{ backgroundColor: `${topCategory.category.color}20` }}>
-                      <CategoryIcon
-                        icon={topCategory.category.icon}
-                        color={topCategory.category.color}
-                        size="sm"
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - 2/3 width */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Spending Velocity */}
+            {totalBudget > 0 && (
+              <FadeIn>
+                <Card className="border-border/40 shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-primary" />
+                      Spending Velocity
+                    </CardTitle>
+                    <CardDescription>
+                      Your spending pace compared to budget
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <SpendingVelocityGauge
+                      currentSpending={totalExpenses}
+                      budget={totalBudget}
+                      daysElapsed={daysElapsed}
+                      daysInMonth={daysInMonth}
+                    />
+                    <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-border/50">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-1">Budget</p>
+                        <p className="text-sm font-bold">{formatCurrency(totalBudget)}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-1">Spent</p>
+                        <p className="text-sm font-bold">{formatCurrency(totalExpenses)}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-1">Remaining</p>
+                        <p className={cn(
+                          "text-sm font-bold",
+                          budgetRemaining >= 0 ? "text-green-500" : "text-destructive"
+                        )}>
+                          {formatCurrency(budgetRemaining)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            )}
+
+            {/* Cash Flow Chart */}
+            <FadeIn>
+              <Card className="border-border/40 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Cash Flow Trend
+                  </CardTitle>
+                  <CardDescription>
+                    Last 30 days income vs expenses
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <AreaChart data={cashFlowData}>
+                      <defs>
+                        <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="expensesGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" />
+                      <XAxis
+                        dataKey="date"
+                        className="text-xs"
+                        tick={{ fill: 'currentColor', className: 'fill-muted-foreground' }}
+                        tickLine={false}
                       />
+                      <YAxis
+                        className="text-xs"
+                        tick={{ fill: 'currentColor', className: 'fill-muted-foreground' }}
+                        tickLine={false}
+                        tickFormatter={(value) => `${symbol}${value}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number) => formatCurrency(value)}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="income"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        fill="url(#incomeGradient)"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="expenses"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        fill="url(#expensesGradient)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </FadeIn>
+
+            {/* Top Categories */}
+            <FadeIn>
+              <Card className="border-border/40 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    Top Spending Categories
+                  </CardTitle>
+                  <CardDescription>
+                    Where your money is going this month
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {topCategories.map((item, index) => (
+                      <motion.div
+                        key={item.category.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="p-2 rounded-xl"
+                              style={{ backgroundColor: `${item.category.color}20` }}
+                            >
+                              <CategoryIcon
+                                icon={item.category.icon}
+                                color={item.category.color}
+                                size="sm"
+                              />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">{item.category.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {item.percentage.toFixed(0)}% of total
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold">{formatCurrency(item.amount)}</p>
+                            {item.budget > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                of {formatCurrency(item.budget)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {item.budget > 0 && (
+                          <Progress
+                            value={Math.min((item.amount / item.budget) * 100, 100)}
+                            className="h-2"
+                          />
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeIn>
+          </div>
+
+          {/* Right Column - 1/3 width */}
+          <div className="space-y-6">
+            {/* Budget Health */}
+            {budgetHealth.length > 0 && (
+              <FadeIn>
+                <Card className="border-border/40 shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-base">Budget Health</CardTitle>
+                    <CardDescription className="text-xs">
+                      Category status
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {budgetHealth.slice(0, 6).map((item: any) => (
+                        <div key={item.category.id} className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-2 h-2 rounded-full"
+                                style={{
+                                  backgroundColor: item.status === 'danger' ? '#ef4444' :
+                                    item.status === 'warning' ? '#f59e0b' : '#10b981'
+                                }}
+                              />
+                              <span className="text-xs font-medium truncate max-w-[100px]">
+                                {item.category.name}
+                              </span>
+                            </div>
+                            <span className="text-xs font-bold">
+                              {item.usage.toFixed(0)}%
+                            </span>
+                          </div>
+                          <Progress
+                            value={Math.min(item.usage, 100)}
+                            className="h-1.5"
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ) : (
-                    <div className="p-2 rounded-xl bg-muted">
-                      <PiggyBank className="h-5 w-5 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            )}
+
+            {/* Monthly Comparison */}
+            <FadeIn>
+              <Card className="border-border/40 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Monthly Comparison
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">This Month</p>
+                      <p className="text-2xl font-bold">{formatCurrency(totalExpenses)}</p>
                     </div>
-                  )}
-                  <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider truncate">
-                    {topCategory?.category.name || 'Top Spend'}
-                  </span>
-                </div>
-                <p className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  {topCategory ? formatCurrency(topCategory.amount) : '-'}
-                </p>
-              </CardContent>
-            </Card>
-          </FadeIn>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Last Month</p>
+                      <p className="text-xl font-semibold text-muted-foreground">
+                        {formatCurrency(previousMonthExpenses)}
+                      </p>
+                    </div>
+                    <div className={cn(
+                      "flex items-center gap-2 p-3 rounded-xl",
+                      monthOverMonthChange > 0 ? "bg-red-500/10" : "bg-green-500/10"
+                    )}>
+                      {monthOverMonthChange > 0 ? (
+                        <ArrowUpRight className="h-4 w-4 text-destructive" />
+                      ) : (
+                        <ArrowDownRight className="h-4 w-4 text-green-500" />
+                      )}
+                      <span className={cn(
+                        "text-sm font-bold",
+                        monthOverMonthChange > 0 ? "text-destructive" : "text-green-500"
+                      )}>
+                        {monthOverMonthChange > 0 ? '+' : ''}{monthOverMonthChange.toFixed(1)}%
+                      </span>
+                      <span className="text-xs text-muted-foreground">vs last month</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeIn>
+
+            {/* Quick Stats */}
+            <FadeIn>
+              <Card className="border-border/40 shadow-lg bg-gradient-to-br from-primary/5 to-primary/10">
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Transactions</span>
+                      <span className="text-lg font-bold">{currentMonthTransactions.length}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Daily Average</span>
+                      <span className="text-lg font-bold">
+                        {formatCurrency(daysElapsed > 0 ? totalExpenses / daysElapsed : 0)}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeIn>
+          </div>
         </div>
 
-        {/* Spending by Category */}
-        <StaggerItem>
-          <SpendingByCategory
-            spending={spendingByCategoryFiltered}
-            categories={categories}
-            totalSpent={totalSpent}
-          />
-        </StaggerItem>
+        {/* Smart Recommendations */}
+        {insights.length > 0 && (
+          <FadeIn>
+            <Card className="border-border/40 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Smart Recommendations
+                </CardTitle>
+                <CardDescription>
+                  Personalized insights based on your spending patterns
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {insights.map((insight, index) => {
+                    const Icon = insight.type === 'warning' ? AlertCircle :
+                      insight.type === 'achievement' ? CheckCircle2 :
+                        insight.type === 'opportunity' ? Zap : Sparkles;
 
-        {/* Budget Overview */}
-        <StaggerItem>
-          <BudgetOverview
-            budget={currentMonthBudget}
-            categories={categories}
-            spendingByCategory={spendingByCategory}
-          />
-        </StaggerItem>
+                    const colors = {
+                      warning: 'bg-amber-500/10 border-amber-500/20 text-amber-600',
+                      achievement: 'bg-green-500/10 border-green-500/20 text-green-600',
+                      opportunity: 'bg-primary/10 border-primary/20 text-primary',
+                      tip: 'bg-blue-500/10 border-blue-500/20 text-blue-600',
+                    };
 
-        {/* Recent Transactions */}
-        <StaggerItem>
-          <RecentTransactions
-            transactions={currentMonthTransactions}
-            categories={categories}
-            limit={5}
-          />
-        </StaggerItem>
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className={cn(
+                          "p-4 rounded-xl border backdrop-blur-sm",
+                          colors[insight.type]
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-lg bg-background/50">
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold uppercase tracking-wider mb-1">
+                              {insight.title}
+                            </p>
+                            <p className="text-sm font-medium mb-2">
+                              {insight.message}
+                            </p>
+                            {(insight.action || insight.impact) && (
+                              <div className="flex flex-wrap gap-2 text-xs">
+                                {insight.action && (
+                                  <Badge variant="secondary" className="font-medium">
+                                    {insight.action}
+                                  </Badge>
+                                )}
+                                {insight.impact && (
+                                  <Badge variant="outline" className="font-bold">
+                                    {insight.impact}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </FadeIn>
+        )}
       </div>
     </PageTransition>
   );
