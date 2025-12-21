@@ -457,37 +457,39 @@ export default function TransactionsPage() {
           </div>
 
           {/* Quick Category Filters */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 max-w-full">
-            <Button
-              variant={selectedCategoryIds.length === 0 ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategoryIds([])}
-              className="flex-shrink-0"
-            >
-              All
-            </Button>
-            {categories.map(cat => {
-              const isSelected = selectedCategoryIds.includes(cat.id);
-              return (
-                <Button
-                  key={cat.id}
-                  variant={isSelected ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
-                    else setSelectedCategoryIds(prev => [...prev, cat.id]);
-                  }}
-                  className="flex-shrink-0 gap-1.5"
-                  style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color, color: '#000' } : {}}
-                >
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: isSelected ? '#000' : cat.color }}
-                  />
-                  {cat.name}
-                </Button>
-              );
-            })}
+          <div className="w-full overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="flex items-center gap-2 pb-1 min-w-min">
+              <Button
+                variant={selectedCategoryIds.length === 0 ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategoryIds([])}
+                className="flex-shrink-0"
+              >
+                All
+              </Button>
+              {categories.map(cat => {
+                const isSelected = selectedCategoryIds.includes(cat.id);
+                return (
+                  <Button
+                    key={cat.id}
+                    variant={isSelected ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                      else setSelectedCategoryIds(prev => [...prev, cat.id]);
+                    }}
+                    className="flex-shrink-0 gap-1.5 whitespace-nowrap"
+                    style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color, color: '#000' } : {}}
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: isSelected ? '#000' : cat.color }}
+                    />
+                    {cat.name}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

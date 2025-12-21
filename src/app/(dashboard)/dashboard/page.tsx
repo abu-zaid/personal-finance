@@ -108,6 +108,13 @@ export default function DashboardPage() {
     return days;
   }, [currentMonthTransactions, totalBudget, daysInMonth, daysElapsed]);
 
+  // Get chart text color for dark mode support
+  const chartTextColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--muted-foreground').trim()
+      ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--muted-foreground').trim()})`
+      : '#888888'
+    : '#888888';
+
   // Top spending categories
   const topCategories = useMemo(() => {
     const categoryTotals = categories.map(cat => {
@@ -347,12 +354,14 @@ export default function DashboardPage() {
                               <XAxis
                                 dataKey="date"
                                 tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                                stroke={chartTextColor}
                                 tickLine={false}
                                 axisLine={false}
                                 interval={Math.floor(spendingTrendData.length / 6)}
                               />
                               <YAxis
                                 tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                                stroke={chartTextColor}
                                 tickLine={false}
                                 axisLine={false}
                                 width={50}
@@ -553,12 +562,12 @@ export default function DashboardPage() {
                       <XAxis
                         dataKey="date"
                         className="text-xs"
-                        tick={{ fill: 'currentColor', className: 'fill-muted-foreground' }}
+                        stroke={chartTextColor}
                         tickLine={false}
                       />
                       <YAxis
                         className="text-xs"
-                        tick={{ fill: 'currentColor', className: 'fill-muted-foreground' }}
+                        stroke={chartTextColor}
                         tickLine={false}
                         width={50}
                         tickFormatter={(value) => `${symbol}${value}`}
