@@ -339,15 +339,6 @@ export default function DashboardPage() {
                                                 stroke="var(--muted-foreground)"
                                                 dy={5}
                                             />
-                                            <YAxis
-                                                tickLine={false}
-                                                axisLine={false}
-                                                tickMargin={8}
-                                                width={40}
-                                                tick={{ fontSize: 11 }}
-                                                tickFormatter={(value) => `${symbol}${value}`}
-                                                stroke="var(--muted-foreground)"
-                                            />
                                             <ChartTooltip
                                                 content={
                                                     <ChartTooltipContent

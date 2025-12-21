@@ -240,133 +240,141 @@ export default function TransactionsPage() {
                     )}
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-full sm:max-w-md">
-                  <SheetHeader>
+                <SheetContent side="right" className="w-full sm:max-w-md flex flex-col gap-0 p-0 sm:pr-0">
+                  <SheetHeader className="px-6 py-4 border-b flex-none">
                     <SheetTitle>Filters & Sort</SheetTitle>
                     <SheetDescription>Refine your transaction list</SheetDescription>
                   </SheetHeader>
 
-                  <div className="space-y-6 mt-6">
-                    {/* Type Filter */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Type</label>
-                      <Tabs value={selectedType} onValueChange={(v) => setSelectedType(v as any)}>
-                        <TabsList className="grid w-full grid-cols-3">
-                          <TabsTrigger value="all">All</TabsTrigger>
-                          <TabsTrigger value="expense">Expense</TabsTrigger>
-                          <TabsTrigger value="income">Income</TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                    </div>
-
-                    {/* Sort */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Sort By</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant={sortConfig.field === 'date' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setSortConfig({
-                            field: 'date',
-                            order: sortConfig.field === 'date' && sortConfig.order === 'desc' ? 'asc' : 'desc'
-                          })}
-                        >
-                          Date {sortConfig.field === 'date' && (sortConfig.order === 'asc' ? '↑' : '↓')}
-                        </Button>
-                        <Button
-                          variant={sortConfig.field === 'amount' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setSortConfig({
-                            field: 'amount',
-                            order: sortConfig.field === 'amount' && sortConfig.order === 'desc' ? 'asc' : 'desc'
-                          })}
-                        >
-                          Amount {sortConfig.field === 'amount' && (sortConfig.order === 'asc' ? '↑' : '↓')}
-                        </Button>
+                  <div className="flex-1 overflow-y-auto px-6 py-6">
+                    <div className="space-y-6">
+                      {/* Type Filter */}
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium">Type</label>
+                        <Tabs value={selectedType} onValueChange={(v) => setSelectedType(v as any)}>
+                          <TabsList className="grid w-full grid-cols-3">
+                            <TabsTrigger value="all">All</TabsTrigger>
+                            <TabsTrigger value="expense">Expense</TabsTrigger>
+                            <TabsTrigger value="income">Income</TabsTrigger>
+                          </TabsList>
+                        </Tabs>
                       </div>
-                    </div>
 
-                    {/* Date Range */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Date Range</label>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDateRange({ from: undefined, to: undefined })}
-                        >
-                          All Time
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDateRange({
-                            from: startOfMonth(new Date()),
-                            to: endOfMonth(new Date())
-                          })}
-                        >
-                          This Month
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDateRange({
-                            from: subDays(new Date(), 30),
-                            to: new Date()
-                          })}
-                        >
-                          Last 30 Days
-                        </Button>
-                      </div>
-                      {dateRange.from && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CalendarIcon className="h-4 w-4" />
-                          <span>
-                            {format(dateRange.from, 'MMM d')} - {dateRange.to ? format(dateRange.to, 'MMM d, yyyy') : 'Now'}
-                          </span>
+                      {/* Sort */}
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium">Sort By</label>
+                        <div className="grid grid-cols-2 gap-3">
                           <Button
-                            variant="ghost"
+                            variant={sortConfig.field === 'date' ? 'default' : 'outline'}
                             size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => setDateRange({ from: undefined, to: undefined })}
+                            className="h-9"
+                            onClick={() => setSortConfig({
+                              field: 'date',
+                              order: sortConfig.field === 'date' && sortConfig.order === 'desc' ? 'asc' : 'desc'
+                            })}
                           >
-                            <X className="h-3 w-3" />
+                            Date {sortConfig.field === 'date' && (sortConfig.order === 'asc' ? '↑' : '↓')}
+                          </Button>
+                          <Button
+                            variant={sortConfig.field === 'amount' ? 'default' : 'outline'}
+                            size="sm"
+                            className="h-9"
+                            onClick={() => setSortConfig({
+                              field: 'amount',
+                              order: sortConfig.field === 'amount' && sortConfig.order === 'desc' ? 'asc' : 'desc'
+                            })}
+                          >
+                            Amount {sortConfig.field === 'amount' && (sortConfig.order === 'asc' ? '↑' : '↓')}
                           </Button>
                         </div>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Categories */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Categories</label>
-                      <div className="flex flex-wrap gap-2">
-                        {categories.map(cat => {
-                          const isSelected = selectedCategoryIds.includes(cat.id);
-                          return (
-                            <Badge
-                              key={cat.id}
-                              variant={isSelected ? 'default' : 'outline'}
-                              className="cursor-pointer"
-                              style={isSelected ? { backgroundColor: cat.color, color: '#000', borderColor: cat.color } : {}}
-                              onClick={() => {
-                                if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
-                                else setSelectedCategoryIds(prev => [...prev, cat.id]);
-                              }}
+                      {/* Date Range */}
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium">Date Range</label>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDateRange({ from: undefined, to: undefined })}
+                            className={cn(!dateRange.from && "bg-secondary")}
+                          >
+                            All Time
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDateRange({
+                              from: startOfMonth(new Date()),
+                              to: endOfMonth(new Date())
+                            })}
+                          >
+                            This Month
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDateRange({
+                              from: subDays(new Date(), 30),
+                              to: new Date()
+                            })}
+                          >
+                            Last 30 Days
+                          </Button>
+                        </div>
+                        {dateRange.from && (
+                          <div className="flex items-center gap-2 text-sm text-primary bg-primary/10 px-3 py-2 rounded-md">
+                            <CalendarIcon className="h-4 w-4" />
+                            <span>
+                              {format(dateRange.from, 'MMM d')} - {dateRange.to ? format(dateRange.to, 'MMM d, yyyy') : 'Now'}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 ml-auto hover:bg-primary/20"
+                              onClick={() => setDateRange({ from: undefined, to: undefined })}
                             >
-                              {cat.name}
-                            </Badge>
-                          );
-                        })}
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Categories */}
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium">Categories</label>
+                        <div className="flex flex-wrap gap-2">
+                          {categories.map(cat => {
+                            const isSelected = selectedCategoryIds.includes(cat.id);
+                            return (
+                              <Badge
+                                key={cat.id}
+                                variant={isSelected ? 'default' : 'outline'}
+                                className={cn(
+                                  "cursor-pointer px-3 py-1.5 hover:bg-secondary/80 transition-colors",
+                                  isSelected && "border-transparent"
+                                )}
+                                style={isSelected ? { backgroundColor: cat.color, color: '#000' } : {}}
+                                onClick={() => {
+                                  if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                                  else setSelectedCategoryIds(prev => [...prev, cat.id]);
+                                }}
+                              >
+                                {cat.name}
+                              </Badge>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <SheetFooter className="mt-6">
-                    <Button variant="outline" onClick={clearFilters} className="flex-1">
+                  <SheetFooter className="px-6 py-4 border-t flex-none mt-0 gap-3 sm:gap-4">
+                    <Button variant="outline" onClick={clearFilters} className="flex-1 h-11 sm:h-10">
                       Reset
                     </Button>
                     <SheetClose asChild>
-                      <Button className="flex-1">
+                      <Button className="flex-1 h-11 sm:h-10 bg-gradient-to-r from-[#98EF5A] to-[#7BEA3C] text-black border-0 hover:opacity-90 transition-opacity">
                         Show {filteredTransactions.length} Results
                       </Button>
                     </SheetClose>
