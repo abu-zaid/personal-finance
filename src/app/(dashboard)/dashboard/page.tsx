@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format, subDays, startOfDay, isSameDay, subMonths, getDaysInMonth } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -43,6 +43,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [currentDate, setCurrentDate] = useState(new Date());
   const { categories, isLoading: categoriesLoading } = useCategories();
   const { transactions, isLoading: transactionsLoading, getMonthlyIncome, getMonthlyExpenses } = useTransactions();
   const { getBudgetByMonth, isLoading: budgetsLoading } = useBudgets();
@@ -51,8 +52,9 @@ export default function DashboardPage() {
 
   const isDataLoading = categoriesLoading || transactionsLoading || budgetsLoading;
 
-  const currentMonth = getMonthString(new Date());
-  const previousMonth = getMonthString(subMonths(new Date(), 1));
+  const currentMonth = getMonthString(currentDate);
+  const previousMonth = getMonthString(subMonths(currentDate, 1));
+  const selectedMonth = format(currentDate, 'MMMM');
   const currentMonthBudget = getBudgetByMonth(currentMonth);
 
   // Calculate key metrics
@@ -337,11 +339,11 @@ export default function DashboardPage() {
                               config={{
                                 spending: {
                                   label: "Spending",
-                                  color: "hsl(var(--destructive))",
+                                  color: "var(--destructive)",
                                 },
                                 budgetPace: {
                                   label: "Budget Pace",
-                                  color: "hsl(var(--chart-2))",
+                                  color: "var(--chart-2)",
                                 },
                               } satisfies ChartConfig}
                               className="h-[200px] w-full [&>div]:!aspect-auto"
@@ -454,8 +456,11 @@ export default function DashboardPage() {
                           </div>
                         </>
                       ) : (
-                        <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
-                          No spending data for this month yet
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                          <div className="p-3 mb-2 rounded-full bg-muted/50">
+                            <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <p className="text-sm font-medium text-muted-foreground">No spending data</p>
                         </div>
                       )}
                     </CardContent>
@@ -464,7 +469,7 @@ export default function DashboardPage() {
               </AnimatePresence>
             </TabsContent>
 
-            {/* Top Categories */}
+            {/* Categories */}
             <TabsContent value="categories" className="mt-4">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -476,50 +481,48 @@ export default function DashboardPage() {
                 >
                   <Card className="border-border/40 shadow-lg">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm md:text-base">Top Categories</CardTitle>
-                      <CardDescription className="text-xs">Where money goes</CardDescription>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-sm md:text-base">Top Categories</CardTitle>
+                          <CardDescription className="text-xs">Highest spending areas</CardDescription>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {selectedMonth}
+                        </Badge>
+                      </div>
                     </CardHeader>
                     <CardContent className="pb-4">
-                      <div className="space-y-3">
-                        {topCategories.map((item, index) => (
-                          <motion.div
-                            key={item.category.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="space-y-1.5"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <div
-                                  className="p-1.5 rounded-lg flex-shrink-0"
-                                  style={{ backgroundColor: `${item.category.color}20` }}
-                                >
-                                  <CategoryIcon
-                                    icon={item.category.icon}
-                                    color={item.category.color}
-                                    size="sm"
-                                  />
+                      <div className="space-y-4">
+                        {topCategories.length > 0 ? (
+                          topCategories.map((item) => (
+                            <div key={item.category.id} className="space-y-1.5">
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">{item.category.icon}</span>
+                                  <span className="font-medium">{item.category.name}</span>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="font-semibold text-xs truncate">{item.category.name}</p>
-                                  <p className="text-[10px] text-muted-foreground tabular-nums">
-                                    <AnimatedNumber value={item.percentage} />% of total
-                                  </p>
+                                <div className="text-right">
+                                  <span className="font-bold tabular-nums">{formatCurrency(item.amount)}</span>
+                                  <span className="text-[10px] text-muted-foreground ml-1">
+                                    ({Math.round((item.amount / totalExpenses) * 100)}%)
+                                  </span>
                                 </div>
                               </div>
-                              <p className="font-bold text-xs ml-2 tabular-nums">
-                                {symbol}<AnimatedNumber value={item.amount} />
-                              </p>
-                            </div>
-                            {item.budget > 0 && (
                               <Progress
-                                value={Math.min((item.amount / item.budget) * 100, 100)}
+                                value={(item.amount / totalExpenses) * 100}
                                 className="h-1.5"
+                                indicatorClassName="bg-primary/80"
                               />
-                            )}
-                          </motion.div>
-                        ))}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-6 text-center">
+                            <div className="p-3 mb-2 rounded-full bg-muted/50">
+                              <Target className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            <p className="text-sm font-medium text-muted-foreground">No category data</p>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -551,11 +554,11 @@ export default function DashboardPage() {
                       config={{
                         spending: {
                           label: "Spending",
-                          color: "hsl(var(--destructive))",
+                          color: "var(--destructive)",
                         },
                         budgetPace: {
                           label: "Budget Pace",
-                          color: "hsl(var(--chart-2))",
+                          color: "var(--chart-2)",
                         },
                       } satisfies ChartConfig}
                       className="h-[250px] w-full [&>div]:!aspect-auto"
