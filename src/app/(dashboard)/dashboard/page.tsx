@@ -35,6 +35,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { CategoryIcon } from '@/components/features/categories/category-icon';
 
 // Loading skeleton component
 function DashboardSkeleton() {
@@ -178,8 +179,8 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="w-full min-h-screen">
-            <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="w-full min-h-screen overflow-x-hidden flex flex-col items-center">
+            <div className="w-full max-w-7xl px-4 sm:px-6 md:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-24 md:pb-8">
 
                 {/* Header */}
                 <motion.div
@@ -254,7 +255,7 @@ export default function DashboardPage() {
 
                                 {/* Stats Grid */}
                                 <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-                                    <div>
+                                    <div className="min-w-0">
                                         <div className="flex items-center gap-1 sm:gap-1.5 mb-0.5 sm:mb-1">
                                             <Wallet className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
                                             <span className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">Budget</span>
@@ -263,7 +264,7 @@ export default function DashboardPage() {
                                             {symbol}<AnimatedNumber value={totalBudget} />
                                         </p>
                                     </div>
-                                    <div>
+                                    <div className="min-w-0">
                                         <div className="flex items-center gap-1 sm:gap-1.5 mb-0.5 sm:mb-1">
                                             <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-destructive flex-shrink-0" />
                                             <span className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">Spent</span>
@@ -272,12 +273,12 @@ export default function DashboardPage() {
                                             {symbol}<AnimatedNumber value={totalExpenses} />
                                         </p>
                                     </div>
-                                    <div>
+                                    <div className="min-w-0">
                                         <div className="flex items-center gap-1 sm:gap-1.5 mb-0.5 sm:mb-1">
                                             <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 flex-shrink-0" />
                                             <span className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">Days Left</span>
                                         </div>
-                                        <p className="text-sm sm:text-lg md:text-2xl font-bold tabular-nums">
+                                        <p className="text-sm sm:text-lg md:text-2xl font-bold tabular-nums truncate">
                                             <AnimatedNumber value={daysRemaining} />
                                         </p>
                                     </div>
@@ -308,80 +309,83 @@ export default function DashboardPage() {
                                 </div>
                             </CardHeader>
                             <CardContent className="pb-4 sm:pb-5">
-                                <ChartContainer
-                                    config={{
-                                        spending: { label: "Spending", color: "hsl(var(--destructive))" },
-                                        budgetPace: { label: "Budget Pace", color: "hsl(var(--chart-2))" },
-                                    } satisfies ChartConfig}
-                                    className="h-[180px] sm:h-[220px] md:h-[250px] w-full"
-                                >
-                                    <AreaChart data={spendingTrendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="var(--color-spending)" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="var(--color-spending)" stopOpacity={0.05} />
-                                            </linearGradient>
-                                            <linearGradient id="budgetGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="var(--color-budgetPace)" stopOpacity={0.2} />
-                                                <stop offset="95%" stopColor="var(--color-budgetPace)" stopOpacity={0.05} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.3} />
-                                        <XAxis
-                                            dataKey="date"
-                                            tickLine={false}
-                                            axisLine={false}
-                                            tickMargin={8}
-                                            interval={Math.floor(spendingTrendData.length / 5)}
-                                            tick={{ fontSize: 11 }}
-                                            stroke="hsl(var(--muted-foreground))"
-                                        />
-                                        <YAxis
-                                            tickLine={false}
-                                            axisLine={false}
-                                            tickMargin={8}
-                                            width={40}
-                                            tick={{ fontSize: 11 }}
-                                            tickFormatter={(value) => `${symbol}${value}`}
-                                            stroke="hsl(var(--muted-foreground))"
-                                        />
-                                        <ChartTooltip
-                                            content={
-                                                <ChartTooltipContent
-                                                    labelFormatter={(label) => `Day ${label}`}
-                                                    formatter={(value) => formatCurrency(Number(value))}
+                                <div className="w-full min-w-0">
+                                    <ChartContainer
+                                        config={{
+                                            spending: { label: "Spending", color: "var(--destructive)" },
+                                            budgetPace: { label: "Budget Pace", color: "var(--chart-2)" },
+                                        }}
+                                        className="h-[180px] sm:h-[220px] md:h-[250px] w-full"
+                                    >
+                                        <AreaChart data={spendingTrendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="var(--color-spending)" stopOpacity={0.45} />
+                                                    <stop offset="95%" stopColor="var(--color-spending)" stopOpacity={0.1} />
+                                                </linearGradient>
+                                                <linearGradient id="budgetGradient" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="var(--color-budgetPace)" stopOpacity={0.2} />
+                                                    <stop offset="95%" stopColor="var(--color-budgetPace)" stopOpacity={0.05} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.3} />
+                                            <XAxis
+                                                dataKey="date"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickMargin={8}
+                                                interval={Math.floor(spendingTrendData.length / 5)}
+                                                tick={{ fontSize: 10 }}
+                                                stroke="var(--muted-foreground)"
+                                                dy={5}
+                                            />
+                                            <YAxis
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickMargin={8}
+                                                width={40}
+                                                tick={{ fontSize: 11 }}
+                                                tickFormatter={(value) => `${symbol}${value}`}
+                                                stroke="var(--muted-foreground)"
+                                            />
+                                            <ChartTooltip
+                                                content={
+                                                    <ChartTooltipContent
+                                                        labelFormatter={(label) => `Day ${label}`}
+                                                        formatter={(value) => formatCurrency(Number(value))}
+                                                    />
+                                                }
+                                            />
+                                            {totalBudget > 0 && (
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="budgetPace"
+                                                    stroke="var(--color-budgetPace)"
+                                                    strokeWidth={2}
+                                                    strokeDasharray="5 5"
+                                                    fill="url(#budgetGradient)"
+                                                    dot={false}
                                                 />
-                                            }
-                                        />
-                                        {totalBudget > 0 && (
+                                            )}
                                             <Area
                                                 type="monotone"
-                                                dataKey="budgetPace"
-                                                stroke="var(--color-budgetPace)"
-                                                strokeWidth={2}
-                                                strokeDasharray="5 5"
-                                                fill="url(#budgetGradient)"
+                                                dataKey="spending"
+                                                stroke="var(--color-spending)"
+                                                strokeWidth={3}
+                                                fill="url(#spendingGradient)"
                                                 dot={false}
+                                                activeDot={{ r: 4 }}
                                             />
-                                        )}
-                                        <Area
-                                            type="monotone"
-                                            dataKey="spending"
-                                            stroke="var(--color-spending)"
-                                            strokeWidth={2.5}
-                                            fill="url(#spendingGradient)"
-                                            dot={false}
-                                            activeDot={{ r: 4 }}
-                                        />
-                                    </AreaChart>
-                                </ChartContainer>
+                                        </AreaChart>
+                                    </ChartContainer>
+                                </div>
                             </CardContent>
                         </Card>
                     </motion.div>
                 )}
 
                 {/* Two Column Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 min-w-0">
 
                     {/* Top Categories */}
                     {topCategories.length > 0 && (
@@ -389,6 +393,7 @@ export default function DashboardPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
+                            className="min-w-0"
                         >
                             <Card className="border-border/40 shadow-lg">
                                 <CardHeader className="pb-3 sm:pb-4">
@@ -416,8 +421,8 @@ export default function DashboardPage() {
                                                 className="space-y-1.5"
                                             >
                                                 <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                                                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                        <span className="text-base sm:text-lg flex-shrink-0">{item.icon}</span>
+                                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                        <CategoryIcon icon={item.icon} color={item.color} size="sm" />
                                                         <span className="font-medium truncate">{item.name}</span>
                                                     </div>
                                                     <div className="text-right flex-shrink-0">
@@ -441,6 +446,7 @@ export default function DashboardPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
+                        className="min-w-0"
                     >
                         <Card className="border-border/40 shadow-lg">
                             <CardHeader className="pb-3 sm:pb-4">
@@ -493,6 +499,7 @@ export default function DashboardPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
+                        className="min-w-0"
                     >
                         <Card className="border-border/40 shadow-lg">
                             <CardHeader className="pb-3 sm:pb-4">
@@ -502,7 +509,7 @@ export default function DashboardPage() {
                             <CardContent className="pb-4 sm:pb-5">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                     {budgetHealth.map((item: any) => (
-                                        <div key={item.id} className="space-y-1.5 sm:space-y-2">
+                                        <div key={item.id} className="space-y-1.5 sm:space-y-2 min-w-0">
                                             <div className="flex items-center justify-between gap-2">
                                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                                     <div
@@ -533,6 +540,7 @@ export default function DashboardPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.6 }}
+                        className="min-w-0"
                     >
                         <Card className="border-border/40 shadow-lg">
                             <CardHeader className="pb-3 sm:pb-4">
