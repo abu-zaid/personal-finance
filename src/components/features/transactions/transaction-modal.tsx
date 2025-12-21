@@ -60,15 +60,15 @@ export function TransactionModal({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] rounded-t-[20px] p-0 flex flex-col">
-        <div className="p-6 pb-2">
+      <SheetContent side="bottom" className="max-h-[85vh] overflow-hidden rounded-t-[20px] p-0 flex flex-col">
+        <div className="px-5 pt-5 pb-2 shrink-0">
           <SheetHeader className="text-left">
             <SheetTitle>{title}</SheetTitle>
             <SheetDescription>{description}</SheetDescription>
           </SheetHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-5 py-2">
           <TransactionForm
             transaction={transaction}
             onSuccess={handleClose}

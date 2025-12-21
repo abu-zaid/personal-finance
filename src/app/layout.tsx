@@ -43,7 +43,7 @@ export default function RootLayout({
       <body className={`${plusJakarta.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >

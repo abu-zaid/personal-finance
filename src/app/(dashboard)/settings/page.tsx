@@ -28,22 +28,18 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/auth-context';
 import { useHaptics } from '@/hooks/use-haptics';
-import { CURRENCY_OPTIONS, DATE_FORMAT_OPTIONS } from '@/lib/constants';
-import { Currency, DateFormat } from '@/types';
+import { CURRENCY_OPTIONS } from '@/lib/constants';
+import { Currency } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   User,
   Settings,
-  Bell,
   LogOut,
   Sun,
   Moon,
   Monitor,
-  Palette,
   ChevronRight,
-  Sparkles,
   DollarSign,
-  Calendar,
   Smartphone,
   Tags,
   Check,
@@ -112,8 +108,6 @@ export default function SettingsPage() {
 
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [weeklyDigest, setWeeklyDigest] = useState(true);
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
 
   const handleExportCSV = useCallback(() => {
@@ -173,11 +167,6 @@ export default function SettingsPage() {
     toast.success(`Currency changed to ${value}`);
   }, [updatePreferences, haptics]);
 
-  const handleDateFormatChange = useCallback((value: string) => {
-    haptics.selection();
-    updatePreferences({ dateFormat: value as DateFormat });
-  }, [updatePreferences, haptics]);
-
   const handleLogout = useCallback(() => {
     haptics.medium();
     logout();
@@ -202,323 +191,146 @@ export default function SettingsPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-5 pb-20 lg:pb-4">
+      <div className="space-y-6 pb-24 lg:pb-8 max-w-2xl mx-auto px-4">
         {/* Header */}
-        <div>
-          <h1 className="text-xl font-bold lg:text-2xl">Settings</h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">Manage your account and preferences</p>
+        <div className="pt-4">
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <p className="text-muted-foreground text-sm">Manage preferences and account</p>
         </div>
 
-        <StaggerContainer className="space-y-4">
-          {/* Profile Card */}
+        <StaggerContainer className="space-y-6">
+          {/* Profile Section */}
           <StaggerItem>
-            <motion.div
-              className="relative overflow-hidden rounded-2xl p-5"
-              style={{
-                background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-                boxShadow: '0 0 40px rgba(152, 239, 90, 0.2)',
-              }}
-            >
-              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-              <div className="absolute -left-8 -bottom-8 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-
-              <div className="relative flex items-center gap-4">
-                <Avatar className="h-14 w-14 sm:h-16 sm:w-16 border-2 border-white/30 shadow-lg">
-                  <AvatarFallback
-                    className="bg-white/20 text-[#101010] text-lg sm:text-xl font-bold"
-                  >
-                    {getInitials(user?.name || 'User')}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-base sm:text-lg font-bold text-[#101010] truncate">
-                    {user?.name || 'User'}
-                  </h2>
-                  <p className="text-[#101010]/70 text-xs sm:text-sm truncate">
-                    {user?.email || 'No email'}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={openEditProfile}
-                  className="bg-white/20 hover:bg-white/30 text-[#101010] border-0 backdrop-blur-sm text-xs sm:text-sm"
-                >
-                  Edit
-                </Button>
+            <div className="flex items-center gap-4 bg-card p-4 rounded-3xl border shadow-sm">
+              <Avatar className="h-16 w-16 border-2 border-background shadow-sm">
+                <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
+                  {getInitials(user?.name || 'User')}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <h2 className="font-bold text-lg leading-tight">{user?.name || 'User'}</h2>
+                <p className="text-sm text-muted-foreground">{user?.email || 'No email'}</p>
               </div>
-            </motion.div>
+              <Button variant="outline" size="sm" onClick={openEditProfile} className="rounded-full px-4">
+                Edit
+              </Button>
+            </div>
           </StaggerItem>
 
-          {/* Appearance Section */}
+          {/* Appearance */}
           <StaggerItem>
-            <FadeIn>
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-purple-500/10">
-                      <Palette className="h-4 w-4 text-purple-500" />
-                    </div>
-                    <CardTitle className="text-sm sm:text-base">Appearance</CardTitle>
-                  </div>
-                  <CardDescription className="text-xs">Choose your preferred theme</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    <ThemeOption
-                      value="light"
-                      label="Light"
-                      icon={Sun}
-                      isSelected={theme === 'light'}
-                      onClick={() => handleThemeChange('light')}
-                    />
-                    <ThemeOption
-                      value="dark"
-                      label="Dark"
-                      icon={Moon}
-                      isSelected={theme === 'dark'}
-                      onClick={() => handleThemeChange('dark')}
-                    />
-                    <ThemeOption
-                      value="system"
-                      label="Auto"
-                      icon={Monitor}
-                      isSelected={theme === 'system'}
-                      onClick={() => handleThemeChange('system')}
-                    />
-                  </div>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground px-1">Appearance</h3>
+              <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-card">
+                <CardContent className="p-4 grid grid-cols-3 gap-3">
+                  <ThemeOption
+                    value="light"
+                    label="Light"
+                    icon={Sun}
+                    isSelected={theme === 'light'}
+                    onClick={() => handleThemeChange('light')}
+                  />
+                  <ThemeOption
+                    value="dark"
+                    label="Dark"
+                    icon={Moon}
+                    isSelected={theme === 'dark'}
+                    onClick={() => handleThemeChange('dark')}
+                  />
+                  <ThemeOption
+                    value="system"
+                    label="Auto"
+                    icon={Monitor}
+                    isSelected={theme === 'system'}
+                    onClick={() => handleThemeChange('system')}
+                  />
                 </CardContent>
               </Card>
-            </FadeIn>
+            </div>
           </StaggerItem>
 
-          {/* Preferences Section */}
+          {/* Preferences Group */}
           <StaggerItem>
-            <FadeIn>
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-blue-500/10">
-                      <Settings className="h-4 w-4 text-blue-500" />
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground px-1">Preferences</h3>
+              <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-card overflow-hidden divide-y divide-border/50">
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-muted rounded-full">
+                      <DollarSign className="w-4 h-4 text-foreground" />
                     </div>
-                    <CardTitle className="text-sm sm:text-base">Preferences</CardTitle>
+                    <span className="font-medium text-sm">Currency</span>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Currency */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-green-500/10">
-                        <DollarSign className="h-4 w-4 text-green-500" />
-                      </div>
-                      <div>
-                        <Label className="text-xs sm:text-sm font-medium">Currency</Label>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">Display currency</p>
-                      </div>
-                    </div>
-                    <Select
-                      value={user?.preferences.currency}
-                      onValueChange={handleCurrencyChange}
-                    >
-                      <SelectTrigger className="w-[90px] sm:w-[100px] h-9 text-xs sm:text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CURRENCY_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Separator />
-
-                  {/* Date Format */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-orange-500/10">
-                        <Calendar className="h-4 w-4 text-orange-500" />
-                      </div>
-                      <div>
-                        <Label className="text-xs sm:text-sm font-medium">Date Format</Label>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">How dates appear</p>
-                      </div>
-                    </div>
-                    <Select
-                      value={user?.preferences.dateFormat}
-                      onValueChange={handleDateFormatChange}
-                    >
-                      <SelectTrigger className="w-[100px] sm:w-[120px] h-9 text-xs sm:text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DATE_FORMAT_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Separator />
-
-                  {/* Haptics */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-pink-500/10">
-                        <Smartphone className="h-4 w-4 text-pink-500" />
-                      </div>
-                      <div>
-                        <Label className="text-xs sm:text-sm font-medium">Haptic Feedback</Label>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">Vibration on tap</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={hapticsEnabled}
-                      onCheckedChange={(v) => handleToggleChange(setHapticsEnabled, v)}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </FadeIn>
-          </StaggerItem>
-
-          {/* Categories Link */}
-          <StaggerItem>
-            <FadeIn>
-              <Link href="/settings/categories">
-                <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                  <CardContent className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-indigo-500/10">
-                        <Tags className="h-4 w-4 text-indigo-500" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-xs sm:text-sm">Manage Categories</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">Add, edit, or remove categories</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </CardContent>
-                </Card>
-              </Link>
-            </FadeIn>
-          </StaggerItem>
-
-          {/* Notifications Section */}
-          <StaggerItem>
-            <FadeIn>
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-yellow-500/10">
-                      <Bell className="h-4 w-4 text-yellow-500" />
-                    </div>
-                    <CardTitle className="text-sm sm:text-base">Notifications</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-amber-500/10">
-                        <Sparkles className="h-4 w-4 text-amber-500" />
-                      </div>
-                      <div>
-                        <Label className="text-xs sm:text-sm font-medium">Budget Alerts</Label>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">Near budget limit</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={notificationsEnabled}
-                      onCheckedChange={(v) => handleToggleChange(setNotificationsEnabled, v)}
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-cyan-500/10">
-                        <Calendar className="h-4 w-4 text-cyan-500" />
-                      </div>
-                      <div>
-                        <Label className="text-xs sm:text-sm font-medium">Weekly Digest</Label>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">Spending summary</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={weeklyDigest}
-                      onCheckedChange={(v) => handleToggleChange(setWeeklyDigest, v)}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </FadeIn>
-          </StaggerItem>
-
-          {/* Data Management Section */}
-          <StaggerItem>
-            <FadeIn>
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-orange-500/10">
-                      <Download className="h-4 w-4 text-orange-500" />
-                    </div>
-                    <CardTitle className="text-sm sm:text-base">Data Management</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <FileText className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <Label className="text-xs sm:text-sm font-medium">Export Transactions</Label>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">Download as CSV file</p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExportCSV}
-                      className="h-9 px-4 rounded-xl font-bold"
-                    >
-                      Export
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </FadeIn>
-          </StaggerItem>
-
-          {/* Sign Out */}
-          <StaggerItem>
-            <FadeIn>
-              <Card className="border-destructive/30">
-                <CardContent className="py-4">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center justify-between"
+                  <Select
+                    value={user?.preferences.currency}
+                    onValueChange={handleCurrencyChange}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-destructive/10">
-                        <LogOut className="h-4 w-4 text-destructive" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-medium text-xs sm:text-sm text-destructive">Sign Out</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">Log out of your account</p>
-                      </div>
+                    <SelectTrigger className="w-[180px] h-8 text-xs border-none bg-muted/50 rounded-full truncate">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {CURRENCY_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-muted rounded-full">
+                      <Smartphone className="w-4 h-4 text-foreground" />
                     </div>
-                    <ChevronRight className="h-5 w-5 text-destructive/50" />
-                  </button>
-                </CardContent>
+                    <span className="font-medium text-sm">Haptics</span>
+                  </div>
+                  <Switch
+                    checked={hapticsEnabled}
+                    onCheckedChange={(v) => handleToggleChange(setHapticsEnabled, v)}
+                  />
+                </div>
               </Card>
-            </FadeIn>
+            </div>
           </StaggerItem>
+
+          {/* More Actions */}
+          <StaggerItem>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground px-1">More</h3>
+              <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-card overflow-hidden divide-y divide-border/50">
+                <Link href="/settings/categories" className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-muted rounded-full">
+                      <Tags className="w-4 h-4 text-foreground" />
+                    </div>
+                    <span className="font-medium text-sm">Manage Categories</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+
+                <button onClick={handleExportCSV} className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-muted rounded-full">
+                      <Download className="w-4 h-4 text-foreground" />
+                    </div>
+                    <span className="font-medium text-sm">Export Data (CSV)</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+
+                <button onClick={handleLogout} className="w-full p-4 flex items-center justify-between hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-full group-hover:bg-red-200 dark:group-hover:bg-red-900/40 transition-colors">
+                      <LogOut className="w-4 h-4 text-red-600 dark:text-red-400" />
+                    </div>
+                    <span className="font-medium text-sm text-red-600 dark:text-red-400">Sign Out</span>
+                  </div>
+                </button>
+              </Card>
+            </div>
+          </StaggerItem>
+
         </StaggerContainer>
       </div>
 
@@ -526,78 +338,43 @@ export default function SettingsPage() {
       <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <div
-                className="p-2 rounded-xl"
-                style={{
-                  background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-                }}
-              >
-                <User className="h-4 w-4 text-[#101010]" />
-              </div>
-              Edit Profile
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Update your profile information
-            </DialogDescription>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>Update your personal information</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Avatar Preview */}
             <div className="flex justify-center">
-              <Avatar className="h-20 w-20 border-4 border-primary/20">
-                <AvatarFallback
-                  className="bg-primary/10 text-primary text-2xl font-bold"
-                >
+              <Avatar className="h-20 w-20 border-4 border-muted">
+                <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
                   {getInitials(editName || 'U')}
                 </AvatarFallback>
               </Avatar>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-xs sm:text-sm">Display Name</Label>
+              <Label htmlFor="name">Display Name</Label>
               <Input
                 id="name"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="Enter your name"
-                className="h-10 sm:h-11"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs sm:text-sm">Email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 value={user?.email || ''}
                 disabled
-                className="bg-muted h-10 sm:h-11"
+                className="bg-muted"
               />
-              <p className="text-muted-foreground text-[10px] sm:text-xs">Email cannot be changed</p>
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setIsEditProfileOpen(false)}
-              className="flex-1 sm:flex-none"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveProfile}
-              disabled={!editName.trim()}
-              className="flex-1 sm:flex-none"
-              style={{
-                background: editName.trim()
-                  ? 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)'
-                  : undefined,
-                color: editName.trim() ? '#101010' : undefined,
-              }}
-            >
-              Save Changes
-            </Button>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditProfileOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveProfile} disabled={!editName.trim()}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

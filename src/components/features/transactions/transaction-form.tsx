@@ -17,6 +17,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useCategories } from '@/context/categories-context';
@@ -113,49 +114,26 @@ export function TransactionForm({
     }, [createTransaction, updateTransaction, haptics, onSuccess, isEditMode, transaction]);
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className={cn("space-y-6", className)}>
+        <form onSubmit={handleSubmit(onSubmit)} className={cn("space-y-4", className)}>
             {/* Type & Amount Group */}
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {/* Type Toggle */}
-                <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setValue('type', 'expense', { shouldDirty: true });
-                            haptics.light();
-                        }}
-                        className={cn(
-                            'flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all',
-                            selectedType === 'expense'
-                                ? 'bg-background shadow-sm text-foreground'
-                                : 'text-muted-foreground hover:text-foreground'
-                        )}
-                    >
-                        Expense
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setValue('type', 'income', { shouldDirty: true });
-                            haptics.light();
-                        }}
-                        className={cn(
-                            'flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all',
-                            selectedType === 'income'
-                                ? 'bg-background shadow-sm text-foreground'
-                                : 'text-muted-foreground hover:text-foreground'
-                        )}
-                    >
-                        Income
-                    </button>
-                </div>
+                <Tabs value={selectedType} onValueChange={(v) => {
+                    setValue('type', v as 'income' | 'expense', { shouldDirty: true });
+                    haptics.light();
+                }} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="expense">Expense</TabsTrigger>
+                        <TabsTrigger value="income">Income</TabsTrigger>
+                    </TabsList>
+                </Tabs>
 
                 {/* Big Amount Input */}
-                <div className="relative flex justify-center py-4">
-                    <div className="relative">
+                <div className="relative flex justify-center py-2">
+                    <div className="relative flex items-center justify-center">
                         <span className={cn(
-                            "absolute left-[-1.5rem] top-1/2 -translate-y-1/2 text-3xl font-medium",
-                            selectedType === 'income' ? 'text-green-500' : 'text-muted-foreground'
+                            "text-3xl font-medium mr-2 self-center text-muted-foreground",
+                            selectedType === 'income' && "text-green-500"
                         )}>
                             {symbol}
                         </span>
@@ -166,7 +144,7 @@ export function TransactionForm({
                             step="0.01"
                             min="0"
                             placeholder="0"
-                            className="h-16 w-48 text-center text-5xl font-bold border-none bg-transparent focus-visible:ring-0 p-0 placeholder:text-muted-foreground/30"
+                            className="h-16 w-48 text-center text-5xl font-bold border-none bg-transparent shadow-none focus-visible:ring-0 p-0 placeholder:text-muted-foreground/30 tabular-nums"
                             {...register('amount', { valueAsNumber: true })}
                         />
                     </div>
@@ -183,36 +161,37 @@ export function TransactionForm({
                     {categories.map((category) => {
                         const isSelected = selectedCategoryId === category.id;
                         return (
-                            <button
+                            <Button
                                 key={category.id}
                                 type="button"
+                                variant={isSelected ? "outline" : "ghost"}
                                 onClick={() => {
                                     setValue('categoryId', category.id, { shouldDirty: true });
                                     haptics.light();
                                 }}
                                 className={cn(
-                                    "flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl transition-all border",
+                                    "flex flex-col items-center justify-center gap-1.5 h-auto py-2 px-1 rounded-xl transition-all hover:bg-muted",
                                     isSelected
-                                        ? "bg-primary/5 border-primary ring-1 ring-primary"
-                                        : "bg-background border-border hover:border-foreground/20"
+                                        ? "bg-primary/5 border-primary ring-1 ring-primary hover:bg-primary/10"
+                                        : "border-transparent hover:border-border"
                                 )}
                             >
                                 <div
-                                    className="p-2 rounded-full text-white transition-transform"
+                                    className="p-2 rounded-full text-white transition-transform shadow-sm"
                                     style={{
                                         backgroundColor: isSelected ? category.color : 'rgba(128,128,128,0.2)',
                                         transform: isSelected ? 'scale(1.1)' : 'scale(1)'
                                     }}
                                 >
-                                    <CategoryIcon icon={category.icon} color="currentColor" className="w-5 h-5 text-current" />
+                                    <CategoryIcon icon={category.icon} color="currentColor" className="w-4 h-4 text-white" />
                                 </div>
                                 <span className={cn(
-                                    "text-[10px] font-medium truncate w-full text-center",
-                                    isSelected ? "text-foreground" : "text-muted-foreground"
+                                    "text-[10px] font-medium truncate w-full",
+                                    isSelected ? "text-foreground font-semibold" : "text-muted-foreground"
                                 )}>
                                     {category.name}
                                 </span>
-                            </button>
+                            </Button>
                         )
                     })}
                 </div>

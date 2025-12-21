@@ -18,14 +18,35 @@ export const DEFAULT_CATEGORIES = [
 ] as const;
 
 // Currency options
+// Currency options
 export const CURRENCY_OPTIONS = [
   { value: 'USD', label: 'US Dollar ($)', symbol: '$' },
   { value: 'EUR', label: 'Euro (€)', symbol: '€' },
   { value: 'GBP', label: 'British Pound (£)', symbol: '£' },
+  { value: 'JPY', label: 'Japanese Yen (¥)', symbol: '¥' },
+  { value: 'AUD', label: 'Australian Dollar (A$)', symbol: 'A$' },
+  { value: 'CAD', label: 'Canadian Dollar (C$)', symbol: 'C$' },
+  { value: 'CHF', label: 'Swiss Franc (Fr)', symbol: 'Fr' },
+  { value: 'CNY', label: 'Chinese Yuan (¥)', symbol: '¥' },
+  { value: 'SEK', label: 'Swedish Krona (kr)', symbol: 'kr' },
+  { value: 'NZD', label: 'New Zealand Dollar (NZ$)', symbol: 'NZ$' },
+  { value: 'MXN', label: 'Mexican Peso ($)', symbol: '$' },
+  { value: 'SGD', label: 'Singapore Dollar (S$)', symbol: 'S$' },
+  { value: 'HKD', label: 'Hong Kong Dollar (HK$)', symbol: 'HK$' },
+  { value: 'NOK', label: 'Norwegian Krone (kr)', symbol: 'kr' },
+  { value: 'KRW', label: 'South Korean Won (₩)', symbol: '₩' },
+  { value: 'TRY', label: 'Turkish Lira (₺)', symbol: '₺' },
   { value: 'INR', label: 'Indian Rupee (₹)', symbol: '₹' },
-  { value: 'SAR', label: 'Saudi Riyal (ر.س)', symbol: 'ر.س' },
+  { value: 'BRL', label: 'Brazilian Real (R$)', symbol: 'R$' },
+  { value: 'ZAR', label: 'South African Rand (R)', symbol: 'R' },
   { value: 'AED', label: 'UAE Dirham (د.إ)', symbol: 'د.إ' },
+  { value: 'SAR', label: 'Saudi Riyal (ر.س)', symbol: 'ر.س' },
   { value: 'EGP', label: 'Egyptian Pound (ج.م)', symbol: 'ج.م' },
+  { value: 'THB', label: 'Thai Baht (฿)', symbol: '฿' },
+  { value: 'IDR', label: 'Indonesian Rupiah (Rp)', symbol: 'Rp' },
+  { value: 'MYR', label: 'Malaysian Ringgit (RM)', symbol: 'RM' },
+  { value: 'PHP', label: 'Philippine Peso (₱)', symbol: '₱' },
+  { value: 'VND', label: 'Vietnamese Dong (₫)', symbol: '₫' },
 ] as const;
 
 // Date format options
