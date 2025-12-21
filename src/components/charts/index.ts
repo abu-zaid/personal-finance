@@ -3,3 +3,4 @@ export { DonutChart } from './donut-chart';
 export { SpendingVelocityGauge } from './spending-velocity-gauge';
 export { ChartTooltip } from './tooltip';
 export { BarChart } from './bar-chart';
+export { LineChart } from './line-chart';
