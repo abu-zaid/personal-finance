@@ -3,20 +3,20 @@
 import { memo, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  House,
-  ListBullets,
+  Home,
+  List,
   Plus,
-  ChartBar,
   Wallet,
-  DotsThreeCircle,
-  ArrowsClockwise,
-  Flag,
-  Gear,
-} from 'phosphor-react';
+  MoreHorizontal,
+  TrendingUp,
+  Repeat,
+  Target,
+  Settings,
+} from 'lucide-react';
 
-import { useHaptics } from '@/hooks/use-haptics';
+import { cn } from '@/lib/utils';
 import {
   Sheet,
   SheetClose,
@@ -25,33 +25,94 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 
-const navItems = [
-  { href: '/dashboard', icon: House, id: 'home' },
-  { href: '/transactions', icon: ListBullets, id: 'transactions' },
-  { href: null, icon: Plus, id: 'add', highlight: true },
-  { href: '/budgets', icon: Wallet, id: 'budgets' },
-  { href: null, icon: DotsThreeCircle, id: 'more' },
+// Navigation configuration
+type NavItem = {
+  href: string | null;
+  icon: typeof Home;
+  label: string;
+  id: string;
+  highlight?: boolean;
+};
+
+const navItems: NavItem[] = [
+  { href: '/dashboard', icon: Home, label: 'Home', id: 'home' },
+  { href: '/transactions', icon: List, label: 'Transactions', id: 'transactions' },
+  { href: null, icon: Plus, label: 'Add', id: 'add', highlight: true },
+  { href: '/budgets', icon: Wallet, label: 'Budgets', id: 'budgets' },
+  { href: null, icon: MoreHorizontal, label: 'More', id: 'more' },
 ];
 
-const secondaryNavItems = [
-  { href: '/insights', label: 'Insights', icon: ChartBar },
-  { href: '/recurring', label: 'Recurring', icon: ArrowsClockwise },
-  { href: '/goals', label: 'Goals', icon: Flag },
-  { href: '/settings', label: 'Settings', icon: Gear },
-];
+const moreItems = [
+  { href: '/insights', label: 'Insights', icon: TrendingUp },
+  { href: '/recurring', label: 'Recurring', icon: Repeat },
+  { href: '/goals', label: 'Goals', icon: Target },
+  { href: '/settings', label: 'Settings', icon: Settings },
+] as const;
 
 interface BottomNavProps {
   onAddExpense?: () => void;
 }
 
+// Memoized nav button component for better performance
+const NavButton = memo(function NavButton({
+  item,
+  isActive,
+  onClick,
+}: {
+  item: NavItem;
+  isActive: boolean;
+  onClick?: () => void;
+}) {
+  const Icon = item.icon;
+
+  if (item.highlight) {
+    return (
+      <Button
+        onClick={onClick}
+        size="icon"
+        className={cn(
+          "h-14 w-14 rounded-2xl shadow-lg transition-all",
+          "bg-gradient-to-br from-[#98EF5A] to-[#7BEA3C]",
+          "hover:shadow-xl hover:scale-105",
+          "active:scale-95"
+        )}
+        style={{
+          boxShadow: '0 6px 20px rgba(152, 239, 90, 0.35)',
+        }}
+      >
+        <Icon className="h-6 w-6 text-[#101010]" strokeWidth={2.5} />
+      </Button>
+    );
+  }
+
+  return (
+    <motion.div
+      whileTap={{ scale: 0.95 }}
+      className={cn(
+        "relative h-12 w-12 rounded-2xl flex items-center justify-center transition-colors",
+        isActive && "bg-primary"
+      )}
+    >
+      <Icon
+        className={cn(
+          "h-5 w-5 transition-colors",
+          isActive ? "text-primary-foreground" : "text-muted-foreground"
+        )}
+        strokeWidth={isActive ? 2.5 : 2}
+      />
+    </motion.div>
+  );
+});
+
 export const BottomNav = memo(function BottomNav({
   onAddExpense,
 }: BottomNavProps) {
   const pathname = usePathname();
-  const haptics = useHaptics();
-  const reduceMotion = useReducedMotion();
 
+  // Memoize active state calculation
   const activeId = useMemo(() => {
     return navItems.find(
       (item) =>
@@ -61,130 +122,116 @@ export const BottomNav = memo(function BottomNav({
   }, [pathname]);
 
   const handleAddClick = useCallback(() => {
-    haptics.medium();
     onAddExpense?.();
-  }, [haptics, onAddExpense]);
-
-  const handleNavClick = useCallback(() => {
-    haptics.light();
-  }, [haptics]);
+  }, [onAddExpense]);
 
   return (
-    <nav className="fixed bottom-4 left-0 right-0 z-50 md:hidden pointer-events-none">
-      <div className="mx-4 flex justify-center pointer-events-auto">
+    <nav
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-50 md:hidden",
+        "pb-safe" // Safe area for iOS devices
+      )}
+    >
+      <div className="mx-4 mb-4">
         <div
-          className="
-            w-full
-            max-w-md
-            rounded-[28px]
-            bg-white/80 dark:bg-[#101010]/80
-            backdrop-blur-md
-            shadow-[0_8px_16px_rgba(0,0,0,0.1)]
-            overflow-hidden
-          "
+          className={cn(
+            "w-full max-w-md mx-auto",
+            "rounded-[28px] overflow-hidden",
+            "bg-background/80 backdrop-blur-xl",
+            "border border-border/40",
+            "shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
+            "dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+          )}
         >
-          {/* static tint layer – cheaper than animating */}
-          <div className="pointer-events-none absolute inset-0 bg-white/15 dark:bg-white/[0.04]" />
+          {/* Subtle gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
 
-          <div className="relative flex items-center justify-around h-[72px] px-4">
+          <div className="relative flex items-center justify-around h-[72px] px-2">
             {navItems.map((item) => {
-              const Icon = item.icon;
               const isActive = item.id === activeId;
 
+              // Add button
               if (item.highlight) {
                 return (
-                  <motion.button
+                  <NavButton
                     key={item.id}
+                    item={item}
+                    isActive={false}
                     onClick={handleAddClick}
-                    whileTap={{ scale: reduceMotion ? 1 : 0.94 }}
-                    className="flex items-center justify-center tap-target"
-                  >
-                    <div className="w-12 h-12 rounded-[16px] bg-gradient-to-br from-[#98EF5A] to-[#7BEA3C] shadow-[0_6px_18px_rgba(152,239,90,0.32)] flex items-center justify-center">
-                      <Icon size={26} weight="bold" className="text-[#101010]" />
-                    </div>
-                  </motion.button>
+                  />
                 );
               }
 
+              // More button with sheet
               if (item.id === 'more') {
                 return (
                   <Sheet key={item.id}>
                     <SheetTrigger asChild>
-                      <motion.button
-                        whileTap={{ scale: reduceMotion ? 1 : 0.94 }}
-                        onClick={handleNavClick}
-                        className="flex items-center justify-center tap-target"
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-12 w-12 rounded-2xl"
                       >
-                        <div className="relative w-12 h-12 rounded-[16px] flex items-center justify-center text-muted-foreground/70">
-                          <Icon size={24} />
-                        </div>
-                      </motion.button>
+                        <NavButton item={item} isActive={false} />
+                      </Button>
                     </SheetTrigger>
-                    <SheetContent side="bottom" className="rounded-t-[32px] p-6 pb-12 dark:bg-[#101010]">
+                    <SheetContent
+                      side="bottom"
+                      className={cn(
+                        "rounded-t-[32px] p-6 pb-12",
+                        "border-t border-border/40"
+                      )}
+                    >
                       <SheetHeader className="mb-6">
-                        <SheetTitle className="text-xl font-bold">More Options</SheetTitle>
+                        <SheetTitle className="text-xl font-bold">
+                          More Options
+                        </SheetTitle>
                       </SheetHeader>
-                      <div className="grid grid-cols-2 gap-4">
-                        {secondaryNavItems.map((sItem) => (
-                          <SheetClose asChild key={sItem.href}>
-                            <Link
-                              href={sItem.href}
-                              onClick={handleNavClick}
-                              className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors"
-                            >
-                              <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-background shadow-sm">
-                                <sItem.icon size={22} className="text-foreground" />
-                              </div>
-                              <span className="text-sm font-semibold">{sItem.label}</span>
-                            </Link>
-                          </SheetClose>
-                        ))}
+                      <div className="grid grid-cols-2 gap-3">
+                        {moreItems.map((moreItem) => {
+                          const MoreIcon = moreItem.icon;
+                          const isMoreActive = pathname === moreItem.href || pathname.startsWith(moreItem.href + '/');
+
+                          return (
+                            <SheetClose asChild key={moreItem.href}>
+                              <Link href={moreItem.href}>
+                                <Button
+                                  variant="ghost"
+                                  className={cn(
+                                    "w-full h-auto flex flex-col items-center gap-3 p-4 rounded-2xl",
+                                    "hover:bg-muted/50 transition-colors",
+                                    isMoreActive && "bg-primary/10 text-primary"
+                                  )}
+                                >
+                                  <div className={cn(
+                                    "h-12 w-12 flex items-center justify-center rounded-xl",
+                                    "bg-background shadow-sm border border-border/40",
+                                    isMoreActive && "bg-primary/20 border-primary/20"
+                                  )}>
+                                    <MoreIcon className="h-5 w-5" strokeWidth={2} />
+                                  </div>
+                                  <span className="text-sm font-semibold">
+                                    {moreItem.label}
+                                  </span>
+                                </Button>
+                              </Link>
+                            </SheetClose>
+                          );
+                        })}
                       </div>
                     </SheetContent>
                   </Sheet>
                 );
               }
 
+              // Regular nav items
               return (
                 <Link
                   key={item.id}
                   href={item.href!}
-                  onClick={handleNavClick}
                   className="tap-target"
                 >
-                  <motion.div
-                    whileTap={{ scale: reduceMotion ? 1 : 0.94 }}
-                    className="
-                      relative
-                      w-12 h-12
-                      rounded-[16px]
-                      flex items-center justify-center
-                      transition-colors
-                      duration-150
-                    "
-                  >
-                    {/* CSS-only indicator (very fast) */}
-                    <div
-                      className={`
-                        absolute inset-0 rounded-[16px]
-                        transition-transform transition-opacity duration-200
-                        ${isActive
-                          ? 'scale-100 opacity-100 bg-primary'
-                          : 'scale-90 opacity-0'
-                        }
-                      `}
-                    />
-
-                    <Icon
-                      size={24}
-                      weight={isActive ? 'fill' : 'regular'}
-                      className={
-                        isActive
-                          ? 'relative z-10 text-primary-foreground'
-                          : 'relative z-10 text-muted-foreground/70'
-                      }
-                    />
-                  </motion.div>
+                  <NavButton item={item} isActive={isActive} />
                 </Link>
               );
             })}
