@@ -332,75 +332,77 @@ export default function DashboardPage() {
                     <CardContent className="pb-4">
                       {spendingTrendData.length > 0 ? (
                         <>
-                          <ChartContainer
-                            config={{
-                              spending: {
-                                label: "Spending",
-                                color: "hsl(var(--destructive))",
-                              },
-                              budgetPace: {
-                                label: "Budget Pace",
-                                color: "hsl(var(--chart-2))",
-                              },
-                            } satisfies ChartConfig}
-                            className="h-[200px] w-full"
-                          >
-                            <AreaChart data={spendingTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                              <defs>
-                                <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
-                                  <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0.05} />
-                                </linearGradient>
-                                <linearGradient id="budgetGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2} />
-                                  <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.05} />
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                              <XAxis
-                                dataKey="date"
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                                interval={Math.floor(spendingTrendData.length / 6)}
-                              />
-                              <YAxis
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                                width={50}
-                                tickFormatter={(value) => `${symbol}${value}`}
-                              />
-                              <ChartTooltip
-                                content={
-                                  <ChartTooltipContent
-                                    labelFormatter={(label) => `Day ${label}`}
-                                    formatter={(value) => formatCurrency(Number(value))}
+                          <div className="w-full overflow-hidden">
+                            <ChartContainer
+                              config={{
+                                spending: {
+                                  label: "Spending",
+                                  color: "hsl(var(--destructive))",
+                                },
+                                budgetPace: {
+                                  label: "Budget Pace",
+                                  color: "hsl(var(--chart-2))",
+                                },
+                              } satisfies ChartConfig}
+                              className="h-[200px] w-full [&>div]:!aspect-auto"
+                            >
+                              <AreaChart data={spendingTrendData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
+                                <defs>
+                                  <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0.05} />
+                                  </linearGradient>
+                                  <linearGradient id="budgetGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2} />
+                                    <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.05} />
+                                  </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis
+                                  dataKey="date"
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tickMargin={8}
+                                  interval={Math.floor(spendingTrendData.length / 6)}
+                                />
+                                <YAxis
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tickMargin={8}
+                                  width={45}
+                                  tickFormatter={(value) => `${symbol}${value}`}
+                                />
+                                <ChartTooltip
+                                  content={
+                                    <ChartTooltipContent
+                                      labelFormatter={(label) => `Day ${label}`}
+                                      formatter={(value) => formatCurrency(Number(value))}
+                                    />
+                                  }
+                                />
+                                {totalBudget > 0 && (
+                                  <Area
+                                    type="monotone"
+                                    dataKey="budgetPace"
+                                    stroke="hsl(var(--chart-2))"
+                                    strokeWidth={2}
+                                    strokeDasharray="5 5"
+                                    fill="url(#budgetGradient)"
+                                    dot={false}
                                   />
-                                }
-                              />
-                              {totalBudget > 0 && (
+                                )}
                                 <Area
                                   type="monotone"
-                                  dataKey="budgetPace"
-                                  stroke="hsl(var(--chart-2))"
-                                  strokeWidth={2}
-                                  strokeDasharray="5 5"
-                                  fill="url(#budgetGradient)"
+                                  dataKey="spending"
+                                  stroke="hsl(var(--destructive))"
+                                  strokeWidth={2.5}
+                                  fill="url(#spendingGradient)"
                                   dot={false}
+                                  activeDot={{ r: 4 }}
                                 />
-                              )}
-                              <Area
-                                type="monotone"
-                                dataKey="spending"
-                                stroke="hsl(var(--destructive))"
-                                strokeWidth={2.5}
-                                fill="url(#spendingGradient)"
-                                dot={false}
-                                activeDot={{ r: 4 }}
-                              />
-                            </AreaChart>
-                          </ChartContainer>
+                              </AreaChart>
+                            </ChartContainer>
+                          </div>
 
                           {/* Summary Stats */}
                           <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/50">
@@ -544,70 +546,73 @@ export default function DashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer
-                    config={{
-                      spending: {
-                        label: "Spending",
-                        color: "hsl(var(--destructive))",
-                      },
-                      budgetPace: {
-                        label: "Budget Pace",
-                        color: "hsl(var(--chart-2))",
-                      },
-                    } satisfies ChartConfig}
-                    className="h-[250px] w-full"
-                  >
-                    <AreaChart data={spendingTrendData}>
-                      <defs>
-                        <linearGradient id="desktopSpendingGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="desktopBudgetGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis
-                        dataKey="date"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        width={50}
-                        tickFormatter={(value) => `${symbol}${value}`}
-                      />
-                      <ChartTooltip
-                        content={
-                          <ChartTooltipContent
-                            labelFormatter={(label) => `Day ${label}`}
-                            formatter={(value) => formatCurrency(Number(value))}
+                  <div className="w-full overflow-hidden">
+                    <ChartContainer
+                      config={{
+                        spending: {
+                          label: "Spending",
+                          color: "hsl(var(--destructive))",
+                        },
+                        budgetPace: {
+                          label: "Budget Pace",
+                          color: "hsl(var(--chart-2))",
+                        },
+                      } satisfies ChartConfig}
+                      className="h-[250px] w-full [&>div]:!aspect-auto"
+                    >
+                      <AreaChart data={spendingTrendData}>
+                        <defs>
+                          <linearGradient id="desktopSpendingGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="desktopBudgetGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis
+                          dataKey="date"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          width={50}
+                          tickFormatter={(value) => `${symbol}${value}`}
+                        />
+                        <ChartTooltip
+                          content={
+                            <ChartTooltipContent
+                              labelFormatter={(label) => `Day ${label}`}
+                              formatter={(value) => formatCurrency(Number(value))}
+                            />
+                          }
+                        />
+                        {totalBudget > 0 && (
+                          <Area
+                            type="monotone"
+                            dataKey="budgetPace"
+                            stroke="hsl(var(--chart-2))"
+                            strokeWidth={2}
+                            strokeDasharray="5 5"
+                            fill="url(#desktopBudgetGradient)"
                           />
-                        }
-                      />
-                      {totalBudget > 0 && (
+                        )}
                         <Area
                           type="monotone"
-                          dataKey="budgetPace"
-                          stroke="hsl(var(--chart-2))"
+                          dataKey="spending"
+                          stroke="hsl(var(--destructive))"
                           strokeWidth={2}
-                          strokeDasharray="5 5"
-                          fill="url(#desktopBudgetGradient)"
+                          fill="url(#desktopSpendingGradient)"
                         />
-                      )}
-                      <Area
-                        type="monotone"
-                        dataKey="spending"
-                        stroke="hsl(var(--destructive))"
-                        strokeWidth={2}
-                        fill="url(#desktopSpendingGradient)"
-                      />
-                    </AreaChart>
-                  </ChartContainer>
+                      </AreaChart>
+                    </ChartContainer>
+                  </div>
                 </CardContent>
               </Card>
             </FadeIn>
