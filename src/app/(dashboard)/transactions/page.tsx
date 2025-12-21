@@ -458,7 +458,7 @@ export default function TransactionsPage() {
 
           {/* Quick Category Filters */}
           <div className="w-full overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-            <div className="flex items-center gap-2 pb-1 min-w-min">
+            <div className="inline-flex items-center gap-2 pb-1">
               <Button
                 variant={selectedCategoryIds.length === 0 ? "default" : "outline"}
                 size="sm"
