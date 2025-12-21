@@ -460,7 +460,7 @@ export default function TransactionsPage() {
 
         {/* Quick Category Filters - full width, outside padding */}
         <div className="w-full overflow-x-auto scrollbar-hide px-4 md:px-6 pb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-fit max-w-[90vw]">
             <Button
               variant={selectedCategoryIds.length === 0 ? "default" : "outline"}
               size="sm"
