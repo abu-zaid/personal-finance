@@ -33,6 +33,7 @@ export function useSmartInsights(): SmartInsight[] {
       t => getMonthString(new Date(t.date)) === currentMonth && t.type === 'expense'
     );
 
+
     // Budget projection warning
     if (budget && budget.totalAmount > 0) {
       const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
@@ -53,13 +54,16 @@ export function useSmartInsights(): SmartInsight[] {
             action: `Reduce to ${formatCurrency(Math.round(recommendedDaily))}/day`,
             impact: `${daysRemaining} days left`,
           });
-        } else if (budgetUsage > 0.8 && budgetUsage < 1) {
-          insights.push({
-            type: 'tip',
-            title: 'Budget Watch',
-            message: `You've used ${(budgetUsage * 100).toFixed(0)}% of your budget`,
-            action: `${formatCurrency(budget.totalAmount - currentExpenses)} remaining`,
-          });
+        } else {
+          const budgetUsagePercent = (currentExpenses / budget.totalAmount) * 100;
+          if (budgetUsagePercent > 80 && budgetUsagePercent < 100) {
+            insights.push({
+              type: 'tip',
+              title: 'Budget Watch',
+              message: `You've used ${budgetUsagePercent.toFixed(0)}% of your budget`,
+              action: `${formatCurrency(budget.totalAmount - currentExpenses)} remaining`,
+            });
+          }
         }
       }
     }
@@ -224,13 +228,4 @@ export function useSmartInsights(): SmartInsight[] {
       .sort((a, b) => priorityOrder[a.type] - priorityOrder[b.type])
       .slice(0, 4); // Show top 4 insights
   }, [transactions, categories, getMonthlyExpenses, getBudgetByMonth, formatCurrency, currentMonth, previousMonth]);
-
-  // Helper to calculate budget usage
-  function getBudgetUsage(): number {
-    const budget = getBudgetByMonth(currentMonth);
-    const expenses = getMonthlyExpenses(currentMonth);
-    return budget && budget.totalAmount > 0 ? expenses / budget.totalAmount : 0;
-  }
-
-  const budgetUsage = getBudgetUsage();
 }
