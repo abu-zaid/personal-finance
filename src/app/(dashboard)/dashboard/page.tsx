@@ -355,7 +355,7 @@ export default function DashboardPage() {
                                 tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                                 tickLine={false}
                                 axisLine={false}
-                                width={40}
+                                width={50}
                                 tickFormatter={(value) => `${symbol}${value}`}
                               />
                               <Tooltip
@@ -560,6 +560,7 @@ export default function DashboardPage() {
                         className="text-xs"
                         tick={{ fill: 'currentColor', className: 'fill-muted-foreground' }}
                         tickLine={false}
+                        width={50}
                         tickFormatter={(value) => `${symbol}${value}`}
                       />
                       <Tooltip
