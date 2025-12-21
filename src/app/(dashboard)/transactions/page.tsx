@@ -214,19 +214,19 @@ export default function TransactionsPage() {
   ].filter(Boolean).length;
 
   return (
-    <PageTransition className="flex flex-col h-full w-full overflow-hidden bg-background">
+    <PageTransition className="flex flex-col h-full w-full max-w-full overflow-hidden bg-background">
       {/* Header */}
       <div className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-4 md:px-6 py-4 space-y-4">
+        <div className="px-4 md:px-6 py-4 space-y-4 max-w-full overflow-hidden">
           {/* Title & Actions */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Transactions</h1>
+          <div className="flex items-center justify-between gap-4 min-w-0">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Transactions</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {filteredTransactions.length} {filteredTransactions.length === 1 ? 'entry' : 'entries'}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
@@ -398,7 +398,7 @@ export default function TransactionsPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-3 gap-2 md:gap-4">
+          <div className="grid grid-cols-3 gap-2 md:gap-4 max-w-full">
             <Card className="border-border/40">
               <CardContent className="p-3 md:p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -457,7 +457,7 @@ export default function TransactionsPage() {
           </div>
 
           {/* Quick Category Filters */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 max-w-full">
             <Button
               variant={selectedCategoryIds.length === 0 ? "default" : "outline"}
               size="sm"

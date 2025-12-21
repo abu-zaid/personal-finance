@@ -78,30 +78,35 @@ export default function DashboardPage() {
     });
   }, [transactions, currentMonth]);
 
-  // Last 30 days cash flow data
-  const cashFlowData = useMemo(() => {
+  // Cumulative spending trend for current month
+  const spendingTrendData = useMemo(() => {
     const days = [];
-    for (let i = 29; i >= 0; i--) {
-      const date = startOfDay(subDays(new Date(), i));
-      const dateStr = format(date, 'dd');
+    let cumulativeSpending = 0;
+    const dailyBudget = totalBudget > 0 ? totalBudget / daysInMonth : 0;
 
-      const dayIncome = transactions
-        .filter(t => isSameDay(new Date(t.date), date) && t.type === 'income')
+    for (let i = 1; i <= daysElapsed; i++) {
+      const date = new Date(new Date().getFullYear(), new Date().getMonth(), i);
+      const dateStr = format(date, 'd');
+
+      const dayExpenses = currentMonthTransactions
+        .filter(t => {
+          const tDate = new Date(t.date);
+          return tDate.getDate() === i;
+        })
         .reduce((sum, t) => sum + t.amount, 0);
 
-      const dayExpenses = transactions
-        .filter(t => isSameDay(new Date(t.date), date) && t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
+      cumulativeSpending += dayExpenses;
+      const budgetPace = dailyBudget * i;
 
       days.push({
         date: dateStr,
-        income: dayIncome,
-        expenses: dayExpenses,
-        net: dayIncome - dayExpenses,
+        spending: cumulativeSpending,
+        budgetPace: budgetPace,
+        dailySpend: dayExpenses,
       });
     }
     return days;
-  }, [transactions]);
+  }, [currentMonthTransactions, totalBudget, daysInMonth, daysElapsed]);
 
   // Top spending categories
   const topCategories = useMemo(() => {
@@ -301,7 +306,7 @@ export default function DashboardPage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Cash Flow */}
+            {/* Spending Trend */}
             <TabsContent value="flow" className="mt-4">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -315,111 +320,136 @@ export default function DashboardPage() {
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className="text-sm md:text-base">Cash Flow</CardTitle>
-                          <CardDescription className="text-xs">Last 30 days trend</CardDescription>
+                          <CardTitle className="text-sm md:text-base">Spending Trend</CardTitle>
+                          <CardDescription className="text-xs">Cumulative spending this month</CardDescription>
                         </div>
                         <Badge variant="outline" className="text-xs">
-                          30D
+                          MTD
                         </Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="pb-4">
-                      <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={cashFlowData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0.05} />
-                            </linearGradient>
-                            <linearGradient id="expensesGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
-                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
-                          <XAxis
-                            dataKey="date"
-                            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                            tickLine={false}
-                            axisLine={false}
-                            interval={5}
-                          />
-                          <YAxis
-                            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                            tickLine={false}
-                            axisLine={false}
-                            width={40}
-                            tickFormatter={(value) => `${symbol}${value}`}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: 'hsl(var(--background))',
-                              border: '1px solid hsl(var(--border))',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                              padding: '8px 12px',
-                              color: 'hsl(var(--foreground))',
-                            }}
-                            formatter={(value: number, name: string) => [
-                              formatCurrency(value),
-                              name === 'income' ? 'Income' : 'Expenses'
-                            ]}
-                            labelFormatter={(label) => `Day ${label}`}
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="income"
-                            stroke="#10b981"
-                            strokeWidth={2.5}
-                            fill="url(#incomeGradient)"
-                            dot={false}
-                            activeDot={{ r: 4, fill: '#10b981' }}
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="expenses"
-                            stroke="#ef4444"
-                            strokeWidth={2.5}
-                            fill="url(#expensesGradient)"
-                            dot={false}
-                            activeDot={{ r: 4, fill: '#ef4444' }}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
+                      {spendingTrendData.length > 0 ? (
+                        <>
+                          <ResponsiveContainer width="100%" height={200}>
+                            <AreaChart data={spendingTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                              <defs>
+                                <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05} />
+                                </linearGradient>
+                                <linearGradient id="budgetGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.05} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
+                              <XAxis
+                                dataKey="date"
+                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                                tickLine={false}
+                                axisLine={false}
+                                interval={Math.floor(spendingTrendData.length / 6)}
+                              />
+                              <YAxis
+                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                                tickLine={false}
+                                axisLine={false}
+                                width={40}
+                                tickFormatter={(value) => `${symbol}${value}`}
+                              />
+                              <Tooltip
+                                contentStyle={{
+                                  backgroundColor: 'hsl(var(--background))',
+                                  border: '1px solid hsl(var(--border))',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  padding: '8px 12px',
+                                  color: 'hsl(var(--foreground))',
+                                }}
+                                formatter={(value: number, name: string) => [
+                                  formatCurrency(value),
+                                  name === 'spending' ? 'Total Spent' : 'Budget Pace'
+                                ]}
+                                labelFormatter={(label) => `Day ${label}`}
+                              />
+                              {totalBudget > 0 && (
+                                <Area
+                                  type="monotone"
+                                  dataKey="budgetPace"
+                                  stroke="#10b981"
+                                  strokeWidth={2}
+                                  strokeDasharray="5 5"
+                                  fill="url(#budgetGradient)"
+                                  dot={false}
+                                />
+                              )}
+                              <Area
+                                type="monotone"
+                                dataKey="spending"
+                                stroke="#ef4444"
+                                strokeWidth={2.5}
+                                fill="url(#spendingGradient)"
+                                dot={false}
+                                activeDot={{ r: 4, fill: '#ef4444' }}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
 
-                      {/* Summary Stats */}
-                      <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/50">
-                        <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 mb-1">
-                            <TrendingUp className="h-3 w-3 text-green-500" />
-                            <span className="text-[10px] text-muted-foreground">Income</span>
+                          {/* Summary Stats */}
+                          <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/50">
+                            <div className="text-center">
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <TrendingDown className="h-3 w-3 text-destructive" />
+                                <span className="text-[10px] text-muted-foreground">Spent</span>
+                              </div>
+                              <p className="text-xs font-bold text-destructive tabular-nums">
+                                {symbol}<AnimatedNumber value={totalExpenses} />
+                              </p>
+                            </div>
+                            {totalBudget > 0 && (
+                              <>
+                                <div className="text-center">
+                                  <div className="flex items-center justify-center gap-1 mb-1">
+                                    <Target className="h-3 w-3 text-green-500" />
+                                    <span className="text-[10px] text-muted-foreground">Budget</span>
+                                  </div>
+                                  <p className="text-xs font-bold text-green-500 tabular-nums">
+                                    {symbol}<AnimatedNumber value={totalBudget} />
+                                  </p>
+                                </div>
+                                <div className="text-center">
+                                  <div className="flex items-center justify-center gap-1 mb-1">
+                                    <DollarSign className="h-3 w-3 text-primary" />
+                                    <span className="text-[10px] text-muted-foreground">Left</span>
+                                  </div>
+                                  <p className={cn(
+                                    "text-xs font-bold tabular-nums",
+                                    budgetRemaining >= 0 ? "text-green-500" : "text-destructive"
+                                  )}>
+                                    {symbol}<AnimatedNumber value={Math.abs(budgetRemaining)} />
+                                  </p>
+                                </div>
+                              </>
+                            )}
+                            {totalBudget === 0 && (
+                              <div className="col-span-2 text-center">
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Calendar className="h-3 w-3 text-primary" />
+                                  <span className="text-[10px] text-muted-foreground">Avg/Day</span>
+                                </div>
+                                <p className="text-xs font-bold tabular-nums">
+                                  {symbol}<AnimatedNumber value={daysElapsed > 0 ? totalExpenses / daysElapsed : 0} />
+                                </p>
+                              </div>
+                            )}
                           </div>
-                          <p className="text-xs font-bold text-green-500 tabular-nums">
-                            {symbol}<AnimatedNumber value={cashFlowData.reduce((sum, d) => sum + d.income, 0)} />
-                          </p>
+                        </>
+                      ) : (
+                        <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+                          No spending data for this month yet
                         </div>
-                        <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 mb-1">
-                            <TrendingDown className="h-3 w-3 text-destructive" />
-                            <span className="text-[10px] text-muted-foreground">Expenses</span>
-                          </div>
-                          <p className="text-xs font-bold text-destructive tabular-nums">
-                            {symbol}<AnimatedNumber value={cashFlowData.reduce((sum, d) => sum + d.expenses, 0)} />
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 mb-1">
-                            <DollarSign className="h-3 w-3 text-primary" />
-                            <span className="text-[10px] text-muted-foreground">Net</span>
-                          </div>
-                          <p className={cn(
-                            "text-xs font-bold tabular-nums",
-                            cashFlowData.reduce((sum, d) => sum + d.net, 0) >= 0 ? "text-green-500" : "text-destructive"
-                          )}>
-                            {symbol}<AnimatedNumber value={cashFlowData.reduce((sum, d) => sum + d.net, 0)} />
-                          </p>
-                        </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -509,7 +539,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={250}>
-                    <AreaChart data={cashFlowData}>
+                    <AreaChart data={spendingTrendData}>
                       <defs>
                         <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
