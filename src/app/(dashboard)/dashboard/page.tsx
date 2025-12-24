@@ -14,6 +14,7 @@ import {
 
 import { useAuth } from '@/context/auth-context';
 import { useTransactions } from '@/context/transactions-context';
+import { useBudgets } from '@/context/budgets-context';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
 import { AnimatedNumber } from '@/components/animations';
@@ -78,6 +79,7 @@ export default function DashboardPage() {
     const { formatCurrency, symbol } = useCurrency();
 
     const { transactions, getMonthlyIncome, getMonthlyExpenses } = useTransactions();
+    const { getBudgetByMonth } = useBudgets();
     const [timeRange, setTimeRange] = useState<'weekly' | 'monthly'>('weekly');
     const [monthlyIncome, setMonthlyIncome] = useState(0);
     const [monthlyExpense, setMonthlyExpense] = useState(0);
@@ -95,6 +97,34 @@ export default function DashboardPage() {
         };
         fetchMonthlyTotals();
     }, [currentMonth, getMonthlyIncome, getMonthlyExpenses]);
+
+    // Get budget and calculate daily allowance
+    const currentBudget = getBudgetByMonth(currentMonth);
+
+    // Calculate today's spending
+    const todaySpending = useMemo(() => {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        return transactions
+            .filter(t =>
+                t.type === 'expense' &&
+                format(new Date(t.date), 'yyyy-MM-dd') === today
+            )
+            .reduce((sum, t) => sum + t.amount, 0);
+    }, [transactions]);
+
+    const dailyAllowance = useMemo(() => {
+        if (!currentBudget) return 0;
+
+        const budgetRemaining = currentBudget.totalAmount - monthlyExpense;
+        const today = new Date();
+        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        const daysRemaining = Math.max(1, lastDayOfMonth.getDate() - today.getDate() + 1);
+
+        const dailyBudget = budgetRemaining / daysRemaining;
+
+        // Subtract today's spending to show how much MORE can be spent
+        return dailyBudget - todaySpending;
+    }, [currentBudget, monthlyExpense, todaySpending]);
 
     // Total balance is income - expenses for current month
     const totalBalance = useMemo(() => {
@@ -231,6 +261,32 @@ export default function DashboardPage() {
                                             </div>
                                             <p className="font-bold text-xl text-foreground">{symbol}{monthlyExpense.toLocaleString()}</p>
                                         </div>
+                                        {currentBudget && (
+                                            <div className="col-span-2 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-4 backdrop-blur-md border border-primary/20 transition-colors hover:from-primary/15 hover:to-primary/10">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="bg-primary/20 p-2 rounded-full">
+                                                            <TrendingUp className="h-4 w-4 text-primary" />
+                                                        </div>
+                                                        <span className="text-sm font-medium text-muted-foreground">Can Spend Today</span>
+                                                    </div>
+                                                    {todaySpending > 0 && (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            Spent: {symbol}{todaySpending.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className={cn(
+                                                    "font-bold text-xl",
+                                                    dailyAllowance >= 0 ? "text-primary" : "text-red-500"
+                                                )}>
+                                                    {symbol}{Math.abs(dailyAllowance).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {dailyAllowance >= 0 ? 'Remaining for today' : 'Over daily budget'}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
