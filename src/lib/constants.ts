@@ -3,6 +3,12 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'FinanceFlow';
 export const APP_DESCRIPTION = 'Your money, beautifully simple.';
 
+export const BRAND_GRADIENT = {
+  from: '#98EF5A', // Lime Green
+  to: '#3B82F6',   // Azure Blue
+  css: 'linear-gradient(135deg, #98EF5A 0%, #3B82F6 100%)',
+};
+
 // Default categories for new users (using hex colors)
 export const DEFAULT_CATEGORIES = [
   { name: 'Groceries', icon: 'shopping-bag', color: '#22c55e' },      // green
