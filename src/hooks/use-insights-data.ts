@@ -1,15 +1,24 @@
 import { useMemo, useState, useEffect } from 'react';
 import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, eachWeekOfInterval, isSameWeek } from 'date-fns';
-import { useTransactions } from '@/context/transactions-context';
-import { useCategories } from '@/context/categories-context';
-import { useBudgets } from '@/context/budgets-context';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { selectTransactions, fetchMonthlyAggregates, selectTransactionsStatus } from '@/lib/features/transactions/transactionsSlice';
+import { selectCategories, selectCategoriesStatus } from '@/lib/features/categories/categoriesSlice';
+import { selectCurrentBudget, fetchBudgetWithSpending, selectBudgetsStatus } from '@/lib/features/budgets/budgetsSlice';
 import { getMonthString } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
 
 export function useInsightsData() {
-    const { transactions, getMonthlyTotal, getMonthlyExpenses } = useTransactions();
-    const { categories } = useCategories();
-    const { getBudgetByMonth } = useBudgets();
+    const dispatch = useAppDispatch();
+    const transactions = useAppSelector(selectTransactions);
+    const categories = useAppSelector(selectCategories);
+    const currentBudget = useAppSelector(selectCurrentBudget);
+
+    // Statuses
+    const txStatus = useAppSelector(selectTransactionsStatus);
+    const catStatus = useAppSelector(selectCategoriesStatus);
+    const budgetStatus = useAppSelector(selectBudgetsStatus);
+    const isLoading = txStatus === 'loading' || catStatus === 'loading' || budgetStatus === 'loading';
+
     const { formatCurrency } = useCurrency();
 
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -31,18 +40,21 @@ export function useInsightsData() {
 
     useEffect(() => {
         const fetchMonthlyTotals = async () => {
+            // Ensure budget is fetched (if not already by Dashboard)
+            dispatch(fetchBudgetWithSpending(currentMonth));
+
             const [current, previous] = await Promise.all([
-                getMonthlyExpenses(currentMonth),
-                getMonthlyExpenses(previousMonth)
+                dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' })).unwrap(),
+                dispatch(fetchMonthlyAggregates({ month: previousMonth, type: 'expense' })).unwrap()
             ]);
-            setCurrentMonthTotal(current);
-            setPreviousMonthTotal(previous);
+            setCurrentMonthTotal(current.total);
+            setPreviousMonthTotal(previous.total);
         };
         fetchMonthlyTotals();
-    }, [currentMonth, previousMonth, getMonthlyExpenses]);
+    }, [currentMonth, previousMonth, dispatch]);
 
     // Budget data
-    const currentBudget = getBudgetByMonth(currentMonth);
+    // Budget is currentBudget from Redux
     const budgetUsage = currentBudget ? (currentMonthTotal / currentBudget.totalAmount) * 100 : 0;
     const budgetRemaining = currentBudget ? currentBudget.totalAmount - currentMonthTotal : 0;
 
@@ -309,6 +321,6 @@ export function useInsightsData() {
         daysElapsed,
         formatCurrency,
         currentMonthTransactions,
-        isLoading: useTransactions().isLoading || useCategories().isLoading || useBudgets().isLoading,
+        isLoading,
     };
 }

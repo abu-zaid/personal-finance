@@ -33,6 +33,9 @@ export const metadata: Metadata = {
   },
 };
 
+import StoreProvider from '@/components/providers/store-provider';
+import AuthListener from '@/components/providers/auth-listener';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,10 +50,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            {children}
+          <StoreProvider>
+            <AuthListener />
+            <AuthProvider>
+              {children}
+            </AuthProvider>
             <Toaster position="top-right" richColors />
-          </AuthProvider>
+          </StoreProvider>
         </ThemeProvider>
       </body>
     </html>

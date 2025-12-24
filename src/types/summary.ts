@@ -48,3 +48,12 @@ export interface InsightsSummary {
   averageMonthlySpending: number;
   averageDailySpending: number;
 }
+
+export interface FinancialHealthScore {
+  overall: number;
+  savingsRate: number;
+  budgetAdherence: number;
+  spendingTrend: number;
+  recommendations: string[];
+  status: 'excellent' | 'good' | 'fair' | 'poor';
+}

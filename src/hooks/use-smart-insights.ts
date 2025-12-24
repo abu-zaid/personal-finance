@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useTransactions } from '@/context/transactions-context';
-import { useCategories } from '@/context/categories-context';
-import { useBudgets } from '@/context/budgets-context';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { selectTransactions, fetchMonthlyAggregates } from '@/lib/features/transactions/transactionsSlice';
+import { selectCategories } from '@/lib/features/categories/categoriesSlice';
+import { selectCurrentBudget, fetchBudgetWithSpending } from '@/lib/features/budgets/budgetsSlice';
 import { useCurrency } from '@/hooks/use-currency';
 import { getMonthString } from '@/lib/utils';
 import { subMonths, isSameDay } from 'date-fns';
@@ -15,9 +16,10 @@ interface SmartInsight {
 }
 
 export function useSmartInsights(): SmartInsight[] {
-  const { transactions, getMonthlyExpenses } = useTransactions();
-  const { categories } = useCategories();
-  const { getBudgetByMonth } = useBudgets();
+  const dispatch = useAppDispatch();
+  const transactions = useAppSelector(selectTransactions);
+  const categories = useAppSelector(selectCategories);
+  const currentBudget = useAppSelector(selectCurrentBudget);
   const { formatCurrency } = useCurrency();
 
   const currentMonth = getMonthString(new Date());
@@ -29,19 +31,22 @@ export function useSmartInsights(): SmartInsight[] {
 
   useEffect(() => {
     const fetchData = async () => {
+      // Ensure budget is fetched (if not already by Dashboard)
+      dispatch(fetchBudgetWithSpending(currentMonth));
+
       const [current, previous] = await Promise.all([
-        getMonthlyExpenses(currentMonth),
-        getMonthlyExpenses(previousMonth)
+        dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' })).unwrap(),
+        dispatch(fetchMonthlyAggregates({ month: previousMonth, type: 'expense' })).unwrap()
       ]);
-      setCurrentExpenses(current);
-      setPreviousExpenses(previous);
+      setCurrentExpenses(current.total);
+      setPreviousExpenses(previous.total);
     };
     fetchData();
-  }, [currentMonth, previousMonth, getMonthlyExpenses]);
+  }, [currentMonth, previousMonth, dispatch]);
 
   return useMemo(() => {
     const insights: SmartInsight[] = [];
-    const budget = getBudgetByMonth(currentMonth);
+    const budget = currentBudget;
 
     const currentMonthTxns = transactions.filter(
       t => getMonthString(new Date(t.date)) === currentMonth && t.type === 'expense'
@@ -241,5 +246,5 @@ export function useSmartInsights(): SmartInsight[] {
     return insights
       .sort((a, b) => priorityOrder[a.type] - priorityOrder[b.type])
       .slice(0, 4); // Show top 4 insights
-  }, [transactions, categories, currentExpenses, previousExpenses, getBudgetByMonth, formatCurrency, currentMonth, previousMonth]);
+  }, [transactions, categories, currentExpenses, previousExpenses, currentBudget, formatCurrency, currentMonth, previousMonth]);
 }

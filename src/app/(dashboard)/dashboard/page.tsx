@@ -7,20 +7,16 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     TrendingUp,
-    MoreHorizontal
 } from 'lucide-react';
 
-import { useAuth } from '@/context/auth-context';
-import { useTransactions } from '@/context/transactions-context';
-import { useBudgets } from '@/context/budgets-context';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
 import { AnimatedNumber } from '@/components/animations';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+// import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
 import { ExpenseDonutChart } from '@/components/features/charts/expense-donut-chart';
@@ -29,12 +25,26 @@ import { RecentTransactions } from '@/components/features/transactions/recent-tr
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardSkeleton, TransactionSkeleton, ChartSkeleton } from '@/components/skeletons/skeleton-loaders';
 
-function DashboardHeader({ user }: { user: any }) {
+// Redux
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { selectUser } from '@/lib/features/auth/authSlice';
+import {
+    selectTransactions,
+    fetchMonthlyAggregates,
+} from '@/lib/features/transactions/transactionsSlice';
+import {
+    selectCurrentBudget,
+    fetchBudgetWithSpending
+} from '@/lib/features/budgets/budgetsSlice';
+
+import { User } from '@/types';
+
+function DashboardHeader({ user }: { user: User | null }) {
     return (
         <div className="flex items-center justify-between py-4 px-2">
             <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                    <AvatarImage src={user?.image} />
+                    <AvatarImage src={user?.avatarUrl} />
                     <AvatarFallback className="bg-primary/10 text-primary font-bold">
                         {user?.name?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>
@@ -48,93 +58,42 @@ function DashboardHeader({ user }: { user: any }) {
     );
 }
 
-// Placeholder for charts
-function ExpenseChartPlaceholder() {
-    return (
-        <div className="h-[300px] w-full bg-muted/20 rounded-3xl animate-pulse flex items-center justify-center text-muted-foreground text-sm">
-            Expense Donut Chart Area
-        </div>
-    );
-}
 
-function TrendChartPlaceholder() {
-    return (
-        <div className="h-[200px] w-full bg-muted/20 rounded-3xl animate-pulse flex items-center justify-center text-muted-foreground text-sm">
-            Trend Chart Area
-        </div>
-    );
-}
 
 export default function DashboardPage() {
-    const { user } = useAuth();
-    const { formatCurrency, symbol } = useCurrency();
+    const dispatch = useAppDispatch();
+    const user = useAppSelector(selectUser);
+    const transactions = useAppSelector(selectTransactions);
+    const currentBudget = useAppSelector(selectCurrentBudget);
+    // const transactionsStatus = useAppSelector(selectTransactionsStatus);
 
-    const { transactions, getMonthlyIncome, getMonthlyExpenses } = useTransactions();
-    const { getBudgetByMonth } = useBudgets();
+    const { symbol } = useCurrency();
+
     const [timeRange, setTimeRange] = useState<'weekly' | 'monthly'>('weekly');
     const [monthlyIncome, setMonthlyIncome] = useState(0);
     const [monthlyExpense, setMonthlyExpense] = useState(0);
     const currentMonth = format(new Date(), 'yyyy-MM');
 
-    // Fetch monthly totals from database
+    // Fetch monthly totals and budget
     useEffect(() => {
-        const fetchMonthlyTotals = async () => {
-            const [income, expenses] = await Promise.all([
-                getMonthlyIncome(currentMonth),
-                getMonthlyExpenses(currentMonth)
-            ]);
-            setMonthlyIncome(income);
-            setMonthlyExpense(expenses);
+        const loadDashboardData = async () => {
+            // Fetch aggregations
+            dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' }))
+                .unwrap()
+                .then((val: { total: number }) => setMonthlyIncome(val.total))
+                .catch(console.error);
+
+            dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' }))
+                .unwrap()
+                .then((val: { total: number }) => setMonthlyExpense(val.total))
+                .catch(console.error);
+
+            // Fetch budget
+            dispatch(fetchBudgetWithSpending(currentMonth));
         };
-        fetchMonthlyTotals();
-    }, [currentMonth, getMonthlyIncome, getMonthlyExpenses]);
 
-    // Loading State
-    if (!user) { // Basic auth loading or while fetching initial data
-        return (
-            <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">
-                <div className="max-w-md lg:max-w-7xl mx-auto px-4 lg:px-8 space-y-6 lg:space-y-8">
-                    {/* Header Skeleton */}
-                    <div className="flex items-center justify-between py-4 px-2">
-                        <div className="flex items-center gap-3">
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                            <div className="space-y-2">
-                                <Skeleton className="h-3 w-24" />
-                                <Skeleton className="h-5 w-32" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-                        {/* Main Content Skeleton */}
-                        <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-                            <CardSkeleton />
-                            <div className="space-y-4">
-                                <div className="flex justify-between">
-                                    <Skeleton className="h-6 w-32" />
-                                    <Skeleton className="h-8 w-24 rounded-full" />
-                                </div>
-                                <ChartSkeleton />
-                            </div>
-                        </div>
-
-                        {/* Side Content Skeleton */}
-                        <div className="lg:col-span-1 space-y-6">
-                            <div className="space-y-4">
-                                <Skeleton className="h-6 w-40" />
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <TransactionSkeleton key={i} />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Get budget and calculate daily allowance
-    const currentBudget = getBudgetByMonth(currentMonth);
+        loadDashboardData();
+    }, [dispatch, currentMonth]);
 
     // Calculate today's spending
     const todaySpending = useMemo(() => {
@@ -183,9 +142,9 @@ export default function DashboardPage() {
 
         filteredTransactions.forEach(t => {
             const existing = categoryMap.get(t.categoryId) || {
-                name: t.category.name,
+                name: t.category?.name || 'Unknown',
                 value: 0,
-                color: t.category.color || '#cbd5e1'
+                color: t.category?.color || '#cbd5e1'
             };
             existing.value += t.amount;
             categoryMap.set(t.categoryId, existing);
@@ -226,8 +185,6 @@ export default function DashboardPage() {
 
         return days.map(day => {
             const dayStr = format(day, 'yyyy-MM-dd');
-            // For monthly view, just show date number. For weekly, show day name.
-            // If it's a new year/month boundary situation, might be good to stay simple.
             const dayName = timeRange === 'weekly' ? format(day, 'EEE') : format(day, 'd');
 
             const dayAmount = transactions
@@ -243,6 +200,50 @@ export default function DashboardPage() {
             };
         });
     }, [transactions, timeRange]);
+
+    // Loading State
+    if (!user) { // Basic auth loading or while fetching initial data
+        return (
+            <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">
+                <div className="max-w-md lg:max-w-7xl mx-auto px-4 lg:px-8 space-y-6 lg:space-y-8">
+                    {/* Header Skeleton */}
+                    <div className="flex items-center justify-between py-4 px-2">
+                        <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-3 w-24" />
+                                <Skeleton className="h-5 w-32" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                        {/* Main Content Skeleton */}
+                        <div className="lg:col-span-2 space-y-6 lg:space-y-8">
+                            <CardSkeleton />
+                            <div className="space-y-4">
+                                <div className="flex justify-between">
+                                    <Skeleton className="h-6 w-32" />
+                                    <Skeleton className="h-8 w-24 rounded-full" />
+                                </div>
+                                <ChartSkeleton />
+                            </div>
+                        </div>
+
+                        {/* Side Content Skeleton */}
+                        <div className="lg:col-span-1 space-y-6">
+                            <div className="space-y-4">
+                                <Skeleton className="h-6 w-40" />
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <TransactionSkeleton key={i} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">

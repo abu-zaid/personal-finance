@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
     RotateCw,
     Plus,
@@ -26,13 +26,27 @@ import { RecurringSkeleton } from '@/components/skeletons/skeleton-loaders';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RecurringModal } from '@/components/features/recurring/recurring-modal';
 import { CategoryIcon } from '@/components/features/categories';
-import { useCategories } from '@/context/categories-context';
-import { useRecurring } from '@/context/recurring-context';
+import { selectCategories } from '@/lib/features/categories/categoriesSlice';
+import {
+    selectRecurring,
+    selectRecurringStatus,
+    fetchRecurring,
+    deleteRecurring
+} from '@/lib/features/recurring/recurringSlice';
+import { useAppDispatch, useAppSelector, useAppStore } from '@/lib/hooks';
 
 export default function RecurringPage() {
+    const dispatch = useAppDispatch();
     const { formatCurrency } = useCurrency();
-    const { categories } = useCategories();
-    const { recurringTransactions, isLoading, deleteRecurring } = useRecurring();
+    const categories = useAppSelector(selectCategories);
+    const recurringTransactions = useAppSelector(selectRecurring);
+    const status = useAppSelector(selectRecurringStatus);
+    const isLoading = status === 'loading' && recurringTransactions.length === 0;
+
+    // Fetch data
+    useEffect(() => {
+        dispatch(fetchRecurring());
+    }, [dispatch]);
 
     // Modal state
     const [modalOpen, setModalOpen] = useState(false);
@@ -51,7 +65,7 @@ export default function RecurringPage() {
     const handleDelete = async (id: string) => {
         if (confirm('Delete this recurring transaction?')) {
             try {
-                await deleteRecurring(id);
+                await dispatch(deleteRecurring(id)).unwrap();
                 toast.success('Deleted');
             } catch (err) {
                 toast.error('Failed to delete');

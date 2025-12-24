@@ -12,8 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useCategories } from '@/context/categories-context';
-import { useTransactions } from '@/context/transactions-context';
+import { useAppDispatch } from '@/lib/hooks';
+import { createTransaction, updateTransaction } from '@/lib/features/transactions/transactionsSlice';
+import { selectCategories } from '@/lib/features/categories/categoriesSlice';
+import { useAppSelector } from '@/lib/hooks';
 import { useCurrency } from '@/hooks/use-currency';
 import { useHaptics } from '@/hooks/use-haptics';
 import { transactionSchema, TransactionFormData } from '@/lib/validations';
@@ -37,8 +39,8 @@ export function TransactionForm({
     variant = 'mobile',
     className
 }: TransactionFormProps) {
-    const { categories } = useCategories();
-    const { createTransaction, updateTransaction } = useTransactions();
+    const categories = useAppSelector(selectCategories);
+    const dispatch = useAppDispatch();
     const { symbol } = useCurrency();
     const haptics = useHaptics();
 
@@ -93,11 +95,11 @@ export function TransactionForm({
             };
 
             if (isEditMode && transaction) {
-                await updateTransaction(transaction.id, payload);
+                await dispatch(updateTransaction({ id: transaction.id, input: payload })).unwrap();
                 haptics.success();
                 toast.success('Transaction updated');
             } else {
-                await createTransaction(payload);
+                await dispatch(createTransaction(payload)).unwrap();
                 haptics.success();
                 toast.success('Transaction added');
             }
@@ -107,7 +109,7 @@ export function TransactionForm({
             haptics.error();
             toast.error('Failed to save transaction');
         }
-    }, [createTransaction, updateTransaction, haptics, onSuccess, isEditMode, transaction]);
+    }, [dispatch, haptics, onSuccess, isEditMode, transaction]);
 
     const setDate = (date: Date) => {
         setValue('date', date, { shouldDirty: true });

@@ -1,21 +1,14 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useTransactions } from '@/context/transactions-context';
-import { useBudgets } from '@/context/budgets-context';
 import { getMonthString } from '@/lib/utils';
 import { subMonths } from 'date-fns';
-
-interface FinancialHealthScore {
-  overall: number;
-  savingsRate: number;
-  budgetAdherence: number;
-  spendingTrend: number;
-  recommendations: string[];
-  status: 'excellent' | 'good' | 'fair' | 'poor';
-}
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { fetchMonthlyAggregates } from '@/lib/features/transactions/transactionsSlice';
+import { selectCurrentBudget, fetchBudgetWithSpending } from '@/lib/features/budgets/budgetsSlice';
+import { FinancialHealthScore } from '@/types';
 
 export function useFinancialHealth(): FinancialHealthScore {
-  const { getMonthlyIncome, getMonthlyExpenses } = useTransactions();
-  const { getBudgetByMonth } = useBudgets();
+  const dispatch = useAppDispatch();
+  const currentBudget = useAppSelector(selectCurrentBudget); // Assumes current budget is for currentMonth
 
   const currentMonth = getMonthString(new Date());
   const previousMonth = getMonthString(subMonths(new Date(), 1));
@@ -27,20 +20,23 @@ export function useFinancialHealth(): FinancialHealthScore {
 
   useEffect(() => {
     const fetchData = async () => {
+      // Ensure budget is fetched (if not already by Dashboard)
+      dispatch(fetchBudgetWithSpending(currentMonth));
+
       const [currentIncome, currentExpenses, prevExpenses] = await Promise.all([
-        getMonthlyIncome(currentMonth),
-        getMonthlyExpenses(currentMonth),
-        getMonthlyExpenses(previousMonth)
+        dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' })).unwrap(),
+        dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' })).unwrap(),
+        dispatch(fetchMonthlyAggregates({ month: previousMonth, type: 'expense' })).unwrap()
       ]);
-      setIncome(currentIncome);
-      setExpenses(currentExpenses);
-      setPreviousExpenses(prevExpenses);
+      setIncome(currentIncome.total);
+      setExpenses(currentExpenses.total);
+      setPreviousExpenses(prevExpenses.total);
     };
     fetchData();
-  }, [currentMonth, previousMonth, getMonthlyIncome, getMonthlyExpenses]);
+  }, [currentMonth, previousMonth, dispatch]);
 
   return useMemo(() => {
-    const budget = getBudgetByMonth(currentMonth);
+    const budget = currentBudget;
 
     const savingsAmount = income - expenses;
     const savingsRatePercent = income > 0 ? (savingsAmount / income) * 100 : 0;
@@ -103,5 +99,5 @@ export function useFinancialHealth(): FinancialHealthScore {
       recommendations,
       status,
     };
-  }, [income, expenses, previousExpenses, getBudgetByMonth, currentMonth]);
+  }, [income, expenses, previousExpenses, currentBudget]);
 }

@@ -2,8 +2,9 @@
 
 import { useMemo } from 'react';
 import { format } from 'date-fns';
-import { useTransactions } from '@/context/transactions-context';
-import { useCategories } from '@/context/categories-context';
+import { useAppSelector } from '@/lib/hooks';
+import { selectTransactions } from '@/lib/features/transactions/transactionsSlice';
+import { selectCategories } from '@/lib/features/categories/categoriesSlice';
 import { useCurrency } from '@/hooks/use-currency';
 import { ShoppingBag, Coffee, Home, Car, Zap, DollarSign } from 'lucide-react';
 import { CategoryIcon } from '@/components/features/categories/category-icon';
@@ -13,8 +14,8 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 export function RecentTransactions() {
-    const { transactions } = useTransactions();
-    const { categories } = useCategories();
+    const transactions = useAppSelector(selectTransactions);
+    const categories = useAppSelector(selectCategories);
     const { symbol, formatCurrency } = useCurrency();
 
     const recentTransactions = useMemo(() => {

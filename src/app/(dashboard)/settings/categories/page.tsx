@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/shared';
 import { CategoryIcon } from '@/components/features/categories';
-import { useCategories } from '@/context/categories-context';
+// import { useCategories } from '@/context/categories-context';
 import { CATEGORY_ICONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Tags, ArrowLeft, Plus, Trash2, Loader2, ChevronRight } from 'lucide-react';
@@ -138,8 +138,17 @@ function CategoryForm({ name, setName, icon, setIcon, color, setColor }: Categor
   );
 }
 
+import {
+  selectCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory
+} from '@/lib/features/categories/categoriesSlice';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+
 export default function CategoriesPage() {
-  const { categories, createCategory, updateCategory, deleteCategory } = useCategories();
+  const dispatch = useAppDispatch();
+  const categories = useAppSelector(selectCategories);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -182,10 +191,10 @@ export default function CategoriesPage() {
     setIsSaving(true);
     try {
       if (categoryToEdit) {
-        await updateCategory(categoryToEdit.id, { name, icon, color });
+        await dispatch(updateCategory({ id: categoryToEdit.id, input: { name, icon, color } })).unwrap();
         toast.success('Category updated');
       } else {
-        await createCategory({ name, icon, color });
+        await dispatch(createCategory({ name, icon, color })).unwrap();
         toast.success('Category created');
       }
       setDialogOpen(false);
@@ -205,7 +214,7 @@ export default function CategoriesPage() {
   const handleConfirmDelete = async () => {
     if (categoryToDelete) {
       try {
-        await deleteCategory(categoryToDelete);
+        await dispatch(deleteCategory(categoryToDelete)).unwrap();
         toast.success('Category deleted');
         setDialogOpen(false);
       } catch {
