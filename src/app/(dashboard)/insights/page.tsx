@@ -12,6 +12,8 @@ import {
     BarChart3
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CardSkeleton, ChartSkeleton } from '@/components/skeletons/skeleton-loaders';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { PageTransition } from '@/components/animations';
@@ -35,10 +37,44 @@ export default function InsightsPage() {
         dailyAverage,
         projectedTotal,
         sixMonthAverage,
+        isLoading,
     } = useInsightsData();
 
     const { overall: healthScore, status: healthStatus, savingsRate: savingsRateScore, budgetAdherence } = useFinancialHealth();
     const insights = useSmartInsights();
+
+    if (isLoading) {
+        return (
+            <PageTransition className="min-h-screen bg-background pb-24 lg:pb-8">
+                <div className="max-w-md lg:max-w-7xl mx-auto px-4 lg:px-8 space-y-6">
+                    {/* Header Skeleton */}
+                    <div className="pt-6 space-y-2">
+                        <Skeleton className="h-9 w-32" />
+                        <Skeleton className="h-4 w-64" />
+                    </div>
+
+                    {/* Monthly Analysis Skeleton */}
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <CardSkeleton key={i} />
+                        ))}
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+                        {/* Category Breakdown Skeleton */}
+                        <div className="md:col-span-1 lg:col-span-3">
+                            <ChartSkeleton />
+                        </div>
+
+                        {/* History Chart Skeleton */}
+                        <div className="md:col-span-1 lg:col-span-4">
+                            <ChartSkeleton />
+                        </div>
+                    </div>
+                </div>
+            </PageTransition>
+        );
+    }
 
     // Empty state
     if (transactions.length === 0) {

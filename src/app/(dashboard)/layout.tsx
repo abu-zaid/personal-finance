@@ -50,7 +50,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="bg-muted h-6 w-32 animate-pulse rounded" />
             <div className="flex gap-2">
               <div className="bg-muted h-10 w-10 animate-pulse rounded-full" />
-              <div className="bg-muted h-10 w-10 animate-pulse rounded-full" />
             </div>
           </header>
           <main className="flex-1 overflow-auto p-4 pb-[100px] md:pb-6 lg:p-6">

@@ -26,6 +26,8 @@ import { useMediaQuery } from '@/hooks/use-media-query';
 
 // UI Components
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TransactionSkeleton } from '@/components/skeletons/skeleton-loaders';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -41,7 +43,7 @@ import {
   SheetClose,
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
+
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
@@ -205,6 +207,64 @@ export default function TransactionsPage() {
     (currentFilters.categoryIds?.length || 0) > 0,
     currentFilters.type && currentFilters.type !== 'all'
   ].filter(Boolean).length;
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <PageTransition className="flex flex-col h-full w-full overflow-hidden bg-background">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          {/* Header */}
+          <div className="px-4 md:px-6 py-4 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Transactions</h1>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="hidden md:flex h-9 rounded-full border-border/60" disabled>
+                  <p className="mr-2">Export</p>
+                </Button>
+                <Button size="sm" className="h-9 w-9 p-0 rounded-full" disabled>
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Stats Cards Skeleton */}
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+              <Card className="shadow-none border-border/40 bg-card/50">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Income</p>
+                  <Skeleton className="h-7 w-24" />
+                </CardContent>
+              </Card>
+              <Card className="shadow-none border-border/40 bg-card/50">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Expenses</p>
+                  <Skeleton className="h-7 w-24" />
+                </CardContent>
+              </Card>
+              <Card className="shadow-none border-border/40 bg-card/50">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Net</p>
+                  <Skeleton className="h-7 w-24" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Search Skeleton */}
+            <Skeleton className="h-10 w-full rounded-xl" />
+          </div>
+
+          {/* Content Skeleton */}
+          <div className="px-4 md:px-6 pb-6 max-w-full space-y-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <TransactionSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition className="flex flex-col h-full w-full overflow-hidden bg-background">
@@ -694,6 +754,6 @@ export default function TransactionsPage() {
         onOpenChange={setModalOpen}
         transaction={editingTransaction}
       />
-    </PageTransition>
+    </PageTransition >
   );
 }
