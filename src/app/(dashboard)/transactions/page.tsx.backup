@@ -91,8 +91,8 @@ export default function TransactionsPage() {
 
   // Filters State
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date())
+    from: undefined,
+    to: undefined
   });
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<'all' | 'income' | 'expense'>('all');
@@ -237,14 +237,17 @@ export default function TransactionsPage() {
 
   return (
     <PageTransition className="flex flex-col h-full w-full overflow-hidden bg-background">
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        {/* Header - Not Sticky */}
+      {/* Header */}
+      <div className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        {/* Title, Actions, Stats, Search - with padding */}
         <div className="px-4 md:px-6 py-4 space-y-4">
           {/* Title & Actions */}
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Transactions</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {filteredTransactions.length} {filteredTransactions.length === 1 ? 'entry' : 'entries'}
+              </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <Sheet>
@@ -394,7 +397,7 @@ export default function TransactionsPage() {
                     </Button>
                     <SheetClose asChild>
                       <Button className="flex-1 h-11 sm:h-10 bg-gradient-to-r from-[#98EF5A] to-[#7BEA3C] text-black border-0 hover:opacity-90 transition-opacity">
-                        Apply Filters
+                        Show {filteredTransactions.length} Results
                       </Button>
                     </SheetClose>
                   </SheetFooter>
@@ -485,8 +488,8 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        {/* Quick Category Filters - STICKY */}
-        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40 w-full overflow-x-auto scrollbar-hide px-4 md:px-6 py-3">
+        {/* Quick Category Filters - full width, outside padding */}
+        <div className="w-full overflow-x-auto scrollbar-hide px-4 md:px-6 pb-4">
           <div className="flex items-center gap-2 w-fit max-w-[90vw]">
             <Button
               variant={selectedCategoryIds.length === 0 ? "default" : "outline"}
@@ -520,144 +523,144 @@ export default function TransactionsPage() {
             })}
           </div>
         </div>
+      </div>
 
-        {/* Transaction List */}
-        <div className="px-4 md:px-6 pb-6 max-w-full">
-          {Object.keys(groupedTransactions).length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                <Search className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold">No transactions found</h3>
-              <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-2">
-                Try adjusting your filters or search query to find what you're looking for.
-              </p>
-              <Button variant="link" onClick={clearFilters} className="mt-4">
-                Clear all filters
-              </Button>
+      {/* Transaction List */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 pb-6 max-w-full">
+        {Object.keys(groupedTransactions).length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+              <Search className="h-8 w-8 text-muted-foreground" />
             </div>
-          ) : (
-            <div className="space-y-6 mt-4">
-              {Object.entries(groupedTransactions).map(([date, list]) => (
-                <div key={date}>
-                  {/* Date Header */}
-                  <div className="sticky top-0 z-10 py-2 bg-background/95 backdrop-blur-sm flex items-center justify-between border-b border-border/40 mb-3">
-                    <h3 className="text-sm font-semibold text-primary">
-                      {getDateLabel(new Date(date))}
-                    </h3>
-                    <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
-                      {formatCurrency(list.reduce((sum, t) => sum + (t.type === 'expense' ? -t.amount : t.amount), 0))}
-                    </span>
-                  </div>
+            <h3 className="text-lg font-semibold">No transactions found</h3>
+            <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-2">
+              Try adjusting your filters or search query to find what you're looking for.
+            </p>
+            <Button variant="link" onClick={clearFilters} className="mt-4">
+              Clear all filters
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-6 mt-4">
+            {Object.entries(groupedTransactions).map(([date, list]) => (
+              <div key={date}>
+                {/* Date Header */}
+                <div className="sticky top-0 z-10 py-2 bg-background/95 backdrop-blur-sm flex items-center justify-between border-b border-border/40 mb-3">
+                  <h3 className="text-sm font-semibold text-primary">
+                    {getDateLabel(new Date(date))}
+                  </h3>
+                  <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
+                    {formatCurrency(list.reduce((sum, t) => sum + (t.type === 'expense' ? -t.amount : t.amount), 0))}
+                  </span>
+                </div>
 
-                  {/* Transactions */}
-                  <div className="space-y-2">
-                    {list.map((transaction) => {
-                      const isSelected = selectedIds.has(transaction.id);
+                {/* Transactions */}
+                <div className="space-y-2">
+                  {list.map((transaction) => {
+                    const isSelected = selectedIds.has(transaction.id);
 
-                      return (
-                        <motion.div
-                          key={transaction.id}
-                          layout
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className="max-w-full"
+                    return (
+                      <motion.div
+                        key={transaction.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="max-w-full"
+                      >
+                        <Card
+                          className={cn(
+                            "group cursor-pointer transition-all duration-200 border-border/40 max-w-full",
+                            "hover:border-primary/30 hover:shadow-md",
+                            isSelected && "border-primary bg-primary/5"
+                          )}
+                          onClick={() => {
+                            if (isBatchMode) toggleSelection(transaction.id);
+                            else {
+                              setEditingTransaction(transaction);
+                              setModalOpen(true);
+                            }
+                          }}
                         >
-                          <Card
-                            className={cn(
-                              "group cursor-pointer transition-all duration-200 border-border/40 max-w-full",
-                              "hover:border-primary/30 hover:shadow-md",
-                              isSelected && "border-primary bg-primary/5"
-                            )}
-                            onClick={() => {
-                              if (isBatchMode) toggleSelection(transaction.id);
-                              else {
-                                setEditingTransaction(transaction);
-                                setModalOpen(true);
-                              }
-                            }}
-                          >
-                            <CardContent className="p-3 md:p-4">
-                              <div className="flex items-center gap-3">
-                                {/* Checkbox */}
-                                <AnimatePresence>
-                                  {isBatchMode && (
-                                    <motion.div
-                                      initial={{ width: 0, opacity: 0 }}
-                                      animate={{ width: 'auto', opacity: 1 }}
-                                      exit={{ width: 0, opacity: 0 }}
-                                      className="overflow-hidden"
+                          <CardContent className="p-3 md:p-4">
+                            <div className="flex items-center gap-3">
+                              {/* Checkbox */}
+                              <AnimatePresence>
+                                {isBatchMode && (
+                                  <motion.div
+                                    initial={{ width: 0, opacity: 0 }}
+                                    animate={{ width: 'auto', opacity: 1 }}
+                                    exit={{ width: 0, opacity: 0 }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div
+                                      className={cn(
+                                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors cursor-pointer",
+                                        isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"
+                                      )}
+                                      onClick={(e: React.MouseEvent) => {
+                                        e.stopPropagation();
+                                        toggleSelection(transaction.id);
+                                      }}
                                     >
-                                      <div
-                                        className={cn(
-                                          "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors cursor-pointer",
-                                          isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"
-                                        )}
-                                        onClick={(e: React.MouseEvent) => {
-                                          e.stopPropagation();
-                                          toggleSelection(transaction.id);
-                                        }}
-                                      >
-                                        {isSelected && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={4} />}
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
+                                      {isSelected && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={4} />}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
 
-                                {/* Icon */}
-                                <div
-                                  className="h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
-                                  style={{ backgroundColor: `${transaction.category.color}20` }}
-                                >
-                                  <CategoryIcon
-                                    icon={transaction.category.icon}
-                                    color={transaction.category.color}
-                                    size="sm"
-                                  />
+                              {/* Icon */}
+                              <div
+                                className="h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                                style={{ backgroundColor: `${transaction.category.color}20` }}
+                              >
+                                <CategoryIcon
+                                  icon={transaction.category.icon}
+                                  color={transaction.category.color}
+                                  size="sm"
+                                />
+                              </div>
+
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start gap-2">
+                                  <p className="font-semibold truncate text-sm md:text-base">
+                                    {transaction.notes || transaction.category.name}
+                                  </p>
+                                  <p className={cn(
+                                    "font-bold whitespace-nowrap text-sm md:text-base tabular-nums",
+                                    transaction.type === 'income' ? "text-green-500" : ""
+                                  )}>
+                                    {transaction.type === 'income' ? '+' : ''}{formatCurrency(transaction.amount)}
+                                  </p>
                                 </div>
-
-                                {/* Content */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex justify-between items-start gap-2">
-                                    <p className="font-semibold truncate text-sm md:text-base">
-                                      {transaction.notes || transaction.category.name}
-                                    </p>
-                                    <p className={cn(
-                                      "font-bold whitespace-nowrap text-sm md:text-base tabular-nums",
-                                      transaction.type === 'income' ? "text-green-500" : ""
-                                    )}>
-                                      {transaction.type === 'income' ? '+' : ''}{formatCurrency(transaction.amount)}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      {transaction.category.name}
-                                    </p>
-                                    <span className="text-xs text-muted-foreground">•</span>
-                                    <p className="text-xs text-muted-foreground">
-                                      {format(new Date(transaction.date), 'h:mm a')}
-                                    </p>
-                                  </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {transaction.category.name}
+                                  </p>
+                                  <span className="text-xs text-muted-foreground">•</span>
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(new Date(transaction.date), 'h:mm a')}
+                                  </p>
                                 </div>
                               </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Load More Trigger */}
-          <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
-            {isLoading && (
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            )}
+              </div>
+            ))}
           </div>
+        )}
+
+        {/* Load More Trigger */}
+        <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
+          {isLoading && (
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          )}
         </div>
       </div>
 
