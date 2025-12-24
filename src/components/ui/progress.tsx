@@ -27,7 +27,7 @@ function Progress({
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
         className={cn(
-          "bg-primary h-full w-full flex-1 rounded-full transition-all duration-500 ease-out shadow-[0_0_8px_rgba(22,163,74,0.3)] dark:shadow-[0_0_8px_rgba(152,239,90,0.4)]",
+          "gradient-primary h-full w-full flex-1 rounded-full transition-all duration-500 ease-out",
           indicatorClassName
         )}
         style={{

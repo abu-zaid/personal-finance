@@ -26,9 +26,12 @@ import {
   fetchMonthlyAggregates,
   selectTransactions,
   selectTransactionsStatus,
-  selectTransactionsError
+  selectTransactionsError,
+  selectMonthlyAggregates
 } from '@/lib/features/transactions/transactionsSlice';
 import { selectCategories } from '@/lib/features/categories/categoriesSlice';
+import { APP_NAME, BRAND_GRADIENT } from '@/lib/constants';
+import { useAuth } from '@/context/auth-context';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useCurrency } from '@/hooks/use-currency';
 import { useMediaQuery } from '@/hooks/use-media-query';
@@ -74,38 +77,31 @@ export default function TransactionsPage() {
   const { formatCurrency, symbol } = useCurrency();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  // Monthly totals state
-  const [monthlyIncome, setMonthlyIncome] = useState(0);
-  const [monthlyExpense, setMonthlyExpense] = useState(0);
+  // Monthly totals from Redux
+  const aggregates = useAppSelector(selectMonthlyAggregates);
   const currentMonth = format(new Date(), 'yyyy-MM');
+  const monthlyIncome = aggregates.monthlyIncome[currentMonth] || 0;
+  const monthlyExpense = aggregates.monthlyExpenses[currentMonth] || 0;
 
   // Sync monthly totals when month changes
-  // Sync monthly totals when month changes
-  const fetchMonthlyTotals = useCallback(async () => {
-    try {
-      const incomeResult = await dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' })).unwrap();
-      const expenseResult = await dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' })).unwrap();
-
-      setMonthlyIncome(incomeResult.total);
-      setMonthlyExpense(expenseResult.total);
-    } catch (e) {
-      console.error('Failed to fetch monthly totals', e);
-    }
+  const fetchMonthlyTotals = useCallback(() => {
+    dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' }));
+    dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' }));
   }, [currentMonth, dispatch]);
 
-  // Sync monthly totals when month changes
-  // Sync monthly totals when month changes
   useEffect(() => {
     fetchMonthlyTotals();
   }, [fetchMonthlyTotals]);
 
-  // Initial Fetch
+  // Initial Fetch - Fix for race condition
+  // We need to access the user from the store or hook to verify they are logged in before fetching
+  const { user } = useAuth();
+
   useEffect(() => {
-    // Only fetch if we have no items or if explicit refetch is needed. 
-    // Ideally the store might persist, but for now let's ensure we have data.
-    // If we want to refetch every time we visit the page:
-    dispatch(fetchTransactions({ page: 0 }));
-  }, [dispatch]);
+    if (user?.id) {
+      dispatch(fetchTransactions({ page: 0 }));
+    }
+  }, [dispatch, user?.id]);
 
   // Local State
   const [isBatchMode, setIsBatchMode] = useState(false);
@@ -459,7 +455,8 @@ export default function TransactionsPage() {
                       Reset
                     </Button>
                     <SheetClose asChild>
-                      <Button className="flex-1 h-11 sm:h-10 bg-gradient-to-r from-[#98EF5A] to-[#7BEA3C] text-black border-0 hover:opacity-90 transition-opacity">
+                      <Button className="flex-1 h-11 sm:h-10 text-[#101010] border-0 hover:opacity-90 transition-opacity"
+                        style={{ background: BRAND_GRADIENT.css }}>
                         Apply Filters
                       </Button>
                     </SheetClose>
@@ -480,7 +477,8 @@ export default function TransactionsPage() {
 
               <Button
                 size="sm"
-                className="h-9 w-9 p-0 rounded-full shadow-lg bg-gradient-to-br from-[#98EF5A] to-[#7BEA3C] hover:shadow-xl hover:scale-105 transition-all text-[#101010]"
+                className="h-9 w-9 p-0 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-[#101010]"
+                style={{ background: BRAND_GRADIENT.css }}
                 onClick={() => {
                   setEditingTransaction(null);
                   setModalOpen(true);

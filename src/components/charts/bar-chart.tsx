@@ -5,6 +5,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { ChartTooltip } from './tooltip';
 import { useChartTooltip } from '@/hooks/use-chart-tooltip';
+import { BRAND_GRADIENT } from '@/lib/constants';
 
 interface BarChartDataPoint {
     label: string;
@@ -83,7 +84,7 @@ export function BarChart({
                     {data.map((bar, index) => {
                         const barHeight = (bar.value / maxValue) * 100;
                         const isHovered = hoveredBar === index;
-                        const barColor = bar.color || '#98EF5A';
+                        const barColor = bar.color || BRAND_GRADIENT.from;
 
                         return (
                             <div
@@ -157,7 +158,7 @@ export function BarChart({
                 {data.map((bar, index) => {
                     const barWidth = (bar.value / maxValue) * 100;
                     const isHovered = hoveredBar === index;
-                    const barColor = bar.color || '#98EF5A';
+                    const barColor = bar.color || BRAND_GRADIENT.from;
 
                     return (
                         <div key={index} className="space-y-1">

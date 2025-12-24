@@ -186,7 +186,7 @@
   /* Primary Gradient Card - Enhanced with glow */
   /* Primary Gradient Card - Enhanced with glow */
   .gradient-primary {
-    background: linear-gradient(145deg, #98EF5A 0%, #3B82F6 100%);
+    background: linear-gradient(135deg, #98EF5A 0%, #3B82F6 100%);
     box-shadow: 0 0 40px rgba(152, 239, 90, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
   }
 
@@ -196,7 +196,7 @@
   }
 
   .gradient-accent {
-    background: linear-gradient(145deg, #A06BF5 0%, #935AEF 50%, #7A3AED 100%);
+    background: linear-gradient(135deg, #A06BF5 0%, #935AEF 50%, #7A3AED 100%);
     box-shadow: 0 0 40px rgba(147, 90, 239, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
   }
 

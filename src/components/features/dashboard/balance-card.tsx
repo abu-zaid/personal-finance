@@ -7,6 +7,7 @@ import { TrendingUp, TrendingDown, Wallet, PieChart, Target, AlertTriangle } fro
 import { AnimatedNumber } from '@/components/animations';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
+import { BRAND_GRADIENT } from '@/lib/constants';
 
 interface BalanceCardProps {
   balance: number;
@@ -34,8 +35,9 @@ export const BalanceCard = memo(function BalanceCard({
     if (!hasBudget) {
       // No budget set - neutral gray/blue gradient
       return {
-        background: 'linear-gradient(145deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%)',
-        boxShadow: '0 0 60px rgba(99, 102, 241, 0.25), 0 12px 40px rgba(0, 0, 0, 0.25)',
+        background: 'linear-gradient(145deg, #1A1A1A 0%, #2A2A2A 100%)',
+        boxShadow: '0 0 60px rgba(0, 0, 0, 0.25), 0 12px 40px rgba(0, 0, 0, 0.25)',
+        border: '1px solid rgba(255,255,255,0.1)'
       };
     }
     if (isOverBudget) {
@@ -47,8 +49,8 @@ export const BalanceCard = memo(function BalanceCard({
     }
     // Normal - green gradient
     return {
-      background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 50%, #5AD920 100%)',
-      boxShadow: '0 0 60px rgba(152, 239, 90, 0.25), 0 12px 40px rgba(0, 0, 0, 0.25)',
+      background: BRAND_GRADIENT.css,
+      boxShadow: `0 0 60px ${BRAND_GRADIENT.from}40, 0 12px 40px rgba(0, 0, 0, 0.25)`,
     };
   };
 

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
+import { BRAND_GRADIENT } from '@/lib/constants';
 
 interface SpendingVelocityGaugeProps {
     currentSpending: number;
@@ -46,7 +47,7 @@ export function SpendingVelocityGauge({
         switch (metrics.status) {
             case 'danger': return '#ef4444';
             case 'warning': return '#f59e0b';
-            default: return '#98EF5A';
+            default: return BRAND_GRADIENT.from;
         }
     };
 
@@ -87,7 +88,7 @@ export function SpendingVelocityGauge({
                     <motion.path
                         d={`M ${strokeWidth / 2} ${center} A ${radius} ${radius} 0 0 1 ${center} ${strokeWidth / 2}`}
                         fill="none"
-                        stroke="#98EF5A"
+                        stroke={BRAND_GRADIENT.from}
                         strokeWidth={strokeWidth}
                         strokeLinecap="round"
                         initial={{ pathLength: 0 }}
