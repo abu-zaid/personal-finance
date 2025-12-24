@@ -155,7 +155,6 @@ export function TransactionForm({
                 type="number"
                 inputMode="decimal"
                 step="0.01"
-                autoFocus
                 placeholder="0"
                 className={cn(
                     "w-full max-w-[280px] text-center font-bold bg-transparent border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 placeholder:text-muted-foreground/20 caret-primary tabular-nums",
@@ -187,7 +186,7 @@ export function TransactionForm({
                     {/* Category Carousel Mobile */}
                     <div className="space-y-3">
                         <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Select Category</Label>
-                        <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar -mx-6 px-6">
+                        <div className="flex gap-4 overflow-x-auto pb-4 px-4 py-2 snap-x scrollbar-hide">
                             {categories.map((category) => {
                                 const isSelected = selectedCategoryId === category.id;
                                 return (
@@ -277,7 +276,7 @@ export function TransactionForm({
                 {/* Category Carousel Mobile */}
                 <div className="space-y-3">
                     <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Select Category</Label>
-                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar -mx-6 px-6">
+                    <div className="flex gap-4 overflow-x-auto pb-4 px-4 py-2 snap-x scrollbar-hide">
                         {categories.map((category) => {
                             const isSelected = selectedCategoryId === category.id;
                             return (

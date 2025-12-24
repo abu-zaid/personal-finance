@@ -44,7 +44,7 @@ interface TransactionsContextType {
 
 const TransactionsContext = createContext<TransactionsContextType | undefined>(undefined);
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 // Map database row to Transaction type
 function mapDbToTransaction(row: {
