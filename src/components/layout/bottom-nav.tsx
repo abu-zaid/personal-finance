@@ -1,243 +1,184 @@
 'use client';
 
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
-  List,
+  BarChart2,
   Plus,
-  Wallet,
-  MoreHorizontal,
-  TrendingUp,
-  Repeat,
-  Target,
+  List,
   Settings,
+  Wallet,
+  Target,
+  Repeat,
+  LayoutGrid,
+  Tags,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 // Navigation configuration
-type NavItem = {
-  href: string | null;
-  icon: typeof Home;
-  label: string;
-  id: string;
-  highlight?: boolean;
-};
-
-const navItems: NavItem[] = [
+const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Home', id: 'home' },
-  { href: '/transactions', icon: List, label: 'Transactions', id: 'transactions' },
-  { href: null, icon: Plus, label: 'Add', id: 'add', highlight: true },
+  { href: '/transactions', icon: List, label: 'Activity', id: 'transactions' },
+  { href: null, icon: Plus, label: 'Add', id: 'add', isFab: true },
   { href: '/budgets', icon: Wallet, label: 'Budgets', id: 'budgets' },
-  { href: null, icon: MoreHorizontal, label: 'More', id: 'more' },
-];
-
-const moreItems = [
-  { href: '/insights', label: 'Insights', icon: TrendingUp },
-  { href: '/recurring', label: 'Recurring', icon: Repeat },
-  { href: '/goals', label: 'Goals', icon: Target },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: null, icon: LayoutGrid, label: 'Menu', id: 'menu' },
 ] as const;
 
 interface BottomNavProps {
   onAddExpense?: () => void;
 }
 
-// Memoized nav button component for better performance
-const NavButton = memo(function NavButton({
-  item,
-  isActive,
-  onClick,
-}: {
-  item: NavItem;
-  isActive: boolean;
-  onClick?: () => void;
-}) {
-  const Icon = item.icon;
-
-  if (item.highlight) {
-    return (
-      <Button
-        onClick={onClick}
-        size="icon"
-        className={cn(
-          "h-14 w-14 rounded-2xl shadow-lg transition-all",
-          "bg-gradient-to-br from-[#98EF5A] to-[#7BEA3C]",
-          "hover:shadow-xl hover:scale-105",
-          "active:scale-95"
-        )}
-        style={{
-          boxShadow: '0 6px 20px rgba(152, 239, 90, 0.35)',
-        }}
-      >
-        <Icon className="h-6 w-6 text-[#101010]" strokeWidth={2.5} />
-      </Button>
-    );
-  }
-
-  return (
-    <motion.div
-      whileTap={{ scale: 0.95 }}
-      className={cn(
-        "relative h-12 w-12 rounded-2xl flex items-center justify-center transition-colors",
-        isActive && "bg-primary"
-      )}
-    >
-      <Icon
-        className={cn(
-          "h-5 w-5 transition-colors",
-          isActive ? "text-primary-foreground" : "text-muted-foreground"
-        )}
-        strokeWidth={isActive ? 2.5 : 2}
-      />
-    </motion.div>
-  );
-});
-
-export const BottomNav = memo(function BottomNav({
-  onAddExpense,
-}: BottomNavProps) {
+export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProps) {
   const pathname = usePathname();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Memoize active state calculation
+  // Determine active tab
   const activeId = useMemo(() => {
-    return navItems.find(
-      (item) =>
-        item.href &&
-        (pathname === item.href || pathname.startsWith(item.href + '/'))
-    )?.id;
+    // Exact match or sub-path match (except for root/dashboard which needs special handling if aliases exist)
+    const currentPath = pathname === '/' ? '/dashboard' : pathname;
+
+    // Find the item that matches the current path
+    const activeItem = NAV_ITEMS.find((item) =>
+      item.href && (currentPath === item.href || currentPath.startsWith(`${item.href}/`))
+    );
+
+    return activeItem?.id || 'home';
   }, [pathname]);
 
-  const handleAddClick = useCallback(() => {
-    onAddExpense?.();
-  }, [onAddExpense]);
-
   return (
-    <nav
-      className={cn(
-        "fixed bottom-0 left-0 right-0 z-50 md:hidden",
-        "pb-safe" // Safe area for iOS devices
-      )}
-    >
-      <div className="mx-4 mb-4">
-        <div
-          className={cn(
-            "w-full max-w-md mx-auto",
-            "rounded-[28px] overflow-hidden",
-            "bg-background/80 backdrop-blur-xl",
-            "border border-border/40",
-            "shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
-            "dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
-          )}
-        >
-          {/* Subtle gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
-
-          <div className="relative flex items-center justify-around h-[72px] px-2">
-            {navItems.map((item) => {
+    <div className="fixed bottom-6 inset-x-0 z-50 flex justify-center pointer-events-none px-4 md:hidden">
+      <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+        <nav className="pointer-events-auto">
+          <div
+            className={cn(
+              "flex items-center gap-1 p-1.5 rounded-full",
+              "bg-background/80 backdrop-blur-xl border border-border",
+              "shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] shadow-black/10",
+              "transition-all duration-300 ease-out"
+            )}
+          >
+            {NAV_ITEMS.map((item) => {
               const isActive = item.id === activeId;
+              const Icon = item.icon;
 
-              // Add button
-              if (item.highlight) {
+              // Render FAB (Add Button)
+              if ('isFab' in item && item.isFab) {
                 return (
-                  <NavButton
-                    key={item.id}
-                    item={item}
-                    isActive={false}
-                    onClick={handleAddClick}
-                  />
-                );
-              }
-
-              // More button with sheet
-              if (item.id === 'more') {
-                return (
-                  <Sheet key={item.id}>
-                    <SheetTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-12 w-12 rounded-2xl"
-                      >
-                        <NavButton item={item} isActive={false} />
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent
-                      side="bottom"
+                  <div key={item.id} className="mx-2">
+                    <Button
+                      onClick={onAddExpense}
+                      size="icon"
                       className={cn(
-                        "rounded-t-[32px] p-6 pb-12",
-                        "border-t border-border/40"
+                        "h-12 w-12 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95",
+                        "bg-primary text-primary-foreground hover:bg-primary/90",
+                        "shadow-primary/25"
                       )}
                     >
-                      <SheetHeader className="mb-6">
-                        <SheetTitle className="text-xl font-bold">
-                          More Options
-                        </SheetTitle>
-                      </SheetHeader>
-                      <div className="grid grid-cols-2 gap-3">
-                        {moreItems.map((moreItem) => {
-                          const MoreIcon = moreItem.icon;
-                          const isMoreActive = pathname === moreItem.href || pathname.startsWith(moreItem.href + '/');
-
-                          return (
-                            <SheetClose asChild key={moreItem.href}>
-                              <Link href={moreItem.href}>
-                                <Button
-                                  variant="ghost"
-                                  className={cn(
-                                    "w-full h-auto flex flex-col items-center gap-3 p-4 rounded-2xl",
-                                    "hover:bg-muted/50 transition-colors",
-                                    isMoreActive && "bg-primary/10 text-primary"
-                                  )}
-                                >
-                                  <div className={cn(
-                                    "h-12 w-12 flex items-center justify-center rounded-xl",
-                                    "bg-background shadow-sm border border-border/40",
-                                    isMoreActive && "bg-primary/20 border-primary/20"
-                                  )}>
-                                    <MoreIcon className="h-5 w-5" strokeWidth={2} />
-                                  </div>
-                                  <span className="text-sm font-semibold">
-                                    {moreItem.label}
-                                  </span>
-                                </Button>
-                              </Link>
-                            </SheetClose>
-                          );
-                        })}
-                      </div>
-                    </SheetContent>
-                  </Sheet>
+                      <Plus className="h-6 w-6" strokeWidth={2.5} />
+                    </Button>
+                  </div>
                 );
               }
 
-              // Regular nav items
+              // Render Menu Trigger
+              if (item.id === 'menu') {
+                return (
+                  <SheetTrigger asChild key={item.id}>
+                    <button
+                      className="relative"
+                    >
+                      <div
+                        className={cn(
+                          "relative flex items-center justify-center h-11 w-11 rounded-full transition-colors duration-200",
+                          isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {/* Active Background Pill (if menu was somehow active route) */}
+                        {isActive && (
+                          <motion.div
+                            layoutId="nav-pill"
+                            className="absolute inset-0 bg-primary/10 rounded-full"
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                          />
+                        )}
+                        <Icon size={24} className="relative z-10" />
+                      </div>
+                    </button>
+                  </SheetTrigger>
+                );
+              }
+
+              // Render Nav Links
               return (
                 <Link
                   key={item.id}
-                  href={item.href!}
-                  className="tap-target"
+                  href={item.href || '#'}
+                  className="relative"
                 >
-                  <NavButton item={item} isActive={isActive} />
+                  <div
+                    className={cn(
+                      "relative flex items-center justify-center h-11 w-11 rounded-full transition-colors duration-200",
+                      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {/* Active Background Pill */}
+                    {isActive && (
+                      <motion.div
+                        layoutId="nav-pill"
+                        className="absolute inset-0 bg-primary/10 rounded-full"
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
+
+                    {/* Icon */}
+                    <Icon
+                      size={24}
+                      strokeWidth={isActive ? 2.5 : 2}
+                      className="relative z-10 transition-transform duration-200"
+                      style={{
+                        transform: isActive ? 'scale(1)' : 'scale(0.9)'
+                      }}
+                    />
+                  </div>
                 </Link>
               );
             })}
           </div>
-        </div>
-      </div>
-    </nav>
+        </nav>
+
+        <SheetContent side="bottom" className="rounded-t-[2rem] p-6 pb-12 bg-background border-border text-foreground">
+          <div className="flex items-center justify-center mb-6">
+            <div className="w-12 h-1.5 bg-muted rounded-full" />
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Insights', icon: BarChart2, href: '/insights', color: 'bg-blue-500/20 text-blue-500' },
+              { label: 'Goals', icon: Target, href: '/goals', color: 'bg-emerald-500/20 text-emerald-500' },
+              { label: 'Recurring', icon: Repeat, href: '/recurring', color: 'bg-purple-500/20 text-purple-500' },
+              { label: 'Categories', icon: Tags, href: '/settings/categories', color: 'bg-pink-500/20 text-pink-500' },
+              { label: 'Settings', icon: Settings, href: '/settings', color: 'bg-muted text-foreground' },
+            ].map((menuItem) => (
+              <Link
+                key={menuItem.label}
+                href={menuItem.href}
+                onClick={() => setIsMenuOpen(false)}
+                className="flex flex-col items-center gap-3 p-2 rounded-2xl hover:bg-accent transition-colors"
+              >
+                <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center", menuItem.color)}>
+                  <menuItem.icon size={24} />
+                </div>
+                <span className="text-xs font-medium text-center text-muted-foreground">{menuItem.label}</span>
+              </Link>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div >
   );
 });

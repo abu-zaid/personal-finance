@@ -56,9 +56,29 @@ export default function TransactionsPage() {
     deleteTransaction,
     loadMore,
     hasMore,
+    getMonthlyIncome,
+    getMonthlyExpenses,
   } = useTransactions();
   const { categories } = useCategories();
   const { formatCurrency, symbol } = useCurrency();
+
+  // Monthly totals from database
+  const [monthlyIncome, setMonthlyIncome] = useState(0);
+  const [monthlyExpense, setMonthlyExpense] = useState(0);
+  const currentMonth = format(new Date(), 'yyyy-MM');
+
+  // Fetch monthly totals from database
+  useEffect(() => {
+    const fetchMonthlyTotals = async () => {
+      const [income, expenses] = await Promise.all([
+        getMonthlyIncome(currentMonth),
+        getMonthlyExpenses(currentMonth)
+      ]);
+      setMonthlyIncome(income);
+      setMonthlyExpense(expenses);
+    };
+    fetchMonthlyTotals();
+  }, [currentMonth, getMonthlyIncome, getMonthlyExpenses]);
 
   // Local State
   const [searchQuery, setSearchQuery] = useState('');
@@ -168,12 +188,14 @@ export default function TransactionsPage() {
     return groups;
   }, [filteredTransactions]);
 
-  // Statistics
+  // Statistics - use monthly totals from database
   const stats = useMemo(() => {
-    const income = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-    const expense = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-    return { income, expense, net: income - expense };
-  }, [filteredTransactions]);
+    return {
+      income: monthlyIncome,
+      expense: monthlyExpense,
+      net: monthlyIncome - monthlyExpense
+    };
+  }, [monthlyIncome, monthlyExpense]);
 
   // --- Handlers ---
 

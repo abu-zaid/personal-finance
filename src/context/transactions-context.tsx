@@ -34,10 +34,11 @@ interface TransactionsContextType {
     sort?: TransactionSort
   ) => TransactionWithCategory[];
   getTransactionsByMonth: (month: string) => TransactionWithCategory[];
-  getMonthlyTotal: (month: string) => number;
-  getMonthlyExpenses: (month: string) => number;
-  getMonthlyIncome: (month: string) => number;
-  getCategoryTotal: (categoryId: string, month?: string) => number;
+  // Database-backed aggregates (async for accuracy)
+  getMonthlyTotal: (month: string) => Promise<number>;
+  getMonthlyExpenses: (month: string) => Promise<number>;
+  getMonthlyIncome: (month: string) => Promise<number>;
+  getCategoryTotal: (categoryId: string, month?: string) => Promise<number>;
   refetch: () => Promise<void>;
 }
 
@@ -91,6 +92,11 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
   // Track initialization and prevent duplicate fetches
   const hasInitialized = useRef(false);
   const fetchInProgress = useRef(false);
+
+  // Cache for monthly aggregates to prevent redundant queries
+  const monthlyAggregatesCache = useRef<Map<string, { expenses: number; income: number; timestamp: number }>>(new Map());
+  const categoryTotalsCache = useRef<Map<string, { total: number; timestamp: number }>>(new Map());
+  const CACHE_TTL = 30000; // 30 seconds
 
   const supabase = createClient();
 
@@ -253,6 +259,12 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     });
   }, [rawTransactions, categoriesMap]);
 
+  // Clear aggregates cache (called on transaction mutations)
+  const clearAggregatesCache = useCallback(() => {
+    monthlyAggregatesCache.current.clear();
+    categoryTotalsCache.current.clear();
+  }, []);
+
   // Create transaction with optimistic update
   const createTransaction = useCallback(
     async (input: CreateTransactionInput): Promise<Transaction> => {
@@ -275,6 +287,8 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       // Add optimistically
       setRawTransactions((prev) => [optimisticTransaction, ...prev]);
       setTotalCount((prev) => prev + 1);
+      // Clear aggregates cache since totals will change
+      clearAggregatesCache();
 
       try {
         // Use local date format to avoid timezone issues
@@ -314,7 +328,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
-    [user, supabase]
+    [user, supabase, clearAggregatesCache]
   );
 
   // Update transaction with optimistic update
@@ -343,6 +357,8 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       setRawTransactions((prev) =>
         prev.map((t) => (t.id === id ? optimisticTransaction : t))
       );
+      // Clear aggregates cache since totals may change
+      clearAggregatesCache();
 
       try {
         const updateData: Record<string, unknown> = {};
@@ -383,7 +399,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
-    [user, supabase, rawTransactions]
+    [user, supabase, rawTransactions, clearAggregatesCache]
   );
 
   // Delete transaction with undo support
@@ -403,6 +419,8 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       // Optimistically remove
       setRawTransactions((prev) => prev.filter((t) => t.id !== id));
       setTotalCount((prev) => prev - 1);
+      // Clear aggregates cache since totals will change
+      clearAggregatesCache();
 
       // Show toast with undo option
       const undoDelete = async () => {
@@ -551,44 +569,138 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     [transactions]
   );
 
-  // Get total expenses for a month
+  // Helper to get next month string for date range queries
+  const getNextMonth = useCallback((month: string): string => {
+    const [year, monthNum] = month.split('-').map(Number);
+    const nextDate = new Date(year, monthNum, 1); // monthNum is already 0-indexed after -1 in split
+    return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+
+  // Get total expenses for a month - DATABASE-BACKED
   const getMonthlyExpenses = useCallback(
-    (month: string): number => {
-      return getTransactionsByMonth(month)
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
+    async (month: string): Promise<number> => {
+      if (!user || !supabase) return 0;
+
+      // Check cache first
+      const cached = monthlyAggregatesCache.current.get(month);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.expenses;
+      }
+
+      try {
+        const nextMonth = getNextMonth(month);
+        const { data, error: queryError } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('user_id', user.id)
+          .eq('type', 'expense')
+          .gte('date', `${month}-01`)
+          .lt('date', `${nextMonth}-01`);
+
+        if (queryError) throw queryError;
+
+        const total = (data || []).reduce((sum, t) => sum + Number(t.amount), 0);
+
+        // Update cache
+        const existing = monthlyAggregatesCache.current.get(month) || { expenses: 0, income: 0, timestamp: Date.now() };
+        monthlyAggregatesCache.current.set(month, { ...existing, expenses: total, timestamp: Date.now() });
+
+        return total;
+      } catch (err) {
+        console.error('Error fetching monthly expenses:', err);
+        return 0;
+      }
     },
-    [getTransactionsByMonth]
+    [user, supabase, getNextMonth]
   );
 
-  // Get total income for a month
+  // Get total income for a month - DATABASE-BACKED
   const getMonthlyIncome = useCallback(
-    (month: string): number => {
-      return getTransactionsByMonth(month)
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
+    async (month: string): Promise<number> => {
+      if (!user || !supabase) return 0;
+
+      // Check cache first
+      const cached = monthlyAggregatesCache.current.get(month);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.income;
+      }
+
+      try {
+        const nextMonth = getNextMonth(month);
+        const { data, error: queryError } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('user_id', user.id)
+          .eq('type', 'income')
+          .gte('date', `${month}-01`)
+          .lt('date', `${nextMonth}-01`);
+
+        if (queryError) throw queryError;
+
+        const total = (data || []).reduce((sum, t) => sum + Number(t.amount), 0);
+
+        // Update cache
+        const existing = monthlyAggregatesCache.current.get(month) || { expenses: 0, income: 0, timestamp: Date.now() };
+        monthlyAggregatesCache.current.set(month, { ...existing, income: total, timestamp: Date.now() });
+
+        return total;
+      } catch (err) {
+        console.error('Error fetching monthly income:', err);
+        return 0;
+      }
     },
-    [getTransactionsByMonth]
+    [user, supabase, getNextMonth]
   );
 
   // Get net total (income - expenses) for a month - DEPRECATED: use getMonthlyExpenses for budget tracking
   const getMonthlyTotal = useCallback(
-    (month: string): number => {
+    async (month: string): Promise<number> => {
       // For backward compatibility, return expenses only (used for budget tracking)
       return getMonthlyExpenses(month);
     },
     [getMonthlyExpenses]
   );
 
+  // Get category total - DATABASE-BACKED
   const getCategoryTotal = useCallback(
-    (categoryId: string, month?: string): number => {
-      let filtered = transactions.filter((t) => t.categoryId === categoryId && t.type === 'expense');
-      if (month) {
-        filtered = filtered.filter((t) => getMonthString(t.date) === month);
+    async (categoryId: string, month?: string): Promise<number> => {
+      if (!user || !supabase) return 0;
+
+      // Create cache key
+      const cacheKey = month ? `${categoryId}-${month}` : categoryId;
+      const cached = categoryTotalsCache.current.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.total;
       }
-      return filtered.reduce((sum, t) => sum + t.amount, 0);
+
+      try {
+        let query = supabase
+          .from('transactions')
+          .select('amount')
+          .eq('user_id', user.id)
+          .eq('category_id', categoryId)
+          .eq('type', 'expense');
+
+        if (month) {
+          const nextMonth = getNextMonth(month);
+          query = query.gte('date', `${month}-01`).lt('date', `${nextMonth}-01`);
+        }
+
+        const { data, error: queryError } = await query;
+        if (queryError) throw queryError;
+
+        const total = (data || []).reduce((sum, t) => sum + Number(t.amount), 0);
+
+        // Update cache
+        categoryTotalsCache.current.set(cacheKey, { total, timestamp: Date.now() });
+
+        return total;
+      } catch (err) {
+        console.error('Error fetching category total:', err);
+        return 0;
+      }
     },
-    [transactions]
+    [user, supabase, getNextMonth]
   );
 
   const refetch = useCallback(async () => {

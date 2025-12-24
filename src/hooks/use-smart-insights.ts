@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTransactions } from '@/context/transactions-context';
 import { useCategories } from '@/context/categories-context';
 import { useBudgets } from '@/context/budgets-context';
@@ -23,10 +23,24 @@ export function useSmartInsights(): SmartInsight[] {
   const currentMonth = getMonthString(new Date());
   const previousMonth = getMonthString(subMonths(new Date(), 1));
 
+  // Fetch monthly totals from database
+  const [currentExpenses, setCurrentExpenses] = useState(0);
+  const [previousExpenses, setPreviousExpenses] = useState(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [current, previous] = await Promise.all([
+        getMonthlyExpenses(currentMonth),
+        getMonthlyExpenses(previousMonth)
+      ]);
+      setCurrentExpenses(current);
+      setPreviousExpenses(previous);
+    };
+    fetchData();
+  }, [currentMonth, previousMonth, getMonthlyExpenses]);
+
   return useMemo(() => {
     const insights: SmartInsight[] = [];
-    const currentExpenses = getMonthlyExpenses(currentMonth);
-    const previousExpenses = getMonthlyExpenses(previousMonth);
     const budget = getBudgetByMonth(currentMonth);
 
     const currentMonthTxns = transactions.filter(
@@ -227,5 +241,5 @@ export function useSmartInsights(): SmartInsight[] {
     return insights
       .sort((a, b) => priorityOrder[a.type] - priorityOrder[b.type])
       .slice(0, 4); // Show top 4 insights
-  }, [transactions, categories, getMonthlyExpenses, getBudgetByMonth, formatCurrency, currentMonth, previousMonth]);
+  }, [transactions, categories, currentExpenses, previousExpenses, getBudgetByMonth, formatCurrency, currentMonth, previousMonth]);
 }

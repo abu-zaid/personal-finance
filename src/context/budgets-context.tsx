@@ -16,8 +16,8 @@ interface BudgetsContextType {
   deleteBudget: (id: string) => Promise<void>;
   getBudgetById: (id: string) => Budget | undefined;
   getBudgetByMonth: (month: string) => Budget | undefined;
-  getBudgetWithSpending: (month: string) => BudgetWithSpending | undefined;
-  getCurrentMonthBudget: () => BudgetWithSpending | undefined;
+  getBudgetWithSpending: (month: string) => Promise<BudgetWithSpending | undefined>;
+  getCurrentMonthBudget: () => Promise<BudgetWithSpending | undefined>;
   refetch: () => Promise<void>;
 }
 
@@ -361,23 +361,25 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
   );
 
   const getBudgetWithSpending = useCallback(
-    (month: string): BudgetWithSpending | undefined => {
+    async (month: string): Promise<BudgetWithSpending | undefined> => {
       const budget = getBudgetByMonth(month);
       if (!budget) return undefined;
 
-      const allocationsWithSpending = budget.allocations.map((allocation) => {
-        const spent = getCategoryTotal(allocation.categoryId, month);
-        const remaining = allocation.amount - spent;
-        const percentageUsed = calculatePercentage(spent, allocation.amount);
+      const allocationsWithSpending = await Promise.all(
+        budget.allocations.map(async (allocation) => {
+          const spent = await getCategoryTotal(allocation.categoryId, month);
+          const remaining = allocation.amount - spent;
+          const percentageUsed = calculatePercentage(spent, allocation.amount);
 
-        return {
-          ...allocation,
-          spent,
-          remaining,
-          percentageUsed,
-          isOverBudget: spent > allocation.amount,
-        };
-      });
+          return {
+            ...allocation,
+            spent,
+            remaining,
+            percentageUsed,
+            isOverBudget: spent > allocation.amount,
+          };
+        })
+      );
 
       const totalSpent = allocationsWithSpending.reduce((sum, a) => sum + a.spent, 0);
       const totalRemaining = budget.totalAmount - totalSpent;
@@ -392,7 +394,7 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
     [getBudgetByMonth, getCategoryTotal]
   );
 
-  const getCurrentMonthBudget = useCallback((): BudgetWithSpending | undefined => {
+  const getCurrentMonthBudget = useCallback(async (): Promise<BudgetWithSpending | undefined> => {
     const currentMonth = getMonthString(new Date());
     return getBudgetWithSpending(currentMonth);
   }, [getBudgetWithSpending]);

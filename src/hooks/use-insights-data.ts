@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, eachWeekOfInterval, isSameWeek } from 'date-fns';
 import { useTransactions } from '@/context/transactions-context';
 import { useCategories } from '@/context/categories-context';
@@ -25,8 +25,21 @@ export function useInsightsData() {
         });
     }, [transactions, currentMonth]);
 
-    const currentMonthTotal = getMonthlyExpenses(currentMonth);
-    const previousMonthTotal = getMonthlyExpenses(previousMonth);
+    // Fetch monthly totals from database
+    const [currentMonthTotal, setCurrentMonthTotal] = useState(0);
+    const [previousMonthTotal, setPreviousMonthTotal] = useState(0);
+
+    useEffect(() => {
+        const fetchMonthlyTotals = async () => {
+            const [current, previous] = await Promise.all([
+                getMonthlyExpenses(currentMonth),
+                getMonthlyExpenses(previousMonth)
+            ]);
+            setCurrentMonthTotal(current);
+            setPreviousMonthTotal(previous);
+        };
+        fetchMonthlyTotals();
+    }, [currentMonth, previousMonth, getMonthlyExpenses]);
 
     // Budget data
     const currentBudget = getBudgetByMonth(currentMonth);
@@ -38,19 +51,23 @@ export function useInsightsData() {
         ? ((currentMonthTotal - previousMonthTotal) / previousMonthTotal) * 100
         : 0;
 
-    // Last 6 months trend data for line chart
+    // Last 6 months trend data for line chart - use in-memory calculation to avoid 6 DB queries
     const monthlyTrendData = useMemo(() => {
         const months = [];
         for (let i = 5; i >= 0; i--) {
             const date = subMonths(new Date(), i);
             const month = getMonthString(date);
+            const monthTransactions = transactions.filter(
+                (t) => getMonthString(new Date(t.date)) === month && t.type === 'expense'
+            );
+            const value = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
             months.push({
                 label: format(date, 'MMM'),
-                value: getMonthlyExpenses(month),
+                value,
             });
         }
         return months;
-    }, [getMonthlyExpenses]);
+    }, [transactions]);
 
     // Category breakdown
     const categoryBreakdown = useMemo(() => {
