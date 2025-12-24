@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTransactions } from '@/context/transactions-context';
 import { useBudgets } from '@/context/budgets-context';
 import { getMonthString } from '@/lib/utils';
@@ -20,10 +20,26 @@ export function useFinancialHealth(): FinancialHealthScore {
   const currentMonth = getMonthString(new Date());
   const previousMonth = getMonthString(subMonths(new Date(), 1));
 
+  // Fetch monthly totals from database
+  const [income, setIncome] = useState(0);
+  const [expenses, setExpenses] = useState(0);
+  const [previousExpenses, setPreviousExpenses] = useState(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [currentIncome, currentExpenses, prevExpenses] = await Promise.all([
+        getMonthlyIncome(currentMonth),
+        getMonthlyExpenses(currentMonth),
+        getMonthlyExpenses(previousMonth)
+      ]);
+      setIncome(currentIncome);
+      setExpenses(currentExpenses);
+      setPreviousExpenses(prevExpenses);
+    };
+    fetchData();
+  }, [currentMonth, previousMonth, getMonthlyIncome, getMonthlyExpenses]);
+
   return useMemo(() => {
-    const income = getMonthlyIncome(currentMonth);
-    const expenses = getMonthlyExpenses(currentMonth);
-    const previousExpenses = getMonthlyExpenses(previousMonth);
     const budget = getBudgetByMonth(currentMonth);
 
     const savingsAmount = income - expenses;
@@ -87,5 +103,5 @@ export function useFinancialHealth(): FinancialHealthScore {
       recommendations,
       status,
     };
-  }, [getMonthlyIncome, getMonthlyExpenses, getBudgetByMonth, currentMonth, previousMonth]);
+  }, [income, expenses, previousExpenses, getBudgetByMonth, currentMonth]);
 }

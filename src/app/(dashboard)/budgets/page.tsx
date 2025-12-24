@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { motion } from 'framer-motion';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '@/components/animations';
@@ -313,23 +313,44 @@ export default function BudgetsPage() {
   };
 
   // --- Calculations ---
-  const totalMonthSpent = getMonthlyTotal(currentMonth);
-  const allocationsWithSpending = useMemo(() => {
-    if (!currentBudget) return [];
-    return currentBudget.allocations
-      .map((allocation) => {
-        const spent = getCategoryTotal(allocation.categoryId, currentMonth);
-        const remaining = allocation.amount - spent;
-        const percentage = allocation.amount > 0 ? (spent / allocation.amount) * 100 : 0;
-        return {
-          ...allocation,
-          spent,
-          remaining,
-          percentage,
-          category: categories.find((c) => c.id === allocation.categoryId),
-        };
-      })
-      .sort((a, b) => b.percentage - a.percentage);
+  const [totalMonthSpent, setTotalMonthSpent] = useState(0);
+  const [allocationsWithSpending, setAllocationsWithSpending] = useState<any[]>([]);
+
+  // Fetch monthly total from database
+  useEffect(() => {
+    const fetchMonthlyTotal = async () => {
+      const total = await getMonthlyTotal(currentMonth);
+      setTotalMonthSpent(total);
+    };
+    fetchMonthlyTotal();
+  }, [currentMonth, getMonthlyTotal]);
+
+  // Fetch category totals and calculate allocations with spending
+  useEffect(() => {
+    if (!currentBudget) {
+      setAllocationsWithSpending([]);
+      return;
+    }
+
+    const fetchAllocationsWithSpending = async () => {
+      const allocationsData = await Promise.all(
+        currentBudget.allocations.map(async (allocation) => {
+          const spent = await getCategoryTotal(allocation.categoryId, currentMonth);
+          const remaining = allocation.amount - spent;
+          const percentage = allocation.amount > 0 ? (spent / allocation.amount) * 100 : 0;
+          return {
+            ...allocation,
+            spent,
+            remaining,
+            percentage,
+            category: categories.find((c) => c.id === allocation.categoryId),
+          };
+        })
+      );
+      setAllocationsWithSpending(allocationsData.sort((a, b) => b.percentage - a.percentage));
+    };
+
+    fetchAllocationsWithSpending();
   }, [currentBudget, categories, getCategoryTotal, currentMonth]);
 
   const overallRemaining = currentBudget ? currentBudget.totalAmount - totalMonthSpent : 0;

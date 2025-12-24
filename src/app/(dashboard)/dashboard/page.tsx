@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import {
@@ -78,18 +78,28 @@ export default function DashboardPage() {
     const { formatCurrency, symbol } = useCurrency();
 
     const { transactions, getMonthlyIncome, getMonthlyExpenses } = useTransactions();
-    const [timeRange, setTimeRange] = useState<'weekly' | 'monthly'>('weekly'); // Re-added state
+    const [timeRange, setTimeRange] = useState<'weekly' | 'monthly'>('weekly');
+    const [monthlyIncome, setMonthlyIncome] = useState(0);
+    const [monthlyExpense, setMonthlyExpense] = useState(0);
     const currentMonth = format(new Date(), 'yyyy-MM');
 
-    // Calculate totals
-    const monthlyIncome = getMonthlyIncome(currentMonth);
-    const monthlyExpense = getMonthlyExpenses(currentMonth);
-    // Total balance is calculated from all transactions for now (Income - Expense)
+    // Fetch monthly totals from database
+    useEffect(() => {
+        const fetchMonthlyTotals = async () => {
+            const [income, expenses] = await Promise.all([
+                getMonthlyIncome(currentMonth),
+                getMonthlyExpenses(currentMonth)
+            ]);
+            setMonthlyIncome(income);
+            setMonthlyExpense(expenses);
+        };
+        fetchMonthlyTotals();
+    }, [currentMonth, getMonthlyIncome, getMonthlyExpenses]);
+
+    // Total balance is income - expenses for current month
     const totalBalance = useMemo(() => {
-        return transactions.reduce((acc, t) => {
-            return t.type === 'income' ? acc + t.amount : acc - t.amount;
-        }, 0);
-    }, [transactions]);
+        return monthlyIncome - monthlyExpense;
+    }, [monthlyIncome, monthlyExpense]);
 
     const expenseData = useMemo(() => {
         let filteredTransactions = transactions.filter(t => t.type === 'expense');

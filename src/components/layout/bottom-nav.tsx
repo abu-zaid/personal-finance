@@ -58,8 +58,8 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
           <div
             className={cn(
               "flex items-center gap-1 p-1.5 rounded-full",
-              "bg-zinc-900/90 backdrop-blur-xl border border-white/10",
-              "shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]",
+              "bg-background/80 backdrop-blur-xl border border-border",
+              "shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] shadow-black/10",
               "transition-all duration-300 ease-out"
             )}
           >
@@ -96,14 +96,14 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                       <div
                         className={cn(
                           "relative flex items-center justify-center h-11 w-11 rounded-full transition-colors duration-200",
-                          isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                         )}
                       >
                         {/* Active Background Pill (if menu was somehow active route) */}
                         {isActive && (
                           <motion.div
                             layoutId="nav-pill"
-                            className="absolute inset-0 bg-white/10 rounded-full"
+                            className="absolute inset-0 bg-primary/10 rounded-full"
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                           />
                         )}
@@ -124,14 +124,14 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                   <div
                     className={cn(
                       "relative flex items-center justify-center h-11 w-11 rounded-full transition-colors duration-200",
-                      isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {/* Active Background Pill */}
                     {isActive && (
                       <motion.div
                         layoutId="nav-pill"
-                        className="absolute inset-0 bg-white/10 rounded-full"
+                        className="absolute inset-0 bg-primary/10 rounded-full"
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                       />
                     )}
@@ -152,33 +152,33 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
           </div>
         </nav>
 
-        <SheetContent side="bottom" className="rounded-t-[2rem] p-6 pb-12 bg-zinc-950 border-white/10 text-white">
+        <SheetContent side="bottom" className="rounded-t-[2rem] p-6 pb-12 bg-background border-border text-foreground">
           <div className="flex items-center justify-center mb-6">
-            <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+            <div className="w-12 h-1.5 bg-muted rounded-full" />
           </div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: 'Insights', icon: BarChart2, href: '/insights', color: 'bg-blue-500/20 text-blue-400' },
-              { label: 'Goals', icon: Target, href: '/goals', color: 'bg-emerald-500/20 text-emerald-400' },
-              { label: 'Recurring', icon: Repeat, href: '/recurring', color: 'bg-purple-500/20 text-purple-400' },
-              { label: 'Categories', icon: Tags, href: '/settings/categories', color: 'bg-pink-500/20 text-pink-400' },
-              { label: 'Settings', icon: Settings, href: '/settings', color: 'bg-zinc-800 text-zinc-400' },
+              { label: 'Insights', icon: BarChart2, href: '/insights', color: 'bg-blue-500/20 text-blue-500' },
+              { label: 'Goals', icon: Target, href: '/goals', color: 'bg-emerald-500/20 text-emerald-500' },
+              { label: 'Recurring', icon: Repeat, href: '/recurring', color: 'bg-purple-500/20 text-purple-500' },
+              { label: 'Categories', icon: Tags, href: '/settings/categories', color: 'bg-pink-500/20 text-pink-500' },
+              { label: 'Settings', icon: Settings, href: '/settings', color: 'bg-muted text-foreground' },
             ].map((menuItem) => (
               <Link
                 key={menuItem.label}
                 href={menuItem.href}
                 onClick={() => setIsMenuOpen(false)}
-                className="flex flex-col items-center gap-3 p-2 rounded-2xl hover:bg-white/5 transition-colors"
+                className="flex flex-col items-center gap-3 p-2 rounded-2xl hover:bg-accent transition-colors"
               >
                 <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center", menuItem.color)}>
                   <menuItem.icon size={24} />
                 </div>
-                <span className="text-xs font-medium text-center text-white/80">{menuItem.label}</span>
+                <span className="text-xs font-medium text-center text-muted-foreground">{menuItem.label}</span>
               </Link>
             ))}
           </div>
         </SheetContent>
       </Sheet>
-    </div>
+    </div >
   );
 });
