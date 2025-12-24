@@ -1,15 +1,25 @@
 import { useMemo, useState, useEffect } from 'react';
 import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, eachWeekOfInterval, isSameWeek } from 'date-fns';
-import { useTransactions } from '@/context/transactions-context';
-import { useCategories } from '@/context/categories-context';
-import { useBudgets } from '@/context/budgets-context';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { selectTransactions, fetchMonthlyAggregates, selectTransactionsStatus, selectMonthlyAggregates } from '@/lib/features/transactions/transactionsSlice';
+import { selectCategories, selectCategoriesStatus } from '@/lib/features/categories/categoriesSlice';
+import { selectCurrentBudget, fetchBudgetWithSpending, selectBudgetsStatus } from '@/lib/features/budgets/budgetsSlice';
 import { getMonthString } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
 
 export function useInsightsData() {
-    const { transactions, getMonthlyTotal, getMonthlyExpenses } = useTransactions();
-    const { categories } = useCategories();
-    const { getBudgetByMonth } = useBudgets();
+    const dispatch = useAppDispatch();
+    const transactions = useAppSelector(selectTransactions);
+    const categories = useAppSelector(selectCategories);
+    const aggregates = useAppSelector(selectMonthlyAggregates);
+    const currentBudget = useAppSelector(selectCurrentBudget);
+
+    // Statuses
+    const txStatus = useAppSelector(selectTransactionsStatus);
+    const catStatus = useAppSelector(selectCategoriesStatus);
+    const budgetStatus = useAppSelector(selectBudgetsStatus);
+    const isLoading = txStatus === 'loading' || catStatus === 'loading' || budgetStatus === 'loading';
+
     const { formatCurrency } = useCurrency();
 
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -25,24 +35,35 @@ export function useInsightsData() {
         });
     }, [transactions, currentMonth]);
 
-    // Fetch monthly totals from database
-    const [currentMonthTotal, setCurrentMonthTotal] = useState(0);
-    const [previousMonthTotal, setPreviousMonthTotal] = useState(0);
+    // Data from Redux Store
+    const currentMonthTotal = aggregates.monthlyExpenses[currentMonth] || 0;
+    const previousMonthTotal = aggregates.monthlyExpenses[previousMonth] || 0;
 
+    // Fetch data if not available or stale
     useEffect(() => {
-        const fetchMonthlyTotals = async () => {
-            const [current, previous] = await Promise.all([
-                getMonthlyExpenses(currentMonth),
-                getMonthlyExpenses(previousMonth)
-            ]);
-            setCurrentMonthTotal(current);
-            setPreviousMonthTotal(previous);
+        const load = async () => {
+            // 1. Fetch Budget (populates expenses aggregate via sync)
+            if (!currentBudget || currentBudget.month !== currentMonth) {
+                dispatch(fetchBudgetWithSpending(currentMonth));
+                return;
+            }
+
+            // 2. Fetch Aggregates (Income)
+            // Note: Expense aggregate is skipped if budget populated it
+            if (aggregates.monthlyExpenses[currentMonth] === undefined) {
+                dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' }));
+            }
+
+            // 3. Previous month
+            if (aggregates.monthlyExpenses[previousMonth] === undefined) {
+                dispatch(fetchMonthlyAggregates({ month: previousMonth, type: 'expense' }));
+            }
         };
-        fetchMonthlyTotals();
-    }, [currentMonth, previousMonth, getMonthlyExpenses]);
+        load();
+    }, [currentMonth, previousMonth, dispatch, currentBudget, aggregates.monthlyExpenses]);
 
     // Budget data
-    const currentBudget = getBudgetByMonth(currentMonth);
+    // Budget is currentBudget from Redux
     const budgetUsage = currentBudget ? (currentMonthTotal / currentBudget.totalAmount) * 100 : 0;
     const budgetRemaining = currentBudget ? currentBudget.totalAmount - currentMonthTotal : 0;
 
@@ -309,6 +330,6 @@ export function useInsightsData() {
         daysElapsed,
         formatCurrency,
         currentMonthTransactions,
-        isLoading: useTransactions().isLoading || useCategories().isLoading || useBudgets().isLoading,
+        isLoading,
     };
 }

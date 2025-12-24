@@ -40,8 +40,9 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { useRecurring } from '@/context/recurring-context';
-import { useCategories } from '@/context/categories-context';
+import { createRecurring, updateRecurring } from '@/lib/features/recurring/recurringSlice';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { selectCategories } from '@/lib/features/categories/categoriesSlice';
 import { useCurrency } from '@/hooks/use-currency';
 import { useHaptics } from '@/hooks/use-haptics';
 import { recurringSchema, RecurringFormData } from '@/lib/validations';
@@ -61,8 +62,8 @@ export const RecurringModal = memo(function RecurringModal({
     onOpenChange,
     recurring
 }: RecurringModalProps) {
-    const { createRecurring, updateRecurring } = useRecurring();
-    const { categories } = useCategories();
+    const dispatch = useAppDispatch();
+    const categories = useAppSelector(selectCategories);
     const { symbol } = useCurrency();
     const haptics = useHaptics();
     const [isLoading, setIsLoading] = useState(false);
@@ -122,11 +123,11 @@ export const RecurringModal = memo(function RecurringModal({
                 next_date: data.next_date.toISOString()
             };
             if (isEditMode && recurring) {
-                await updateRecurring(recurring.id, payload);
+                await dispatch(updateRecurring({ id: recurring.id, input: payload })).unwrap();
                 haptics.success();
                 toast.success('Recurring transaction updated');
             } else {
-                await createRecurring(payload);
+                await dispatch(createRecurring(payload)).unwrap();
                 haptics.success();
                 toast.success('Recurring transaction created');
             }

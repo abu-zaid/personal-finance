@@ -19,8 +19,17 @@ import {
 
 import { cn } from '@/lib/utils';
 import { TransactionWithCategory, TransactionSort } from '@/types';
-import { useTransactions } from '@/context/transactions-context';
-import { useCategories } from '@/context/categories-context';
+import {
+  setFilters,
+  fetchTransactions,
+  deleteTransaction,
+  fetchMonthlyAggregates,
+  selectTransactions,
+  selectTransactionsStatus,
+  selectTransactionsError
+} from '@/lib/features/transactions/transactionsSlice';
+import { selectCategories } from '@/lib/features/categories/categoriesSlice';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useCurrency } from '@/hooks/use-currency';
 import { useMediaQuery } from '@/hooks/use-media-query';
 
@@ -52,19 +61,16 @@ import { CategoryIcon } from '@/components/features/categories';
 import { TransactionModal } from '@/components/features/transactions';
 
 export default function TransactionsPage() {
-  // Context
-  const {
-    transactions,
-    isLoading,
-    deleteTransaction,
-    loadMore,
-    hasMore,
-    getMonthlyIncome,
-    getMonthlyExpenses,
-    currentFilters,
-    setFilters
-  } = useTransactions();
-  const { categories } = useCategories();
+  // Redux & Context
+  const dispatch = useAppDispatch();
+  const transactions = useAppSelector(selectTransactions);
+  const status = useAppSelector(selectTransactionsStatus);
+  const error = useAppSelector(selectTransactionsError);
+  const categories = useAppSelector(selectCategories);
+  const { hasMore, filters: currentFilters, totalCount } = useAppSelector((state) => state.transactions);
+
+  const isLoading = status === 'loading' && transactions.length === 0;
+
   const { formatCurrency, symbol } = useCurrency();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -74,19 +80,32 @@ export default function TransactionsPage() {
   const currentMonth = format(new Date(), 'yyyy-MM');
 
   // Sync monthly totals when month changes
+  // Sync monthly totals when month changes
   const fetchMonthlyTotals = useCallback(async () => {
-    const [income, expenses] = await Promise.all([
-      getMonthlyIncome(currentMonth),
-      getMonthlyExpenses(currentMonth)
-    ]);
-    setMonthlyIncome(income);
-    setMonthlyExpense(expenses);
-  }, [currentMonth, getMonthlyIncome, getMonthlyExpenses]);
+    try {
+      const incomeResult = await dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' })).unwrap();
+      const expenseResult = await dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' })).unwrap();
 
+      setMonthlyIncome(incomeResult.total);
+      setMonthlyExpense(expenseResult.total);
+    } catch (e) {
+      console.error('Failed to fetch monthly totals', e);
+    }
+  }, [currentMonth, dispatch]);
+
+  // Sync monthly totals when month changes
   // Sync monthly totals when month changes
   useEffect(() => {
     fetchMonthlyTotals();
-  }, [currentMonth, getMonthlyIncome, getMonthlyExpenses]);
+  }, [fetchMonthlyTotals]);
+
+  // Initial Fetch
+  useEffect(() => {
+    // Only fetch if we have no items or if explicit refetch is needed. 
+    // Ideally the store might persist, but for now let's ensure we have data.
+    // If we want to refetch every time we visit the page:
+    dispatch(fetchTransactions({ page: 0 }));
+  }, [dispatch]);
 
   // Local State
   const [isBatchMode, setIsBatchMode] = useState(false);
@@ -128,9 +147,15 @@ export default function TransactionsPage() {
     return result;
   }, [transactions, sortConfig]);
 
+  const loadMore = useCallback(() => {
+    if (hasMore && status !== 'loading') {
+      const nextPage = Math.ceil(transactions.length / 20);
+      dispatch(fetchTransactions({ page: nextPage, append: true }));
+    }
+  }, [hasMore, status, transactions.length, dispatch]);
+
   const handleScroll = useCallback((entries: IntersectionObserverEntry[]) => {
     const target = entries[0];
-    // Check internal loaded count vs total count logic inside context
     if (target.isIntersecting && !isLoading) {
       loadMore();
     }
@@ -185,7 +210,7 @@ export default function TransactionsPage() {
     setIsBatchMode(false);
 
     try {
-      await Promise.all(ids.map(id => deleteTransaction(id)));
+      await Promise.all(ids.map(id => dispatch(deleteTransaction(id)).unwrap()));
       toast.success(`Deleted ${ids.length} transactions`);
     } catch (err) {
       toast.error("Some transactions failed to delete");
@@ -194,12 +219,15 @@ export default function TransactionsPage() {
 
   // Helper to update specific filters
   const updateFilters = (updates: Partial<typeof currentFilters>) => {
-    setFilters({ ...currentFilters, ...updates });
+    const newFilters = { ...currentFilters, ...updates };
+    dispatch(setFilters(newFilters));
+    dispatch(fetchTransactions({ page: 0 }));
   };
 
   const clearFilters = () => {
-    setFilters({});
+    dispatch(setFilters({}));
     setSortConfig({ field: 'date', order: 'desc' });
+    dispatch(fetchTransactions({ page: 0 }));
   };
 
   const activeFilterCount = [
@@ -358,8 +386,8 @@ export default function TransactionsPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => updateFilters({
-                              startDate: startOfMonth(new Date()),
-                              endDate: endOfMonth(new Date())
+                              startDate: startOfMonth(new Date()).toISOString(),
+                              endDate: endOfMonth(new Date()).toISOString()
                             })}
                           >
                             This Month
@@ -368,8 +396,8 @@ export default function TransactionsPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => updateFilters({
-                              startDate: subDays(new Date(), 30),
-                              endDate: new Date()
+                              startDate: subDays(new Date(), 30).toISOString(),
+                              endDate: new Date().toISOString()
                             })}
                           >
                             Last 30 Days
@@ -379,7 +407,7 @@ export default function TransactionsPage() {
                           <div className="flex items-center gap-2 text-sm text-primary bg-primary/10 px-3 py-2 rounded-md">
                             <CalendarIcon className="h-4 w-4" />
                             <span>
-                              {format(currentFilters.startDate, 'MMM d')} - {currentFilters.endDate ? format(currentFilters.endDate, 'MMM d, yyyy') : 'Now'}
+                              {format(new Date(currentFilters.startDate!), 'MMM d')} - {currentFilters.endDate ? format(new Date(currentFilters.endDate), 'MMM d, yyyy') : 'Now'}
                             </span>
                             <Button
                               variant="ghost"
@@ -411,7 +439,7 @@ export default function TransactionsPage() {
                                 onClick={() => {
                                   const current = currentFilters.categoryIds || [];
                                   if (isSelected) {
-                                    updateFilters({ categoryIds: current.filter(id => id !== cat.id) });
+                                    updateFilters({ categoryIds: current.filter((id: string) => id !== cat.id) });
                                   } else {
                                     updateFilters({ categoryIds: [...current, cat.id] });
                                   }
@@ -544,7 +572,7 @@ export default function TransactionsPage() {
                   onClick={() => {
                     const current = currentFilters.categoryIds || [];
                     if (isSelected) {
-                      updateFilters({ categoryIds: current.filter(id => id !== cat.id) });
+                      updateFilters({ categoryIds: current.filter((id: string) => id !== cat.id) });
                     } else {
                       updateFilters({ categoryIds: [...current, cat.id] });
                     }

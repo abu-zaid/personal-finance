@@ -7,34 +7,47 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     TrendingUp,
-    MoreHorizontal
 } from 'lucide-react';
 
-import { useAuth } from '@/context/auth-context';
-import { useTransactions } from '@/context/transactions-context';
-import { useBudgets } from '@/context/budgets-context';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
 import { AnimatedNumber } from '@/components/animations';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+// import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
 import { ExpenseDonutChart } from '@/components/features/charts/expense-donut-chart';
-import { SpendingTrendChart } from '@/components/features/charts/spending-trend-chart';
+// import { SpendingTrendChart } from '@/components/features/charts/spending-trend-chart';
+import { DailySpendingChart } from '@/components/features/charts/daily-spending-chart';
 import { RecentTransactions } from '@/components/features/transactions/recent-transactions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardSkeleton, TransactionSkeleton, ChartSkeleton } from '@/components/skeletons/skeleton-loaders';
 
-function DashboardHeader({ user }: { user: any }) {
+// Redux
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { selectUser } from '@/lib/features/auth/authSlice';
+import {
+    selectTransactions,
+    fetchMonthlyAggregates,
+    selectMonthlyAggregates,
+    fetchTransactions
+} from '@/lib/features/transactions/transactionsSlice';
+import {
+    selectCurrentBudget,
+    fetchBudgetWithSpending
+} from '@/lib/features/budgets/budgetsSlice';
+
+import { User } from '@/types';
+
+function DashboardHeader({ user }: { user: User | null }) {
     return (
         <div className="flex items-center justify-between py-4 px-2">
             <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                    <AvatarImage src={user?.image} />
+                    <AvatarImage src={user?.avatarUrl} />
                     <AvatarFallback className="bg-primary/10 text-primary font-bold">
                         {user?.name?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>
@@ -48,46 +61,197 @@ function DashboardHeader({ user }: { user: any }) {
     );
 }
 
-// Placeholder for charts
-function ExpenseChartPlaceholder() {
-    return (
-        <div className="h-[300px] w-full bg-muted/20 rounded-3xl animate-pulse flex items-center justify-center text-muted-foreground text-sm">
-            Expense Donut Chart Area
-        </div>
-    );
-}
 
-function TrendChartPlaceholder() {
-    return (
-        <div className="h-[200px] w-full bg-muted/20 rounded-3xl animate-pulse flex items-center justify-center text-muted-foreground text-sm">
-            Trend Chart Area
-        </div>
-    );
-}
 
 export default function DashboardPage() {
-    const { user } = useAuth();
-    const { formatCurrency, symbol } = useCurrency();
+    const dispatch = useAppDispatch();
+    const user = useAppSelector(selectUser);
+    const transactions = useAppSelector(selectTransactions);
+    const currentBudget = useAppSelector(selectCurrentBudget);
+    const aggregates = useAppSelector(selectMonthlyAggregates);
+    // const transactionsStatus = useAppSelector(selectTransactionsStatus);
 
-    const { transactions, getMonthlyIncome, getMonthlyExpenses } = useTransactions();
-    const { getBudgetByMonth } = useBudgets();
+    const { symbol } = useCurrency();
+
     const [timeRange, setTimeRange] = useState<'weekly' | 'monthly'>('weekly');
-    const [monthlyIncome, setMonthlyIncome] = useState(0);
-    const [monthlyExpense, setMonthlyExpense] = useState(0);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    // const [monthlyIncome, setMonthlyIncome] = useState(0); // Use Redux instead
+    // const [monthlyExpense, setMonthlyExpense] = useState(0); // Use Redux instead
     const currentMonth = format(new Date(), 'yyyy-MM');
 
-    // Fetch monthly totals from database
+    // Reset selection when time range changes
     useEffect(() => {
-        const fetchMonthlyTotals = async () => {
-            const [income, expenses] = await Promise.all([
-                getMonthlyIncome(currentMonth),
-                getMonthlyExpenses(currentMonth)
-            ]);
-            setMonthlyIncome(income);
-            setMonthlyExpense(expenses);
+        setSelectedDate(null);
+    }, [timeRange]);
+
+    // Get totals from Redux
+    const monthlyIncome = aggregates.monthlyIncome[currentMonth] || 0;
+    const monthlyExpense = aggregates.monthlyExpenses[currentMonth] || 0;
+
+    // Fetch monthly totals and budget
+    // We only trigger this on MOUNT or when currentMonth changes.
+    // We do NOT rely on `currentBudget` or `aggregates` in the dependency array
+    // because that causes re-runs when data arrives, potentially triggering double-fetches.
+    useEffect(() => {
+        const loadDashboardData = async () => {
+            // 1. Fetch Budget
+            dispatch(fetchBudgetWithSpending(currentMonth));
+
+            // 2. Fetch Aggregates (Income)
+            // We check store state directly to avoid redundant dispatch if already loaded
+            // (though the thunk condition handles this, safe double-checking doesn't hurt)
+            const state = (window as any).store?.getState?.() || {};
+            // fallback if window.store isn't exposed (it usually isn't in prod), 
+            // so we rely on the thunk's internal condition.
+
+            // Dispatching these will basically check the "condition" in the slice 
+            // and abort if data is there. This is safe to call once on mount.
+            dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' }));
+            dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' }));
         };
-        fetchMonthlyTotals();
-    }, [currentMonth, getMonthlyIncome, getMonthlyExpenses]);
+
+        loadDashboardData();
+    }, [dispatch, currentMonth]);
+
+    // Separate effect for Transactions List to avoid infinite loops
+    // This should only run when currentMonth changes, not when aggregates/budget update
+    useEffect(() => {
+        dispatch(fetchTransactions({ page: 0, pageSize: 1000 }));
+    }, [dispatch, currentMonth]);
+
+    // Calculate today's spending
+    const todaySpending = useMemo(() => {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        return transactions
+            .filter(t =>
+                t.type === 'expense' &&
+                format(new Date(t.date), 'yyyy-MM-dd') === today
+            )
+            .reduce((sum, t) => sum + t.amount, 0);
+    }, [transactions]);
+
+    const dailyAllowance = useMemo(() => {
+        if (!currentBudget) return 0;
+
+        const budgetRemaining = currentBudget.totalAmount - monthlyExpense;
+        const today = new Date();
+        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        const daysRemaining = Math.max(1, lastDayOfMonth.getDate() - today.getDate() + 1);
+
+        const dailyBudget = budgetRemaining / daysRemaining;
+
+        // Subtract today's spending to show how much MORE can be spent
+        return dailyBudget - todaySpending;
+    }, [currentBudget, monthlyExpense, todaySpending]);
+
+    // Total balance is income - expenses for current month
+    const totalBalance = useMemo(() => {
+        return monthlyIncome - monthlyExpense;
+    }, [monthlyIncome, monthlyExpense]);
+
+    const expenseData = useMemo(() => {
+        let filteredTransactions = transactions.filter(t => t.type === 'expense');
+
+        if (timeRange === 'weekly') {
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            filteredTransactions = filteredTransactions.filter(t => new Date(t.date) >= oneWeekAgo);
+        } else {
+            // Monthly - match current month
+            filteredTransactions = filteredTransactions.filter(t => format(new Date(t.date), 'yyyy-MM') === currentMonth);
+        }
+
+        // Filter by selected date if one is clicked on the chart
+        if (selectedDate) {
+            filteredTransactions = filteredTransactions.filter(t => {
+                const dateVal = new Date(t.date);
+                const formatStr = timeRange === 'weekly' ? 'EEE' : 'd';
+                return format(dateVal, formatStr) === selectedDate;
+            });
+        }
+
+        // Group by category
+        const categoryMap = new Map<string, { name: string; value: number; color: string }>();
+
+        filteredTransactions.forEach(t => {
+            const existing = categoryMap.get(t.categoryId) || {
+                name: t.category?.name || 'Unknown',
+                value: 0,
+                color: t.category?.color || '#cbd5e1'
+            };
+            existing.value += t.amount;
+            categoryMap.set(t.categoryId, existing);
+        });
+
+        // Convert to array and sort by value
+        const sortedCategories = Array.from(categoryMap.values())
+            .sort((a, b) => b.value - a.value);
+
+        // Take top 4 or return empty state if no data
+        if (sortedCategories.length === 0) {
+            return [{ name: 'No Data', value: 1, color: '#e2e8f0' }];
+        }
+
+        return sortedCategories.slice(0, 4);
+    }, [transactions, currentMonth, timeRange, selectedDate]);
+
+    const trendData = useMemo(() => {
+        let days: Date[];
+        const today = new Date();
+
+        if (timeRange === 'weekly') {
+            days = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(today);
+                d.setDate(today.getDate() - (6 - i));
+                return d;
+            });
+        } else {
+            // Monthly: Show dates from 1st to today
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const daysInMonthSoFar = today.getDate();
+
+            days = Array.from({ length: daysInMonthSoFar }, (_, i) => {
+                return new Date(year, month, i + 1);
+            });
+        }
+
+        return days.map(day => {
+            const dayStr = format(day, 'yyyy-MM-dd');
+            const dayName = timeRange === 'weekly' ? format(day, 'EEE') : format(day, 'd');
+
+            const dayTransactions = transactions
+                .filter(t =>
+                    t.type === 'expense' &&
+                    format(new Date(t.date), 'yyyy-MM-dd') === dayStr
+                );
+
+            const dayAmount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+            // Find top category
+            const categoryTotals = new Map<string, number>();
+            dayTransactions.forEach(t => {
+                const catName = t.category?.name || 'Uncategorized';
+                categoryTotals.set(catName, (categoryTotals.get(catName) || 0) + t.amount);
+            });
+
+            let topCategory = '';
+            let maxVal = 0;
+            categoryTotals.forEach((val, key) => {
+                if (val > maxVal) {
+                    maxVal = val;
+                    topCategory = key;
+                }
+            });
+
+            return {
+                date: dayName,
+                amount: dayAmount,
+                count: dayTransactions.length,
+                topCategory: topCategory
+            };
+        });
+    }, [transactions, timeRange]);
 
     // Loading State
     if (!user) { // Basic auth loading or while fetching initial data
@@ -132,117 +296,6 @@ export default function DashboardPage() {
             </div>
         );
     }
-
-    // Get budget and calculate daily allowance
-    const currentBudget = getBudgetByMonth(currentMonth);
-
-    // Calculate today's spending
-    const todaySpending = useMemo(() => {
-        const today = format(new Date(), 'yyyy-MM-dd');
-        return transactions
-            .filter(t =>
-                t.type === 'expense' &&
-                format(new Date(t.date), 'yyyy-MM-dd') === today
-            )
-            .reduce((sum, t) => sum + t.amount, 0);
-    }, [transactions]);
-
-    const dailyAllowance = useMemo(() => {
-        if (!currentBudget) return 0;
-
-        const budgetRemaining = currentBudget.totalAmount - monthlyExpense;
-        const today = new Date();
-        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        const daysRemaining = Math.max(1, lastDayOfMonth.getDate() - today.getDate() + 1);
-
-        const dailyBudget = budgetRemaining / daysRemaining;
-
-        // Subtract today's spending to show how much MORE can be spent
-        return dailyBudget - todaySpending;
-    }, [currentBudget, monthlyExpense, todaySpending]);
-
-    // Total balance is income - expenses for current month
-    const totalBalance = useMemo(() => {
-        return monthlyIncome - monthlyExpense;
-    }, [monthlyIncome, monthlyExpense]);
-
-    const expenseData = useMemo(() => {
-        let filteredTransactions = transactions.filter(t => t.type === 'expense');
-
-        if (timeRange === 'weekly') {
-            const oneWeekAgo = new Date();
-            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            filteredTransactions = filteredTransactions.filter(t => new Date(t.date) >= oneWeekAgo);
-        } else {
-            // Monthly - match current month
-            filteredTransactions = filteredTransactions.filter(t => format(new Date(t.date), 'yyyy-MM') === currentMonth);
-        }
-
-        // Group by category
-        const categoryMap = new Map<string, { name: string; value: number; color: string }>();
-
-        filteredTransactions.forEach(t => {
-            const existing = categoryMap.get(t.categoryId) || {
-                name: t.category.name,
-                value: 0,
-                color: t.category.color || '#cbd5e1'
-            };
-            existing.value += t.amount;
-            categoryMap.set(t.categoryId, existing);
-        });
-
-        // Convert to array and sort by value
-        const sortedCategories = Array.from(categoryMap.values())
-            .sort((a, b) => b.value - a.value);
-
-        // Take top 4 or return empty state if no data
-        if (sortedCategories.length === 0) {
-            return [{ name: 'No Data', value: 1, color: '#e2e8f0' }];
-        }
-
-        return sortedCategories.slice(0, 4);
-    }, [transactions, currentMonth, timeRange]);
-
-    const trendData = useMemo(() => {
-        let days: Date[];
-        const today = new Date();
-
-        if (timeRange === 'weekly') {
-            days = Array.from({ length: 7 }, (_, i) => {
-                const d = new Date(today);
-                d.setDate(today.getDate() - (6 - i));
-                return d;
-            });
-        } else {
-            // Monthly: Show dates from 1st to today
-            const year = today.getFullYear();
-            const month = today.getMonth();
-            const daysInMonthSoFar = today.getDate();
-
-            days = Array.from({ length: daysInMonthSoFar }, (_, i) => {
-                return new Date(year, month, i + 1);
-            });
-        }
-
-        return days.map(day => {
-            const dayStr = format(day, 'yyyy-MM-dd');
-            // For monthly view, just show date number. For weekly, show day name.
-            // If it's a new year/month boundary situation, might be good to stay simple.
-            const dayName = timeRange === 'weekly' ? format(day, 'EEE') : format(day, 'd');
-
-            const dayAmount = transactions
-                .filter(t =>
-                    t.type === 'expense' &&
-                    format(new Date(t.date), 'yyyy-MM-dd') === dayStr
-                )
-                .reduce((sum, t) => sum + t.amount, 0);
-
-            return {
-                date: dayName,
-                amount: dayAmount
-            };
-        });
-    }, [transactions, timeRange]);
 
     return (
         <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">
@@ -353,7 +406,11 @@ export default function DashboardPage() {
                                                 <p className="text-xs text-muted-foreground">Spending over time</p>
                                             </div>
                                         </div>
-                                        <SpendingTrendChart data={trendData} />
+                                        <DailySpendingChart
+                                            data={trendData}
+                                            onBarClick={(date) => setSelectedDate(prev => prev === date ? null : date)}
+                                            selectedDate={selectedDate}
+                                        />
                                     </div>
 
                                     <Separator className="bg-border/50" />
@@ -366,7 +423,11 @@ export default function DashboardPage() {
                                             </div>
                                             <div>
                                                 <h4 className="font-bold text-sm">Expense Breakdown</h4>
-                                                <p className="text-xs text-muted-foreground">Where your money went</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {selectedDate
+                                                        ? `Breakdown for ${selectedDate}`
+                                                        : 'Where your money went'}
+                                                </p>
                                             </div>
                                         </div>
                                         <ExpenseDonutChart

@@ -27,9 +27,15 @@ import {
 } from '@/components/ui/sheet';
 import { EmptyState } from '@/components/shared';
 import { CategoryIcon } from '@/components/features/categories';
-import { useBudgets } from '@/context/budgets-context';
-import { useCategories } from '@/context/categories-context';
-import { useTransactions } from '@/context/transactions-context';
+import {
+  fetchBudgetWithSpending,
+  createBudget,
+  updateBudget,
+  selectCurrentBudget,
+  selectBudgetsStatus
+} from '@/lib/features/budgets/budgetsSlice';
+import { selectCategories } from '@/lib/features/categories/categoriesSlice';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn, getMonthString } from '@/lib/utils';
 import {
@@ -244,9 +250,11 @@ function BudgetForm({
 
 
 export default function BudgetsPage() {
-  const { categories } = useCategories();
-  const { createBudget, updateBudget, getBudgetByMonth, isLoading } = useBudgets();
-  const { getCategoryTotal, getMonthlyTotal } = useTransactions();
+  const dispatch = useAppDispatch();
+  const categories = useAppSelector(selectCategories);
+  const currentBudget = useAppSelector(selectCurrentBudget);
+  const status = useAppSelector(selectBudgetsStatus);
+  const isLoading = status === 'loading';
   const { formatCurrency, symbol } = useCurrency();
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
@@ -259,8 +267,12 @@ export default function BudgetsPage() {
   const [allocations, setAllocations] = useState<Record<string, number>>({});
 
   const currentMonth = getMonthString(selectedDate);
-  const currentBudget = getBudgetByMonth(currentMonth);
   const isCurrentMonth = getMonthString(new Date()) === currentMonth;
+
+  // Fetch Budget Data when month changes
+  useEffect(() => {
+    dispatch(fetchBudgetWithSpending(currentMonth));
+  }, [currentMonth, dispatch]);
 
   const handlePrevMonth = () => setSelectedDate(subMonths(selectedDate, 1));
   const handleNextMonth = () => setSelectedDate(addMonths(selectedDate, 1));
@@ -293,67 +305,51 @@ export default function BudgetsPage() {
         .map(([categoryId, amount]) => ({ categoryId, amount }));
 
       if (currentBudget) {
-        await updateBudget(currentBudget.id, {
-          totalAmount: totalBudget,
-          allocations: budgetAllocations,
-        });
+        await dispatch(updateBudget({
+          id: currentBudget.id,
+          input: {
+            totalAmount: totalBudget,
+            allocations: budgetAllocations,
+          }
+        })).unwrap();
         toast.success('Budget updated');
       } else {
-        await createBudget({
+        await dispatch(createBudget({
           month: currentMonth,
           totalAmount: totalBudget,
           allocations: budgetAllocations,
-        });
+        })).unwrap();
         toast.success('Budget created');
       }
+
+      // Refresh to get updated calculations (if needed, or optmistic updates handle it)
+      dispatch(fetchBudgetWithSpending(currentMonth));
+
       setDialogOpen(false);
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error('Failed to save budget');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // --- Calculations ---
-  const [totalMonthSpent, setTotalMonthSpent] = useState(0);
-  const [allocationsWithSpending, setAllocationsWithSpending] = useState<any[]>([]);
+  // --- Derived Calculations from Redux State ---
+  const totalMonthSpent = currentBudget?.totalSpent || 0;
 
-  // Fetch monthly total from database
-  useEffect(() => {
-    const fetchMonthlyTotal = async () => {
-      const total = await getMonthlyTotal(currentMonth);
-      setTotalMonthSpent(total);
-    };
-    fetchMonthlyTotal();
-  }, [currentMonth, getMonthlyTotal]);
+  // Prepare allocations with category data for display
+  const allocationsWithSpending = useMemo(() => {
+    if (!currentBudget) return [];
 
-  // Fetch category totals and calculate allocations with spending
-  useEffect(() => {
-    if (!currentBudget) {
-      setAllocationsWithSpending([]);
-      return;
-    }
-
-    const fetchAllocationsWithSpending = async () => {
-      const allocationsData = await Promise.all(
-        currentBudget.allocations.map(async (allocation) => {
-          const spent = await getCategoryTotal(allocation.categoryId, currentMonth);
-          const remaining = allocation.amount - spent;
-          const percentage = allocation.amount > 0 ? (spent / allocation.amount) * 100 : 0;
-          return {
-            ...allocation,
-            spent,
-            remaining,
-            percentage,
-            category: categories.find((c) => c.id === allocation.categoryId),
-          };
-        })
-      );
-      setAllocationsWithSpending(allocationsData.sort((a, b) => b.percentage - a.percentage));
-    };
-
-    fetchAllocationsWithSpending();
-  }, [currentBudget, categories, getCategoryTotal, currentMonth]);
+    return currentBudget.allocations.map(allocation => {
+      const category = categories.find(c => c.id === allocation.categoryId);
+      return {
+        ...allocation,
+        category,
+        percentage: allocation.amount > 0 ? (allocation.spent / allocation.amount) * 100 : 0
+      };
+    }).sort((a, b) => b.percentage - a.percentage);
+  }, [currentBudget, categories]);
 
   const overallRemaining = currentBudget ? currentBudget.totalAmount - totalMonthSpent : 0;
   const overallPercentage = currentBudget?.totalAmount

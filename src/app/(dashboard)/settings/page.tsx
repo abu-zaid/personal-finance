@@ -48,7 +48,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { useTransactions } from '@/context/transactions-context';
+import { useAppSelector } from '@/lib/hooks';
+import { selectTransactions } from '@/lib/features/transactions/transactionsSlice';
 import { format } from 'date-fns';
 
 // Memoized theme option component
@@ -102,7 +103,7 @@ const ThemeOption = memo(function ThemeOption({
 
 export default function SettingsPage() {
   const { user, logout, updatePreferences, updateProfile } = useAuth();
-  const { transactions } = useTransactions();
+  const transactions = useAppSelector(selectTransactions);
   const { theme, setTheme } = useTheme();
   const haptics = useHaptics();
 
