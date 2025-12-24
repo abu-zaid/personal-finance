@@ -60,13 +60,13 @@ export function TransactionModal({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[90vh] max-h-[90vh] rounded-t-[2rem] p-0 gap-0 border-t-0 bg-zinc-950 text-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.3)] flex flex-col after:hidden"
+        className="h-[90vh] max-h-[90vh] rounded-t-[2rem] p-0 gap-0 border-t-0 bg-background text-foreground shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.3)] flex flex-col after:hidden"
       >
         <SheetTitle className="sr-only">
           {isEditMode ? 'Edit Transaction' : 'Add Transaction'}
         </SheetTitle>
         <div className="flex items-center justify-center pt-3 pb-2 shrink-0">
-          <div className="w-12 h-1.5 bg-zinc-800 rounded-full" />
+          <div className="w-12 h-1.5 bg-border rounded-full" />
         </div>
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden">

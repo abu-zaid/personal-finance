@@ -116,28 +116,42 @@ export function TransactionForm({
 
     // Shared Form Elements helpers
     const TypeToggle = () => (
-        <div className="bg-muted/50 p-1 rounded-full flex gap-1">
+        <div className="bg-muted/50 p-1 rounded-full flex gap-1 relative">
             <button
                 type="button"
                 onClick={() => { setValue('type', 'expense'); haptics.light(); }}
                 className={cn(
-                    "rounded-full text-sm font-medium transition-all",
+                    "relative rounded-full text-sm font-medium transition-colors z-10",
                     isDesktop ? "px-6 py-2" : "px-8 py-2.5",
-                    selectedType === 'expense' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    selectedType === 'expense' ? "text-white" : "text-muted-foreground hover:text-foreground"
                 )}
             >
-                Expense
+                {selectedType === 'expense' && (
+                    <motion.div
+                        layoutId="type-toggle-bg"
+                        className="absolute inset-0 bg-destructive rounded-full shadow-sm"
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                )}
+                <span className="relative z-10">Expense</span>
             </button>
             <button
                 type="button"
                 onClick={() => { setValue('type', 'income'); haptics.light(); }}
                 className={cn(
-                    "rounded-full text-sm font-medium transition-all",
+                    "relative rounded-full text-sm font-medium transition-colors z-10",
                     isDesktop ? "px-6 py-2" : "px-8 py-2.5",
-                    selectedType === 'income' ? "bg-emerald-500 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    selectedType === 'income' ? "text-white" : "text-muted-foreground hover:text-foreground"
                 )}
             >
-                Income
+                {selectedType === 'income' && (
+                    <motion.div
+                        layoutId="type-toggle-bg"
+                        className="absolute inset-0 bg-primary rounded-full shadow-sm"
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                )}
+                <span className="relative z-10">Income</span>
             </button>
         </div>
     );
@@ -146,7 +160,7 @@ export function TransactionForm({
         <div className="relative flex items-center justify-center gap-2">
             <span className={cn(
                 "font-medium text-muted-foreground",
-                isDesktop ? "text-3xl" : "text-4xl"
+                isDesktop ? "text-2xl" : "text-3xl"
             )}>
                 {symbol}
             </span>
@@ -158,10 +172,10 @@ export function TransactionForm({
                 placeholder="0"
                 className={cn(
                     "w-full max-w-[280px] text-center font-bold bg-transparent border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 placeholder:text-muted-foreground/20 caret-primary tabular-nums",
-                    isDesktop ? "h-20 text-7xl" : "h-24 text-8xl",
+                    isDesktop ? "h-16 text-4xl" : "h-20 text-5xl",
                     "!bg-transparent !border-none !shadow-none !ring-0 !outline-none",
                     "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                    selectedType === 'income' ? "text-emerald-500" : "text-foreground"
+                    selectedType === 'income' ? "text-primary" : "text-destructive"
                 )}
                 {...register('amount', { valueAsNumber: true })}
             />
@@ -247,7 +261,7 @@ export function TransactionForm({
                         <Button
                             type="submit"
                             size="lg"
-                            className={cn("w-full h-14 text-lg font-bold rounded-[2rem] shadow-lg transition-all", selectedType === 'income' ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/25" : "bg-foreground hover:bg-foreground/90 text-background shadow-zinc-500/25")}
+                            className={cn("w-full h-14 text-lg font-bold rounded-[2rem] shadow-lg transition-all text-white", selectedType === 'income' ? "bg-primary hover:bg-primary/90 shadow-primary/25" : "bg-destructive hover:bg-destructive/90 shadow-destructive/25")}
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : (isEditMode ? 'Update Transaction' : 'Save Transaction')}
@@ -271,7 +285,7 @@ export function TransactionForm({
             </div>
 
             {/* 2. Details Section */}
-            <div className="flex-1 bg-card rounded-t-[2rem] px-6 pt-6 pb-32 flex flex-col gap-6 shadow-[0_-1px_10px_rgba(0,0,0,0.05)] border-t border-border/50">
+            <div className="flex-1 bg-card rounded-t-[2rem] px-6 pt-6 pb-6 flex flex-col gap-6 shadow-[0_-1px_10px_rgba(0,0,0,0.05)] border-t border-border/50">
 
                 {/* Category Carousel Mobile */}
                 <div className="space-y-3">
@@ -337,7 +351,7 @@ export function TransactionForm({
                     <Button
                         type="submit"
                         size="lg"
-                        className={cn("w-full h-14 text-lg font-bold rounded-[2rem] shadow-lg transition-all", selectedType === 'income' ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/25" : "bg-foreground hover:bg-foreground/90 text-background shadow-zinc-500/25")}
+                        className={cn("w-full h-14 text-lg font-bold rounded-[2rem] shadow-lg transition-all text-white", selectedType === 'income' ? "bg-primary hover:bg-primary/90 shadow-primary/25" : "bg-destructive hover:bg-destructive/90 shadow-destructive/25")}
                         disabled={isSubmitting}
                     >
                         {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : (isEditMode ? 'Update Transaction' : 'Save Transaction')}
