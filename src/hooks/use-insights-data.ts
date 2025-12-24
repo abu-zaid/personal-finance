@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, eachWeekOfInterval, isSameWeek } from 'date-fns';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { selectTransactions, fetchMonthlyAggregates, selectTransactionsStatus } from '@/lib/features/transactions/transactionsSlice';
+import { selectTransactions, fetchMonthlyAggregates, selectTransactionsStatus, selectMonthlyAggregates } from '@/lib/features/transactions/transactionsSlice';
 import { selectCategories, selectCategoriesStatus } from '@/lib/features/categories/categoriesSlice';
 import { selectCurrentBudget, fetchBudgetWithSpending, selectBudgetsStatus } from '@/lib/features/budgets/budgetsSlice';
 import { getMonthString } from '@/lib/utils';
@@ -11,6 +11,7 @@ export function useInsightsData() {
     const dispatch = useAppDispatch();
     const transactions = useAppSelector(selectTransactions);
     const categories = useAppSelector(selectCategories);
+    const aggregates = useAppSelector(selectMonthlyAggregates);
     const currentBudget = useAppSelector(selectCurrentBudget);
 
     // Statuses
@@ -34,24 +35,32 @@ export function useInsightsData() {
         });
     }, [transactions, currentMonth]);
 
-    // Fetch monthly totals from database
-    const [currentMonthTotal, setCurrentMonthTotal] = useState(0);
-    const [previousMonthTotal, setPreviousMonthTotal] = useState(0);
+    // Data from Redux Store
+    const currentMonthTotal = aggregates.monthlyExpenses[currentMonth] || 0;
+    const previousMonthTotal = aggregates.monthlyExpenses[previousMonth] || 0;
 
+    // Fetch data if not available or stale
     useEffect(() => {
-        const fetchMonthlyTotals = async () => {
-            // Ensure budget is fetched (if not already by Dashboard)
-            dispatch(fetchBudgetWithSpending(currentMonth));
+        const load = async () => {
+            // 1. Fetch Budget (populates expenses aggregate via sync)
+            if (!currentBudget || currentBudget.month !== currentMonth) {
+                dispatch(fetchBudgetWithSpending(currentMonth));
+                return;
+            }
 
-            const [current, previous] = await Promise.all([
-                dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' })).unwrap(),
-                dispatch(fetchMonthlyAggregates({ month: previousMonth, type: 'expense' })).unwrap()
-            ]);
-            setCurrentMonthTotal(current.total);
-            setPreviousMonthTotal(previous.total);
+            // 2. Fetch Aggregates (Income)
+            // Note: Expense aggregate is skipped if budget populated it
+            if (aggregates.monthlyExpenses[currentMonth] === undefined) {
+                dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' }));
+            }
+
+            // 3. Previous month
+            if (aggregates.monthlyExpenses[previousMonth] === undefined) {
+                dispatch(fetchMonthlyAggregates({ month: previousMonth, type: 'expense' }));
+            }
         };
-        fetchMonthlyTotals();
-    }, [currentMonth, previousMonth, dispatch]);
+        load();
+    }, [currentMonth, previousMonth, dispatch, currentBudget, aggregates.monthlyExpenses]);
 
     // Budget data
     // Budget is currentBudget from Redux

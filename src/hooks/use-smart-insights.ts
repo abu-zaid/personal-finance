@@ -1,8 +1,8 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { selectTransactions, fetchMonthlyAggregates } from '@/lib/features/transactions/transactionsSlice';
+import { selectTransactions, selectMonthlyAggregates } from '@/lib/features/transactions/transactionsSlice';
 import { selectCategories } from '@/lib/features/categories/categoriesSlice';
-import { selectCurrentBudget, fetchBudgetWithSpending } from '@/lib/features/budgets/budgetsSlice';
+import { selectCurrentBudget } from '@/lib/features/budgets/budgetsSlice';
 import { useCurrency } from '@/hooks/use-currency';
 import { getMonthString } from '@/lib/utils';
 import { subMonths, isSameDay } from 'date-fns';
@@ -20,29 +20,15 @@ export function useSmartInsights(): SmartInsight[] {
   const transactions = useAppSelector(selectTransactions);
   const categories = useAppSelector(selectCategories);
   const currentBudget = useAppSelector(selectCurrentBudget);
+  const aggregates = useAppSelector(selectMonthlyAggregates);
   const { formatCurrency } = useCurrency();
 
   const currentMonth = getMonthString(new Date());
   const previousMonth = getMonthString(subMonths(new Date(), 1));
 
-  // Fetch monthly totals from database
-  const [currentExpenses, setCurrentExpenses] = useState(0);
-  const [previousExpenses, setPreviousExpenses] = useState(0);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      // Ensure budget is fetched (if not already by Dashboard)
-      dispatch(fetchBudgetWithSpending(currentMonth));
-
-      const [current, previous] = await Promise.all([
-        dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' })).unwrap(),
-        dispatch(fetchMonthlyAggregates({ month: previousMonth, type: 'expense' })).unwrap()
-      ]);
-      setCurrentExpenses(current.total);
-      setPreviousExpenses(previous.total);
-    };
-    fetchData();
-  }, [currentMonth, previousMonth, dispatch]);
+  // Get totals from Redux store (populated by useInsightsData or other hooks)
+  const currentExpenses = aggregates.monthlyExpenses[currentMonth] || 0;
+  const previousExpenses = aggregates.monthlyExpenses[previousMonth] || 0;
 
   return useMemo(() => {
     const insights: SmartInsight[] = [];

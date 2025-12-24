@@ -161,7 +161,9 @@ export const fetchBudgetWithSpending = createAsyncThunk(
                 };
             });
 
-            const totalSpent = allocationsWithSpending.reduce((sum, a) => sum + a.spent, 0);
+            // Calculate total spent from ALL transactions, not just allocations
+            // This ensures meaningful "Total Spent" even for unbudgeted categories
+            const totalSpent = (transactions || []).reduce((sum, t) => sum + Number(t.amount), 0);
             const totalRemaining = budget.totalAmount - totalSpent;
 
             return {
@@ -173,6 +175,16 @@ export const fetchBudgetWithSpending = createAsyncThunk(
 
         } catch (err: any) {
             return rejectWithValue(err.message);
+        }
+    },
+    {
+        condition: (month, { getState }) => {
+            const state = getState() as any;
+            // Don't fetch if we already have the data for this month
+            if (state.budgets.currentBudget?.month === month) return false;
+            // Also check if we are already loading to handle race conditions
+            if (state.budgets.status === 'loading') return false;
+            return true;
         }
     }
 );

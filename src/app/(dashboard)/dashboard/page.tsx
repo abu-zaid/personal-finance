@@ -20,7 +20,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 
 import { ExpenseDonutChart } from '@/components/features/charts/expense-donut-chart';
-import { SpendingTrendChart } from '@/components/features/charts/spending-trend-chart';
+// import { SpendingTrendChart } from '@/components/features/charts/spending-trend-chart';
+import { DailySpendingChart } from '@/components/features/charts/daily-spending-chart';
 import { RecentTransactions } from '@/components/features/transactions/recent-transactions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardSkeleton, TransactionSkeleton, ChartSkeleton } from '@/components/skeletons/skeleton-loaders';
@@ -31,6 +32,8 @@ import { selectUser } from '@/lib/features/auth/authSlice';
 import {
     selectTransactions,
     fetchMonthlyAggregates,
+    selectMonthlyAggregates,
+    fetchTransactions
 } from '@/lib/features/transactions/transactionsSlice';
 import {
     selectCurrentBudget,
@@ -65,34 +68,55 @@ export default function DashboardPage() {
     const user = useAppSelector(selectUser);
     const transactions = useAppSelector(selectTransactions);
     const currentBudget = useAppSelector(selectCurrentBudget);
+    const aggregates = useAppSelector(selectMonthlyAggregates);
     // const transactionsStatus = useAppSelector(selectTransactionsStatus);
 
     const { symbol } = useCurrency();
 
     const [timeRange, setTimeRange] = useState<'weekly' | 'monthly'>('weekly');
-    const [monthlyIncome, setMonthlyIncome] = useState(0);
-    const [monthlyExpense, setMonthlyExpense] = useState(0);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    // const [monthlyIncome, setMonthlyIncome] = useState(0); // Use Redux instead
+    // const [monthlyExpense, setMonthlyExpense] = useState(0); // Use Redux instead
     const currentMonth = format(new Date(), 'yyyy-MM');
 
+    // Reset selection when time range changes
+    useEffect(() => {
+        setSelectedDate(null);
+    }, [timeRange]);
+
+    // Get totals from Redux
+    const monthlyIncome = aggregates.monthlyIncome[currentMonth] || 0;
+    const monthlyExpense = aggregates.monthlyExpenses[currentMonth] || 0;
+
     // Fetch monthly totals and budget
+    // We only trigger this on MOUNT or when currentMonth changes.
+    // We do NOT rely on `currentBudget` or `aggregates` in the dependency array
+    // because that causes re-runs when data arrives, potentially triggering double-fetches.
     useEffect(() => {
         const loadDashboardData = async () => {
-            // Fetch aggregations
-            dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' }))
-                .unwrap()
-                .then((val: { total: number }) => setMonthlyIncome(val.total))
-                .catch(console.error);
-
-            dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' }))
-                .unwrap()
-                .then((val: { total: number }) => setMonthlyExpense(val.total))
-                .catch(console.error);
-
-            // Fetch budget
+            // 1. Fetch Budget
             dispatch(fetchBudgetWithSpending(currentMonth));
+
+            // 2. Fetch Aggregates (Income)
+            // We check store state directly to avoid redundant dispatch if already loaded
+            // (though the thunk condition handles this, safe double-checking doesn't hurt)
+            const state = (window as any).store?.getState?.() || {};
+            // fallback if window.store isn't exposed (it usually isn't in prod), 
+            // so we rely on the thunk's internal condition.
+
+            // Dispatching these will basically check the "condition" in the slice 
+            // and abort if data is there. This is safe to call once on mount.
+            dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' }));
+            dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' }));
         };
 
         loadDashboardData();
+    }, [dispatch, currentMonth]);
+
+    // Separate effect for Transactions List to avoid infinite loops
+    // This should only run when currentMonth changes, not when aggregates/budget update
+    useEffect(() => {
+        dispatch(fetchTransactions({ page: 0, pageSize: 1000 }));
     }, [dispatch, currentMonth]);
 
     // Calculate today's spending
@@ -137,6 +161,15 @@ export default function DashboardPage() {
             filteredTransactions = filteredTransactions.filter(t => format(new Date(t.date), 'yyyy-MM') === currentMonth);
         }
 
+        // Filter by selected date if one is clicked on the chart
+        if (selectedDate) {
+            filteredTransactions = filteredTransactions.filter(t => {
+                const dateVal = new Date(t.date);
+                const formatStr = timeRange === 'weekly' ? 'EEE' : 'd';
+                return format(dateVal, formatStr) === selectedDate;
+            });
+        }
+
         // Group by category
         const categoryMap = new Map<string, { name: string; value: number; color: string }>();
 
@@ -160,7 +193,7 @@ export default function DashboardPage() {
         }
 
         return sortedCategories.slice(0, 4);
-    }, [transactions, currentMonth, timeRange]);
+    }, [transactions, currentMonth, timeRange, selectedDate]);
 
     const trendData = useMemo(() => {
         let days: Date[];
@@ -187,16 +220,35 @@ export default function DashboardPage() {
             const dayStr = format(day, 'yyyy-MM-dd');
             const dayName = timeRange === 'weekly' ? format(day, 'EEE') : format(day, 'd');
 
-            const dayAmount = transactions
+            const dayTransactions = transactions
                 .filter(t =>
                     t.type === 'expense' &&
                     format(new Date(t.date), 'yyyy-MM-dd') === dayStr
-                )
-                .reduce((sum, t) => sum + t.amount, 0);
+                );
+
+            const dayAmount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+            // Find top category
+            const categoryTotals = new Map<string, number>();
+            dayTransactions.forEach(t => {
+                const catName = t.category?.name || 'Uncategorized';
+                categoryTotals.set(catName, (categoryTotals.get(catName) || 0) + t.amount);
+            });
+
+            let topCategory = '';
+            let maxVal = 0;
+            categoryTotals.forEach((val, key) => {
+                if (val > maxVal) {
+                    maxVal = val;
+                    topCategory = key;
+                }
+            });
 
             return {
                 date: dayName,
-                amount: dayAmount
+                amount: dayAmount,
+                count: dayTransactions.length,
+                topCategory: topCategory
             };
         });
     }, [transactions, timeRange]);
@@ -354,7 +406,11 @@ export default function DashboardPage() {
                                                 <p className="text-xs text-muted-foreground">Spending over time</p>
                                             </div>
                                         </div>
-                                        <SpendingTrendChart data={trendData} />
+                                        <DailySpendingChart
+                                            data={trendData}
+                                            onBarClick={(date) => setSelectedDate(prev => prev === date ? null : date)}
+                                            selectedDate={selectedDate}
+                                        />
                                     </div>
 
                                     <Separator className="bg-border/50" />
@@ -367,7 +423,11 @@ export default function DashboardPage() {
                                             </div>
                                             <div>
                                                 <h4 className="font-bold text-sm">Expense Breakdown</h4>
-                                                <p className="text-xs text-muted-foreground">Where your money went</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {selectedDate
+                                                        ? `Breakdown for ${selectedDate}`
+                                                        : 'Where your money went'}
+                                                </p>
                                             </div>
                                         </div>
                                         <ExpenseDonutChart

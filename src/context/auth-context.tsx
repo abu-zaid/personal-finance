@@ -1,23 +1,21 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { createContext, useContext, useCallback, ReactNode } from 'react';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { User, UserPreferences } from '@/types';
+import {
+  selectUser,
+  selectIsAuthenticated,
+  updatePreferences as updatePreferencesThunk,
+  updateProfile as updateProfileThunk,
+  logout as logoutThunk,
+  selectAuth
+} from '@/lib/features/auth/authSlice';
 import { createClient } from '@/lib/supabase/client';
-import { UserPreferences, Currency, DateFormat, Theme } from '@/types';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatarUrl?: string;
-  preferences: UserPreferences;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 interface AuthContextType {
   user: User | null;
-  supabaseUser: SupabaseUser | null;
+  // supabaseUser: SupabaseUser | null; // Removed as it's redundant and unused externally
   isLoading: boolean;
   isAuthenticated: boolean;
   isConfigured: boolean;
@@ -29,125 +27,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const defaultPreferences: UserPreferences = {
-  currency: 'USD',
-  dateFormat: 'MM/DD/YYYY',
-  theme: 'system',
-  firstDayOfWeek: 0,
-};
-
-// Map database row to UserPreferences
-function mapDbToPreferences(row: {
-  currency: string;
-  date_format: string;
-  theme: string;
-  first_day_of_week: number;
-} | null): UserPreferences {
-  if (!row) return defaultPreferences;
-  return {
-    currency: row.currency as Currency,
-    dateFormat: row.date_format as DateFormat,
-    theme: row.theme as Theme,
-    firstDayOfWeek: row.first_day_of_week as 0 | 1,
-  };
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  const supabase = createClient();
-  const isConfigured = supabase !== null;
-
-  // Convert Supabase user to our User type (without preferences - instant)
-  const mapSupabaseUserQuick = useCallback((supaUser: SupabaseUser): User => {
-    return {
-      id: supaUser.id,
-      email: supaUser.email || '',
-      name: supaUser.user_metadata?.full_name || supaUser.user_metadata?.name || supaUser.email?.split('@')[0] || 'User',
-      avatarUrl: supaUser.user_metadata?.avatar_url || supaUser.user_metadata?.picture,
-      preferences: defaultPreferences,
-      createdAt: new Date(supaUser.created_at),
-      updatedAt: new Date(supaUser.updated_at || supaUser.created_at),
-    };
-  }, []);
-
-  // Fetch user preferences from Supabase (background, non-blocking)
-  const fetchAndUpdatePreferences = useCallback(async (userId: string) => {
-    if (!supabase) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-      
-      if (!error && data) {
-        const prefs = mapDbToPreferences(data);
-        setUser(prev => prev ? { ...prev, preferences: prefs } : null);
-      }
-    } catch {
-      // Preferences will use defaults, that's fine
-    }
-  }, [supabase]);
-
-  // Initialize auth state
-  useEffect(() => {
-    if (!supabase) {
-      setIsLoading(false);
-      return;
-    }
-
-    let isMounted = true;
-    
-    const initAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user && isMounted) {
-          setSupabaseUser(session.user);
-          // Set user immediately with defaults
-          setUser(mapSupabaseUserQuick(session.user));
-          // Fetch preferences in background (non-blocking)
-          fetchAndUpdatePreferences(session.user.id);
-        }
-      } catch (error) {
-        console.error('Error loading auth:', error);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    initAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event);
-        if (session?.user) {
-          setSupabaseUser(session.user);
-          // Set user immediately with defaults
-          setUser(mapSupabaseUserQuick(session.user));
-          setIsLoading(false);
-          // Fetch preferences in background (non-blocking)
-          fetchAndUpdatePreferences(session.user.id);
-        } else {
-          setSupabaseUser(null);
-          setUser(null);
-          setIsLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [supabase, mapSupabaseUserQuick, fetchAndUpdatePreferences]);
+  const dispatch = useAppDispatch();
+  // Read state from Redux (Single Source of Truth)
+  // AuthListener handles the actual fetching and updating of this state.
+  const user = useAppSelector(selectUser);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const { isLoading, isConfigured } = useAppSelector(selectAuth);
 
   const signInWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    const supabase = createClient();
     if (!supabase) {
       return { success: false, error: 'Supabase is not configured' };
     }
@@ -172,77 +61,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       return { success: false, error: 'Failed to sign in with Google' };
     }
-  }, [supabase]);
+  }, []);
 
   const logout = useCallback(async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
-    setUser(null);
-    setSupabaseUser(null);
-  }, [supabase]);
+    await dispatch(logoutThunk());
+  }, [dispatch]);
 
   const updatePreferences = useCallback(
     async (preferences: Partial<UserPreferences>) => {
-      if (!user || !supabase) return;
-
-      const updatedPreferences = { ...user.preferences, ...preferences };
-
-      // Update in database
-      try {
-        const { error } = await supabase
-          .from('user_preferences')
-          .upsert({
-            user_id: user.id,
-            currency: updatedPreferences.currency,
-            date_format: updatedPreferences.dateFormat,
-            theme: updatedPreferences.theme,
-            first_day_of_week: updatedPreferences.firstDayOfWeek,
-          }, {
-            onConflict: 'user_id',
-          });
-
-        if (error) {
-          console.error('Error updating preferences:', error);
-          return;
-        }
-
-        // Update local state
-        const updatedUser: User = {
-          ...user,
-          preferences: updatedPreferences,
-          updatedAt: new Date(),
-        };
-        setUser(updatedUser);
-      } catch (err) {
-        console.error('Error updating preferences:', err);
-      }
+      await dispatch(updatePreferencesThunk(preferences));
     },
-    [user, supabase]
+    [dispatch]
   );
 
   const updateProfile = useCallback(
-    (name: string) => {
-      if (!user) return;
-
-      const updatedUser: User = {
-        ...user,
-        name,
-        updatedAt: new Date(),
-      };
-
-      setUser(updatedUser);
+    async (name: string) => {
+      await dispatch(updateProfileThunk(name));
     },
-    [user]
+    [dispatch]
   );
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        supabaseUser,
         isLoading,
-        isAuthenticated: !!user,
+        isAuthenticated,
         isConfigured,
         signInWithGoogle,
         logout,

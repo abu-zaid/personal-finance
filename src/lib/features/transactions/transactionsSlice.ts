@@ -8,6 +8,7 @@ import {
     TransactionSort
 } from '@/types';
 import { createClient } from '@/lib/supabase/client';
+import { fetchBudgetWithSpending } from '@/lib/features/budgets/budgetsSlice';
 // import { RootState } from '@/lib/store';
 import { getMonthString } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -82,7 +83,7 @@ function mapDbToTransaction(row: any): SerializableTransaction {
 
 export const fetchTransactions = createAsyncThunk(
     'transactions/fetchTransactions',
-    async ({ page = 0, append = false }: { page?: number; append?: boolean }, { getState, rejectWithValue }) => {
+    async ({ page = 0, append = false, pageSize = 20 }: { page?: number; append?: boolean; pageSize?: number }, { getState, rejectWithValue }) => {
         const state = getState() as any;
         const { filters } = state.transactions;
         const { user } = state.auth;
@@ -90,7 +91,7 @@ export const fetchTransactions = createAsyncThunk(
 
         if (!user || !supabase) return rejectWithValue('User not authenticated');
 
-        const PAGE_SIZE = 20;
+        const PAGE_SIZE = pageSize;
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
@@ -294,6 +295,16 @@ export const fetchMonthlyAggregates = createAsyncThunk(
 
         const total = (data || []).reduce((sum, t) => sum + Number(t.amount), 0);
         return { month, type, total };
+    },
+    {
+        condition: ({ month, type }, { getState }) => {
+            const state = getState() as any;
+            const aggregates = state.transactions.aggregates;
+            // Don't fetch if we already have the data
+            if (type === 'expense' && aggregates.monthlyExpenses[month] !== undefined) return false;
+            if (type === 'income' && aggregates.monthlyIncome[month] !== undefined) return false;
+            return true;
+        }
     }
 );
 
@@ -328,7 +339,9 @@ const transactionsSlice = createSlice({
                 if (action.payload.count !== null) {
                     state.totalCount = action.payload.count || 0;
                 }
-                state.hasMore = action.payload.transactions.length === 20; // Page size
+                // Check against the requested page size
+                const requestedSize = action.meta.arg.pageSize || 20;
+                state.hasMore = action.payload.transactions.length === requestedSize;
             })
             .addCase(fetchTransactions.rejected, (state, action) => {
                 state.status = 'failed';
@@ -364,6 +377,14 @@ const transactionsSlice = createSlice({
                 } else {
                     state.aggregates.monthlyIncome[month] = total;
                 }
+            })
+            // Sync from Budget Fetch
+            .addCase(fetchBudgetWithSpending.fulfilled, (state, action) => {
+                if (action.payload) {
+                    const { month, totalSpent } = action.payload;
+                    // Budget fetch always gets expenses
+                    state.aggregates.monthlyExpenses[month] = totalSpent;
+                }
             });
     },
 });
@@ -381,5 +402,6 @@ export const selectTransactions = (state: any): TransactionWithCategory[] => {
 };
 export const selectTransactionsStatus = (state: any) => state.transactions.status;
 export const selectTransactionsError = (state: any) => state.transactions.error;
+export const selectMonthlyAggregates = (state: any) => state.transactions.aggregates;
 
 export default transactionsSlice.reducer;
