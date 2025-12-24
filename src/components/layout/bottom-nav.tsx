@@ -43,6 +43,12 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
     // Exact match or sub-path match (except for root/dashboard which needs special handling if aliases exist)
     const currentPath = pathname === '/' ? '/dashboard' : pathname;
 
+    // Check if current path belongs to 'menu' items
+    const menuPaths = ['/insights', '/goals', '/recurring', '/settings'];
+    if (menuPaths.some(path => currentPath.startsWith(path))) {
+      return 'menu';
+    }
+
     // Find the item that matches the current path
     const activeItem = NAV_ITEMS.find((item) =>
       item.href && (currentPath === item.href || currentPath.startsWith(`${item.href}/`))

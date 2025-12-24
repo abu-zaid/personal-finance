@@ -4,8 +4,6 @@ import { useMemo, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import {
-    Bell,
-    Search,
     ArrowUpRight,
     ArrowDownRight,
     TrendingUp,
@@ -28,6 +26,8 @@ import { Separator } from '@/components/ui/separator';
 import { ExpenseDonutChart } from '@/components/features/charts/expense-donut-chart';
 import { SpendingTrendChart } from '@/components/features/charts/spending-trend-chart';
 import { RecentTransactions } from '@/components/features/transactions/recent-transactions';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CardSkeleton, TransactionSkeleton, ChartSkeleton } from '@/components/skeletons/skeleton-loaders';
 
 function DashboardHeader({ user }: { user: any }) {
     return (
@@ -43,15 +43,6 @@ function DashboardHeader({ user }: { user: any }) {
                     <h1 className="text-sm font-medium text-muted-foreground">Welcome back,</h1>
                     <p className="text-lg font-bold text-foreground leading-none">{user?.name?.split(' ')[0]}</p>
                 </div>
-            </div>
-            <div className="flex gap-2">
-                <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-foreground">
-                    <Search className="h-5 w-5" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full h-10 w-10 border-border/50 shadow-sm relative">
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute top-2 right-2.5 h-2 w-2 bg-red-500 rounded-full border-2 border-background" />
-                </Button>
             </div>
         </div>
     );
@@ -97,6 +88,50 @@ export default function DashboardPage() {
         };
         fetchMonthlyTotals();
     }, [currentMonth, getMonthlyIncome, getMonthlyExpenses]);
+
+    // Loading State
+    if (!user) { // Basic auth loading or while fetching initial data
+        return (
+            <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">
+                <div className="max-w-md lg:max-w-7xl mx-auto px-4 lg:px-8 space-y-6 lg:space-y-8">
+                    {/* Header Skeleton */}
+                    <div className="flex items-center justify-between py-4 px-2">
+                        <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-3 w-24" />
+                                <Skeleton className="h-5 w-32" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                        {/* Main Content Skeleton */}
+                        <div className="lg:col-span-2 space-y-6 lg:space-y-8">
+                            <CardSkeleton />
+                            <div className="space-y-4">
+                                <div className="flex justify-between">
+                                    <Skeleton className="h-6 w-32" />
+                                    <Skeleton className="h-8 w-24 rounded-full" />
+                                </div>
+                                <ChartSkeleton />
+                            </div>
+                        </div>
+
+                        {/* Side Content Skeleton */}
+                        <div className="lg:col-span-1 space-y-6">
+                            <div className="space-y-4">
+                                <Skeleton className="h-6 w-40" />
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <TransactionSkeleton key={i} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // Get budget and calculate daily allowance
     const currentBudget = getBudgetByMonth(currentMonth);

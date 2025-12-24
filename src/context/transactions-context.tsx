@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useCallback, useEffect, useState, useMemo, useRef, ReactNode } from 'react';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import {
   Transaction,
   TransactionWithCategory,
@@ -23,6 +24,9 @@ interface TransactionsContextType {
   hasMore: boolean;
   loadMore: () => Promise<void>;
   totalCount: number;
+  // Filtering
+  currentFilters: TransactionFilters;
+  setFilters: (filters: TransactionFilters) => void;
   // CRUD operations
   createTransaction: (input: CreateTransactionInput) => Promise<Transaction>;
   updateTransaction: (id: string, input: UpdateTransactionInput) => Promise<Transaction>;
@@ -86,6 +90,12 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
   const [totalCount, setTotalCount] = useState(0);
   const currentPage = useRef(0);
 
+  // Filter state
+  const [currentFilters, setCurrentFilters] = useState<TransactionFilters>({
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date())
+  });
+
   // Track pending operations for undo
   const pendingDeletes = useRef<Map<string, Transaction>>(new Map());
 
@@ -113,7 +123,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
   }, [user, supabase]);
 
   // Fetch transactions from Supabase with pagination and timeout
-  const fetchTransactions = useCallback(async (page: number = 0, append: boolean = false) => {
+  const fetchTransactions = useCallback(async (page: number = 0, append: boolean = false, filters: TransactionFilters = {}) => {
     if (!user || !supabase) {
       setRawTransactions([]);
       setIsLoading(false);
@@ -139,10 +149,48 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const { data, error: fetchError } = await supabase
+      // Build query with filters
+      let query = supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user.id);
+
+      // Apply date range filters
+      if (filters.startDate) {
+        query = query.gte('date', filters.startDate.toISOString());
+      }
+      if (filters.endDate) {
+        // Set to end of day
+        const endOfDay = new Date(filters.endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        query = query.lte('date', endOfDay.toISOString());
+      }
+
+      // Apply category filter
+      if (filters.categoryIds && filters.categoryIds.length > 0) {
+        query = query.in('category_id', filters.categoryIds);
+      }
+
+      // Apply type filter
+      if (filters.type && filters.type !== 'all') {
+        query = query.eq('type', filters.type);
+      }
+
+      // Apply amount range filters
+      if (filters.minAmount !== undefined) {
+        query = query.gte('amount', filters.minAmount);
+      }
+      if (filters.maxAmount !== undefined) {
+        query = query.lte('amount', filters.maxAmount);
+      }
+
+      // Apply search filter (search in notes)
+      if (filters.search) {
+        query = query.ilike('notes', `%${filters.search}%`);
+      }
+
+      // Apply ordering and pagination
+      const { data, error: fetchError } = await query
         .order('date', { ascending: false })
         .range(from, to)
         .abortSignal(controller.signal);
@@ -172,28 +220,45 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         setRawTransactions([]);
       }
     } finally {
-      setIsLoading(false);
+      if (!append) {
+        setIsLoading(false);
+      }
       fetchInProgress.current = false;
     }
   }, [user, supabase, fetchCount]);
 
+  // Set filters and refetch
+  const setFilters = useCallback((filters: TransactionFilters) => {
+    setCurrentFilters(filters);
+    // Reset page and fetch with new filters
+    currentPage.current = 0;
+    fetchTransactions(0, false, filters);
+  }, [fetchTransactions]);
+
   // Load more transactions
   const loadMore = useCallback(async () => {
-    if (!hasMore || isLoading) return;
-    await fetchTransactions(currentPage.current + 1, true);
-  }, [fetchTransactions, hasMore, isLoading]);
+    if (!hasMore || isLoading || fetchInProgress.current) return;
+    await fetchTransactions(currentPage.current + 1, true, currentFilters);
+  }, [fetchTransactions, hasMore, isLoading, currentFilters]);
 
-  // Load transactions when user changes - lazy initialization
+  // Initial fetch
   useEffect(() => {
     if (isAuthenticated && user && !hasInitialized.current) {
       hasInitialized.current = true;
-      fetchTransactions(0, false);
+      fetchTransactions(0, false, currentFilters);
     } else if (!isAuthenticated || !user) {
       hasInitialized.current = false;
       setRawTransactions([]);
       setIsLoading(false);
     }
-  }, [isAuthenticated, user, fetchTransactions]);
+  }, [isAuthenticated, user, fetchTransactions]); // currentFilters excluded from dep array to prevent double fetch on init
+
+  const refetch = useCallback(async () => {
+    // Clear caches on manual refetch
+    monthlyAggregatesCache.current.clear();
+    categoryTotalsCache.current.clear();
+    await fetchTransactions(0, false, currentFilters);
+  }, [fetchTransactions, currentFilters]);
 
   // Subscribe to realtime changes (but don't refetch - let optimistic updates handle it)
   useEffect(() => {
@@ -518,8 +583,11 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         if (filters.endDate) {
           filtered = filtered.filter((t) => t.date <= filters.endDate!);
         }
-        if (filters.categoryId) {
-          filtered = filtered.filter((t) => t.categoryId === filters.categoryId);
+        if (filters.categoryIds && filters.categoryIds.length > 0) {
+          filtered = filtered.filter((t) => filters.categoryIds!.includes(t.categoryId));
+        }
+        if (filters.type && filters.type !== 'all') {
+          filtered = filtered.filter((t) => t.type === filters.type);
         }
         if (filters.minAmount !== undefined) {
           filtered = filtered.filter((t) => t.amount >= filters.minAmount!);
@@ -528,34 +596,30 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
           filtered = filtered.filter((t) => t.amount <= filters.maxAmount!);
         }
         if (filters.search) {
-          const searchLower = filters.search.toLowerCase();
+          const q = filters.search.toLowerCase();
           filtered = filtered.filter(
             (t) =>
-              t.notes?.toLowerCase().includes(searchLower) ||
-              t.category.name.toLowerCase().includes(searchLower)
+              t.category.name.toLowerCase().includes(q) ||
+              (t.notes && t.notes.toLowerCase().includes(q))
           );
         }
       }
 
-      // Sort
-      const sortField = sort?.field || 'date';
-      const sortOrder = sort?.order || 'desc';
+      if (sort) {
+        filtered.sort((a, b) => {
+          let compareValueA: any = a[sort.field];
+          let compareValueB: any = b[sort.field];
 
-      filtered.sort((a, b) => {
-        let comparison = 0;
-        switch (sortField) {
-          case 'date':
-            comparison = a.date.getTime() - b.date.getTime();
-            break;
-          case 'amount':
-            comparison = a.amount - b.amount;
-            break;
-          case 'category':
-            comparison = a.category.name.localeCompare(b.category.name);
-            break;
-        }
-        return sortOrder === 'asc' ? comparison : -comparison;
-      });
+          if (sort.field === 'category') {
+            compareValueA = a.category.name;
+            compareValueB = b.category.name;
+          }
+
+          if (compareValueA < compareValueB) return sort.order === 'asc' ? -1 : 1;
+          if (compareValueA > compareValueB) return sort.order === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
 
       return filtered;
     },
@@ -703,11 +767,6 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     [user, supabase, getNextMonth]
   );
 
-  const refetch = useCallback(async () => {
-    currentPage.current = 0;
-    await fetchTransactions(0, false);
-  }, [fetchTransactions]);
-
   return (
     <TransactionsContext.Provider
       value={{
@@ -717,6 +776,8 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         hasMore,
         loadMore,
         totalCount,
+        currentFilters,
+        setFilters,
         createTransaction,
         updateTransaction,
         deleteTransaction,

@@ -309,5 +309,6 @@ export function useInsightsData() {
         daysElapsed,
         formatCurrency,
         currentMonthTransactions,
+        isLoading: useTransactions().isLoading || useCategories().isLoading || useBudgets().isLoading,
     };
 }

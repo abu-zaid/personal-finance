@@ -1,22 +1,26 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-  ArrowRight, 
-  Wallet, 
-  PieChart, 
-  TrendingUp, 
-  Shield, 
+import {
+  ArrowRight,
+  Wallet,
+  PieChart,
+  TrendingUp,
+  Shield,
   Sparkles,
   CheckCircle2,
   BarChart3,
   Target,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
+import { useAuth } from '@/context/auth-context';
 
 const features = [
   {
@@ -55,18 +59,35 @@ const stats = [
 ];
 
 export default function Home() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading || isAuthenticated) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-background min-h-screen overflow-hidden">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center gap-2.5"
             >
-              <div 
+              <div
                 className="flex h-9 w-9 items-center justify-center rounded-xl"
                 style={{
                   background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
@@ -76,7 +97,7 @@ export default function Home() {
               </div>
               <span className="text-lg font-bold">{APP_NAME}</span>
             </motion.div>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center gap-3"
@@ -104,11 +125,11 @@ export default function Home() {
       <section className="relative pt-32 pb-20 sm:pt-40 sm:pb-32">
         {/* Background decorations */}
         <div className="absolute inset-0 overflow-hidden">
-          <div 
+          <div
             className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-20"
             style={{ background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)' }}
           />
-          <div 
+          <div
             className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full blur-3xl opacity-10"
             style={{ background: 'linear-gradient(145deg, #60A5FA 0%, #3B82F6 100%)' }}
           />
@@ -148,7 +169,7 @@ export default function Home() {
               transition={{ delay: 0.3 }}
               className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto"
             >
-              Track expenses effortlessly, understand your spending patterns at a glance, 
+              Track expenses effortlessly, understand your spending patterns at a glance,
               and stay on budget—all within a calm, premium interface.
             </motion.p>
 
@@ -203,11 +224,11 @@ export default function Home() {
           >
             <div className="relative mx-auto max-w-4xl">
               {/* Glow effect */}
-              <div 
+              <div
                 className="absolute inset-0 rounded-3xl blur-3xl opacity-30"
                 style={{ background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)' }}
               />
-              
+
               {/* Mock app interface */}
               <div className="relative bg-card border border-border/50 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden">
                 {/* Header bar */}
@@ -223,11 +244,11 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Content preview */}
                 <div className="p-6 sm:p-8 space-y-4">
                   {/* Balance card mock */}
-                  <div 
+                  <div
                     className="p-5 rounded-2xl"
                     style={{
                       background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
@@ -246,7 +267,7 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Quick stats mock */}
                   <div className="grid grid-cols-3 gap-3">
                     {[
@@ -255,7 +276,7 @@ export default function Home() {
                       { icon: Zap, label: 'Insights', color: '#FBBF24' },
                     ].map((item, i) => (
                       <div key={i} className="bg-muted/30 rounded-xl p-4 text-center">
-                        <div 
+                        <div
                           className="w-10 h-10 mx-auto rounded-xl flex items-center justify-center mb-2"
                           style={{ background: `${item.color}20` }}
                         >
@@ -301,7 +322,7 @@ export default function Home() {
                 className="relative group"
               >
                 <div className="bg-card border border-border/50 rounded-2xl p-6 h-full transition-all duration-300 hover:shadow-xl hover:border-primary/20">
-                  <div 
+                  <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
                     style={{ background: `${feature.color}20` }}
                   >
@@ -359,7 +380,7 @@ export default function Home() {
             >
               {/* Decorative cards */}
               <div className="relative">
-                <div 
+                <div
                   className="absolute -top-4 -left-4 w-full h-full rounded-2xl"
                   style={{ background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)', opacity: 0.1 }}
                 />
@@ -375,7 +396,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full rounded-full w-[62%]"
                         style={{ background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)' }}
                       />
@@ -406,13 +427,13 @@ export default function Home() {
             {/* Decorations */}
             <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -left-20 -bottom-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
-            
+
             <div className="relative">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#101010] mb-4">
                 Ready to take control?
               </h2>
               <p className="text-lg text-[#101010]/70 max-w-2xl mx-auto mb-8">
-                Join thousands of users who are already managing their finances smarter. 
+                Join thousands of users who are already managing their finances smarter.
                 Get started in seconds with Google sign-in.
               </p>
               <Button asChild size="lg" className="h-12 px-8 text-base font-medium bg-[#101010] text-white hover:bg-[#202020]">
@@ -431,7 +452,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div 
+              <div
                 className="flex h-8 w-8 items-center justify-center rounded-lg"
                 style={{
                   background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',

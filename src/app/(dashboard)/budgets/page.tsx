@@ -49,6 +49,8 @@ import {
 import { toast } from 'sonner';
 import { BudgetAllocation } from '@/types';
 import { Sparkline } from '@/components/charts';
+import { BudgetSkeleton, CardSkeleton } from '@/components/skeletons/skeleton-loaders';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useMediaQuery } from '@/hooks/use-media-query';
 
 // --- Helper Functions ---
@@ -243,7 +245,7 @@ function BudgetForm({
 
 export default function BudgetsPage() {
   const { categories } = useCategories();
-  const { createBudget, updateBudget, getBudgetByMonth } = useBudgets();
+  const { createBudget, updateBudget, getBudgetByMonth, isLoading } = useBudgets();
   const { getCategoryTotal, getMonthlyTotal } = useTransactions();
   const { formatCurrency, symbol } = useCurrency();
   const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -368,6 +370,43 @@ export default function BudgetsPage() {
     return { label: 'On Track', color: 'success', icon: CheckCircle2 };
   };
   const budgetStatus = getBudgetStatus();
+
+  if (isLoading) {
+    return (
+      <PageTransition>
+        <div className="space-y-4 p-4 pb-32 md:p-6 lg:p-8 max-w-4xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between pt-2">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <Skeleton className="h-10 w-24 rounded-full" />
+          </div>
+
+          {/* Month Navigator Skeleton */}
+          <div className="h-12 w-full rounded-2xl bg-muted/20" />
+
+          {/* Hero Card Skeleton */}
+          <CardSkeleton />
+
+          {/* Stats Grid Skeleton */}
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton className="h-32 w-full rounded-3xl" />
+            <Skeleton className="h-32 w-full rounded-3xl" />
+          </div>
+
+          {/* Category List Skeleton */}
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-40" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <BudgetSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>

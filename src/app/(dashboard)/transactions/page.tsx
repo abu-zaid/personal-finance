@@ -22,9 +22,12 @@ import { TransactionWithCategory, TransactionSort } from '@/types';
 import { useTransactions } from '@/context/transactions-context';
 import { useCategories } from '@/context/categories-context';
 import { useCurrency } from '@/hooks/use-currency';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 // UI Components
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TransactionSkeleton } from '@/components/skeletons/skeleton-loaders';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -40,7 +43,7 @@ import {
   SheetClose,
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
+
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
@@ -58,30 +61,34 @@ export default function TransactionsPage() {
     hasMore,
     getMonthlyIncome,
     getMonthlyExpenses,
+    currentFilters,
+    setFilters
   } = useTransactions();
   const { categories } = useCategories();
   const { formatCurrency, symbol } = useCurrency();
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
-  // Monthly totals from database
+  // Monthly totals state
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpense, setMonthlyExpense] = useState(0);
   const currentMonth = format(new Date(), 'yyyy-MM');
 
-  // Fetch monthly totals from database
+  // Sync monthly totals when month changes
+  const fetchMonthlyTotals = useCallback(async () => {
+    const [income, expenses] = await Promise.all([
+      getMonthlyIncome(currentMonth),
+      getMonthlyExpenses(currentMonth)
+    ]);
+    setMonthlyIncome(income);
+    setMonthlyExpense(expenses);
+  }, [currentMonth, getMonthlyIncome, getMonthlyExpenses]);
+
+  // Sync monthly totals when month changes
   useEffect(() => {
-    const fetchMonthlyTotals = async () => {
-      const [income, expenses] = await Promise.all([
-        getMonthlyIncome(currentMonth),
-        getMonthlyExpenses(currentMonth)
-      ]);
-      setMonthlyIncome(income);
-      setMonthlyExpense(expenses);
-    };
     fetchMonthlyTotals();
   }, [currentMonth, getMonthlyIncome, getMonthlyExpenses]);
 
   // Local State
-  const [searchQuery, setSearchQuery] = useState('');
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -89,13 +96,7 @@ export default function TransactionsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<TransactionWithCategory | null>(null);
 
-  // Filters State
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date())
-  });
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [selectedType, setSelectedType] = useState<'all' | 'income' | 'expense'>('all');
+  // Local Sort State (can stay local as it operates on loaded data)
   const [sortConfig, setSortConfig] = useState<TransactionSort>({ field: 'date', order: 'desc' });
 
   // Infinite Scroll Ref
@@ -103,61 +104,11 @@ export default function TransactionsPage() {
 
   // --- Helpers ---
 
-  const handleScroll = useCallback((entries: IntersectionObserverEntry[]) => {
-    const target = entries[0];
-    if (target.isIntersecting && hasMore && !isLoading) {
-      loadMore();
-    }
-  }, [hasMore, isLoading, loadMore]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(handleScroll, { rootMargin: '100px' });
-    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
-    return () => observer.disconnect();
-  }, [handleScroll]);
-
-  const getDateLabel = (dateFn: Date) => {
-    if (isToday(dateFn)) return 'Today';
-    if (isYesterday(dateFn)) return 'Yesterday';
-    return format(dateFn, 'EEEE, MMM d');
-  };
-
-  // --- Filtering & Sorting Logic ---
-
+  // Use transactions directly from context (already filtered by DB)
   const filteredTransactions = useMemo(() => {
     let result = [...transactions];
 
-    // 1. Search
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(t =>
-        (t.notes && t.notes.toLowerCase().includes(q)) ||
-        t.category.name.toLowerCase().includes(q) ||
-        t.amount.toString().includes(q)
-      );
-    }
-
-    // 2. Date Range
-    if (dateRange.from) {
-      result = result.filter(t => new Date(t.date) >= dateRange.from!);
-    }
-    if (dateRange.to) {
-      const endOfDay = new Date(dateRange.to);
-      endOfDay.setHours(23, 59, 59, 999);
-      result = result.filter(t => new Date(t.date) <= endOfDay);
-    }
-
-    // 3. Category
-    if (selectedCategoryIds.length > 0) {
-      result = result.filter(t => selectedCategoryIds.includes(t.categoryId));
-    }
-
-    // 4. Type
-    if (selectedType !== 'all') {
-      result = result.filter(t => t.type === selectedType);
-    }
-
-    // 5. Sort
+    // Additional client-side sort if needed
     result.sort((a, b) => {
       let comparison = 0;
       switch (sortConfig.field) {
@@ -175,7 +126,27 @@ export default function TransactionsPage() {
     });
 
     return result;
-  }, [transactions, searchQuery, dateRange, selectedCategoryIds, selectedType, sortConfig]);
+  }, [transactions, sortConfig]);
+
+  const handleScroll = useCallback((entries: IntersectionObserverEntry[]) => {
+    const target = entries[0];
+    // Check internal loaded count vs total count logic inside context
+    if (target.isIntersecting && !isLoading) {
+      loadMore();
+    }
+  }, [isLoading, loadMore]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleScroll, { rootMargin: '100px' });
+    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [handleScroll]);
+
+  const getDateLabel = (dateFn: Date) => {
+    if (isToday(dateFn)) return 'Today';
+    if (isYesterday(dateFn)) return 'Yesterday';
+    return format(dateFn, 'EEEE, MMM d');
+  };
 
   // Group by Date for List View
   const groupedTransactions = useMemo(() => {
@@ -221,19 +192,79 @@ export default function TransactionsPage() {
     }
   };
 
+  // Helper to update specific filters
+  const updateFilters = (updates: Partial<typeof currentFilters>) => {
+    setFilters({ ...currentFilters, ...updates });
+  };
+
   const clearFilters = () => {
-    setSearchQuery('');
-    setDateRange({ from: undefined, to: undefined });
-    setSelectedCategoryIds([]);
-    setSelectedType('all');
+    setFilters({});
     setSortConfig({ field: 'date', order: 'desc' });
   };
 
   const activeFilterCount = [
-    dateRange.from,
-    selectedCategoryIds.length > 0,
-    selectedType !== 'all'
+    currentFilters.startDate || currentFilters.endDate,
+    (currentFilters.categoryIds?.length || 0) > 0,
+    currentFilters.type && currentFilters.type !== 'all'
   ].filter(Boolean).length;
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <PageTransition className="flex flex-col h-full w-full overflow-hidden bg-background">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          {/* Header */}
+          <div className="px-4 md:px-6 py-4 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Transactions</h1>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="hidden md:flex h-9 rounded-full border-border/60" disabled>
+                  <p className="mr-2">Export</p>
+                </Button>
+                <Button size="sm" className="h-9 w-9 p-0 rounded-full" disabled>
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Stats Cards Skeleton */}
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+              <Card className="shadow-none border-border/40 bg-card/50">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Income</p>
+                  <Skeleton className="h-7 w-24" />
+                </CardContent>
+              </Card>
+              <Card className="shadow-none border-border/40 bg-card/50">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Expenses</p>
+                  <Skeleton className="h-7 w-24" />
+                </CardContent>
+              </Card>
+              <Card className="shadow-none border-border/40 bg-card/50">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Net</p>
+                  <Skeleton className="h-7 w-24" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Search Skeleton */}
+            <Skeleton className="h-10 w-full rounded-xl" />
+          </div>
+
+          {/* Content Skeleton */}
+          <div className="px-4 md:px-6 pb-6 max-w-full space-y-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <TransactionSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition className="flex flex-col h-full w-full overflow-hidden bg-background">
@@ -270,7 +301,10 @@ export default function TransactionsPage() {
                       {/* Type Filter */}
                       <div className="space-y-3">
                         <label className="text-sm font-medium">Type</label>
-                        <Tabs value={selectedType} onValueChange={(v) => setSelectedType(v as any)}>
+                        <Tabs
+                          value={currentFilters.type || 'all'}
+                          onValueChange={(v) => updateFilters({ type: v as 'all' | 'income' | 'expense' })}
+                        >
                           <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="all">All</TabsTrigger>
                             <TabsTrigger value="expense">Expense</TabsTrigger>
@@ -315,17 +349,17 @@ export default function TransactionsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setDateRange({ from: undefined, to: undefined })}
-                            className={cn(!dateRange.from && "bg-secondary")}
+                            onClick={() => updateFilters({ startDate: undefined, endDate: undefined })}
+                            className={cn(!currentFilters.startDate && "bg-secondary")}
                           >
                             All Time
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setDateRange({
-                              from: startOfMonth(new Date()),
-                              to: endOfMonth(new Date())
+                            onClick={() => updateFilters({
+                              startDate: startOfMonth(new Date()),
+                              endDate: endOfMonth(new Date())
                             })}
                           >
                             This Month
@@ -333,25 +367,25 @@ export default function TransactionsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setDateRange({
-                              from: subDays(new Date(), 30),
-                              to: new Date()
+                            onClick={() => updateFilters({
+                              startDate: subDays(new Date(), 30),
+                              endDate: new Date()
                             })}
                           >
                             Last 30 Days
                           </Button>
                         </div>
-                        {dateRange.from && (
+                        {currentFilters.startDate && (
                           <div className="flex items-center gap-2 text-sm text-primary bg-primary/10 px-3 py-2 rounded-md">
                             <CalendarIcon className="h-4 w-4" />
                             <span>
-                              {format(dateRange.from, 'MMM d')} - {dateRange.to ? format(dateRange.to, 'MMM d, yyyy') : 'Now'}
+                              {format(currentFilters.startDate, 'MMM d')} - {currentFilters.endDate ? format(currentFilters.endDate, 'MMM d, yyyy') : 'Now'}
                             </span>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-6 w-6 p-0 ml-auto hover:bg-primary/20"
-                              onClick={() => setDateRange({ from: undefined, to: undefined })}
+                              onClick={() => updateFilters({ startDate: undefined, endDate: undefined })}
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -364,7 +398,7 @@ export default function TransactionsPage() {
                         <label className="text-sm font-medium">Categories</label>
                         <div className="flex flex-wrap gap-2">
                           {categories.map(cat => {
-                            const isSelected = selectedCategoryIds.includes(cat.id);
+                            const isSelected = (currentFilters.categoryIds || []).includes(cat.id);
                             return (
                               <Badge
                                 key={cat.id}
@@ -375,8 +409,12 @@ export default function TransactionsPage() {
                                 )}
                                 style={isSelected ? { backgroundColor: cat.color, color: '#000' } : {}}
                                 onClick={() => {
-                                  if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
-                                  else setSelectedCategoryIds(prev => [...prev, cat.id]);
+                                  const current = currentFilters.categoryIds || [];
+                                  if (isSelected) {
+                                    updateFilters({ categoryIds: current.filter(id => id !== cat.id) });
+                                  } else {
+                                    updateFilters({ categoryIds: [...current, cat.id] });
+                                  }
                                 }}
                               >
                                 {cat.name}
@@ -478,8 +516,8 @@ export default function TransactionsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search transactions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={currentFilters.search || ''}
+              onChange={(e) => updateFilters({ search: e.target.value })}
               className="pl-9"
             />
           </div>
@@ -489,23 +527,27 @@ export default function TransactionsPage() {
         <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40 w-full overflow-x-auto scrollbar-hide px-4 md:px-6 py-3">
           <div className="flex items-center gap-2 w-fit max-w-[90vw]">
             <Button
-              variant={selectedCategoryIds.length === 0 ? "default" : "outline"}
+              variant={(currentFilters.categoryIds || []).length === 0 ? "default" : "outline"}
               size="sm"
-              onClick={() => setSelectedCategoryIds([])}
+              onClick={() => updateFilters({ categoryIds: [] })}
               className="flex-shrink-0"
             >
               All
             </Button>
             {categories.map(cat => {
-              const isSelected = selectedCategoryIds.includes(cat.id);
+              const isSelected = (currentFilters.categoryIds || []).includes(cat.id);
               return (
                 <Button
                   key={cat.id}
                   variant={isSelected ? "default" : "outline"}
                   size="sm"
                   onClick={() => {
-                    if (isSelected) setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
-                    else setSelectedCategoryIds(prev => [...prev, cat.id]);
+                    const current = currentFilters.categoryIds || [];
+                    if (isSelected) {
+                      updateFilters({ categoryIds: current.filter(id => id !== cat.id) });
+                    } else {
+                      updateFilters({ categoryIds: [...current, cat.id] });
+                    }
                   }}
                   className="flex-shrink-0 gap-1.5 whitespace-nowrap"
                   style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color, color: '#000' } : {}}
@@ -712,6 +754,6 @@ export default function TransactionsPage() {
         onOpenChange={setModalOpen}
         transaction={editingTransaction}
       />
-    </PageTransition>
+    </PageTransition >
   );
 }

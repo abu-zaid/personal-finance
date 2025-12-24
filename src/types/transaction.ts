@@ -41,11 +41,13 @@ export interface UpdateTransactionInput {
 export interface TransactionFilters {
   startDate?: Date;
   endDate?: Date;
-  categoryId?: string;
+  categoryIds?: string[]; // Changed from categoryId to support multiple categories
+  type?: 'all' | 'income' | 'expense'; // Added type filter
   minAmount?: number;
   maxAmount?: number;
   search?: string;
 }
+
 
 export type TransactionSortField = 'date' | 'amount' | 'category';
 export type SortOrder = 'asc' | 'desc';
