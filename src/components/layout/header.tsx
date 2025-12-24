@@ -39,14 +39,8 @@ export function Header({ title }: HeaderProps) {
       <div className="flex items-center gap-3">
         {/* Mobile Logo */}
         <div className="flex items-center gap-2.5 lg:hidden">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-xl"
-            style={{
-              background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-              boxShadow: '0 0 12px rgba(152, 239, 90, 0.25)',
-            }}
-          >
-            <Wallet className="text-[#101010] h-4.5 w-4.5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden shadow-sm">
+            <img src="/icon.svg" alt="Logo" className="h-full w-full object-cover" />
           </div>
           <span className="text-base font-semibold tracking-tight">{APP_NAME}</span>
         </div>

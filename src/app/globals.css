@@ -184,9 +184,15 @@
 @layer components {
 
   /* Primary Gradient Card - Enhanced with glow */
+  /* Primary Gradient Card - Enhanced with glow */
   .gradient-primary {
-    background: linear-gradient(145deg, #98EF5A 0%, #7BEA3C 50%, #6AE030 100%);
+    background: linear-gradient(145deg, #98EF5A 0%, #3B82F6 100%);
     box-shadow: 0 0 40px rgba(152, 239, 90, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Brand Gradient (Matches Logo) */
+  .gradient-brand {
+    background: linear-gradient(135deg, #98EF5A 0%, #3B82F6 100%);
   }
 
   .gradient-accent {
@@ -196,7 +202,7 @@
 
   /* Gradient Text */
   .gradient-text {
-    background: linear-gradient(135deg, #98EF5A 0%, #6AE030 100%);
+    background: linear-gradient(135deg, #98EF5A 0%, #3B82F6 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;

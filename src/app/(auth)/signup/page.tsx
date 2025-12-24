@@ -66,7 +66,7 @@ export default function SignUpPage() {
     <PageTransition>
       <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4">
         {/* Back to home */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="absolute left-4 top-4 sm:left-8 sm:top-8"
@@ -78,20 +78,14 @@ export default function SignUpPage() {
         </motion.div>
 
         {/* Logo */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="mb-8 flex flex-col items-center"
         >
-          <div 
-            className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg"
-            style={{
-              background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-              boxShadow: '0 8px 32px rgba(152, 239, 90, 0.3)',
-            }}
-          >
-            <Wallet className="text-[#101010] h-8 w-8" />
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl overflow-hidden shadow-lg">
+            <img src="/icon.svg" alt="Logo" className="h-full w-full object-cover" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">{APP_NAME}</h1>
         </motion.div>
@@ -127,7 +121,7 @@ export default function SignUpPage() {
               </div>
 
               {error && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="bg-destructive/10 text-destructive rounded-xl p-3 text-sm text-center"
@@ -161,7 +155,7 @@ export default function SignUpPage() {
         </motion.div>
 
         {/* Trust badges */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}

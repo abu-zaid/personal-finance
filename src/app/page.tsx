@@ -87,13 +87,8 @@ export default function Home() {
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center gap-2.5"
             >
-              <div
-                className="flex h-9 w-9 items-center justify-center rounded-xl"
-                style={{
-                  background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-                }}
-              >
-                <Wallet className="text-[#101010] h-4.5 w-4.5" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden shadow-sm">
+                <img src="/icon.svg" alt="Logo" className="h-full w-full object-cover" />
               </div>
               <span className="text-lg font-bold">{APP_NAME}</span>
             </motion.div>
@@ -452,13 +447,8 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-lg"
-                style={{
-                  background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
-                }}
-              >
-                <Wallet className="text-[#101010] h-4 w-4" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden shadow-sm">
+                <img src="/icon.svg" alt="Logo" className="h-full w-full object-cover" />
               </div>
               <span className="font-semibold">{APP_NAME}</span>
             </div>
