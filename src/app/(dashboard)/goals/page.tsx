@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
+import { BRAND_GRADIENT } from '@/lib/constants';
 import { GoalModal } from '@/components/features/goals/goal-modal';
 
 import { useGoals } from '@/context/goals-context';
@@ -177,7 +178,8 @@ export default function GoalsPage() {
                         <Button
                             onClick={handleAddGoal}
                             size="sm"
-                            className="h-9 w-9 p-0 rounded-full shadow-lg bg-gradient-to-br from-[#98EF5A] to-[#7BEA3C] hover:shadow-xl hover:scale-105 transition-all text-[#101010]"
+                            className="h-9 w-9 p-0 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-[#101010]"
+                            style={{ background: BRAND_GRADIENT.css }}
                         >
                             <Plus className="h-5 w-5" strokeWidth={3} />
                         </Button>

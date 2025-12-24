@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
+import { APP_NAME, APP_DESCRIPTION, BRAND_GRADIENT } from '@/lib/constants';
 import { useAuth } from '@/context/auth-context';
 
 const features = [
@@ -27,7 +27,7 @@ const features = [
     icon: PieChart,
     title: 'Budget Tracking',
     description: 'Set monthly budgets for each category and track your spending in real-time.',
-    color: '#98EF5A',
+    color: BRAND_GRADIENT.from,
   },
   {
     icon: TrendingUp,
@@ -102,7 +102,7 @@ export default function Home() {
               </Button>
               <Button asChild size="sm" className="gap-1.5"
                 style={{
-                  background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
+                  background: BRAND_GRADIENT.css,
                   color: '#101010',
                 }}
               >
@@ -177,9 +177,9 @@ export default function Home() {
             >
               <Button asChild size="lg" className="gap-2 h-12 px-8 text-base font-medium shadow-lg"
                 style={{
-                  background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
+                  background: BRAND_GRADIENT.css,
                   color: '#101010',
-                  boxShadow: '0 8px 32px rgba(152, 239, 90, 0.3)',
+                  boxShadow: `0 8px 32px ${BRAND_GRADIENT.from}4D`,
                 }}
               >
                 <Link href="/signup">
@@ -221,7 +221,7 @@ export default function Home() {
               {/* Glow effect */}
               <div
                 className="absolute inset-0 rounded-3xl blur-3xl opacity-30"
-                style={{ background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)' }}
+                style={{ background: BRAND_GRADIENT.css }}
               />
 
               {/* Mock app interface */}
@@ -246,7 +246,7 @@ export default function Home() {
                   <div
                     className="p-5 rounded-2xl"
                     style={{
-                      background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
+                      background: BRAND_GRADIENT.css,
                     }}
                   >
                     <p className="text-[#101010]/60 text-xs font-medium uppercase">Available Balance</p>
@@ -393,7 +393,7 @@ export default function Home() {
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full w-[62%]"
-                        style={{ background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)' }}
+                        style={{ background: BRAND_GRADIENT.css }}
                       />
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -416,7 +416,7 @@ export default function Home() {
             viewport={{ once: true }}
             className="relative overflow-hidden rounded-3xl p-8 sm:p-12 lg:p-16 text-center"
             style={{
-              background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)',
+              background: BRAND_GRADIENT.css,
             }}
           >
             {/* Decorations */}

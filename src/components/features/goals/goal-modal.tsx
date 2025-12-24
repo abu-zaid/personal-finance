@@ -49,6 +49,7 @@ import { goalSchema, GoalFormData } from '@/lib/validations';
 import { cn } from '@/lib/utils';
 import { Goal } from '@/types';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { BRAND_GRADIENT } from '@/lib/constants';
 
 const ICONS = [
     { id: 'Target', icon: Target },
@@ -60,8 +61,8 @@ const ICONS = [
 ];
 
 const COLORS = [
-    '#98EF5A', // Primary
-    '#3B82F6', // Blue
+    BRAND_GRADIENT.from, // Primary
+    BRAND_GRADIENT.to,   // Blue
     '#A855F7', // Purple
     '#EC4899', // Pink
     '#EF4444', // Red

@@ -333,8 +333,8 @@ export default function DashboardPage() {
                                     <div className="grid grid-cols-2 gap-4 w-full lg:w-auto min-w-[300px]">
                                         <div className="bg-muted/50 rounded-2xl p-4 backdrop-blur-md border border-border/50 transition-colors hover:bg-muted/80">
                                             <div className="flex items-center gap-3 mb-2">
-                                                <div className="bg-primary/20 p-2 rounded-full">
-                                                    <ArrowDownRight className="h-4 w-4 text-primary" />
+                                                <div className="bg-emerald-500/10 dark:bg-[#98EF5A]/10 p-2 rounded-full">
+                                                    <ArrowDownRight className="h-4 w-4 text-emerald-600 dark:text-[#98EF5A]" />
                                                 </div>
                                                 <span className="text-sm font-medium text-muted-foreground">Income</span>
                                             </div>
@@ -350,11 +350,11 @@ export default function DashboardPage() {
                                             <p className="font-bold text-xl text-foreground">{symbol}{monthlyExpense.toLocaleString()}</p>
                                         </div>
                                         {currentBudget && (
-                                            <div className="col-span-2 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-4 backdrop-blur-md border border-primary/20 transition-colors hover:from-primary/15 hover:to-primary/10">
+                                            <div className="col-span-2 bg-gradient-to-br from-[#98EF5A]/10 to-[#3B82F6]/10 rounded-2xl p-4 backdrop-blur-md border border-[#98EF5A]/20 transition-colors">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="bg-primary/20 p-2 rounded-full">
-                                                            <TrendingUp className="h-4 w-4 text-primary" />
+                                                        <div className="bg-emerald-500/10 dark:bg-[#98EF5A]/10 p-2 rounded-full">
+                                                            <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-[#98EF5A]" />
                                                         </div>
                                                         <span className="text-sm font-medium text-muted-foreground">Can Spend Today</span>
                                                     </div>
@@ -366,7 +366,7 @@ export default function DashboardPage() {
                                                 </div>
                                                 <p className={cn(
                                                     "font-bold text-xl",
-                                                    dailyAllowance >= 0 ? "text-primary" : "text-red-500"
+                                                    dailyAllowance >= 0 ? "text-emerald-600 dark:text-[#98EF5A]" : "text-red-500"
                                                 )}>
                                                     {symbol}{Math.abs(dailyAllowance).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                 </p>
@@ -398,7 +398,7 @@ export default function DashboardPage() {
                                     {/* Trend Chart (Top) */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2">
-                                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                            <div className="h-8 w-8 rounded-full bg-emerald-500/10 dark:bg-[#98EF5A]/10 flex items-center justify-center text-emerald-600 dark:text-[#98EF5A]">
                                                 <TrendingUp className="h-4 w-4" />
                                             </div>
                                             <div>

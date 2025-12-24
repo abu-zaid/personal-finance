@@ -82,8 +82,8 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                       size="icon"
                       className={cn(
                         "h-12 w-12 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95",
-                        "bg-primary text-primary-foreground hover:bg-primary/90",
-                        "shadow-primary/25"
+                        "gradient-primary text-[#101010] border-0",
+                        "shadow-[0_0_20px_rgba(152,239,90,0.4)]"
                       )}
                     >
                       <Plus className="h-6 w-6" strokeWidth={2.5} />
@@ -102,14 +102,14 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                       <div
                         className={cn(
                           "relative flex items-center justify-center h-11 w-11 rounded-full transition-colors duration-200",
-                          isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                          isActive ? "text-[#101010]" : "text-muted-foreground hover:text-foreground"
                         )}
                       >
                         {/* Active Background Pill (if menu was somehow active route) */}
                         {isActive && (
                           <motion.div
                             layoutId="nav-pill"
-                            className="absolute inset-0 bg-primary/10 rounded-full"
+                            className="absolute inset-0 gradient-brand rounded-full shadow-[0_0_12px_rgba(152,239,90,0.3)]"
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                           />
                         )}
@@ -130,14 +130,14 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                   <div
                     className={cn(
                       "relative flex items-center justify-center h-11 w-11 rounded-full transition-colors duration-200",
-                      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                      isActive ? "text-[#101010]" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {/* Active Background Pill */}
                     {isActive && (
                       <motion.div
                         layoutId="nav-pill"
-                        className="absolute inset-0 bg-primary/10 rounded-full"
+                        className="absolute inset-0 gradient-brand rounded-full shadow-[0_0_12px_rgba(152,239,90,0.3)]"
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                       />
                     )}

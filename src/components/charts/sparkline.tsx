@@ -5,6 +5,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { ChartTooltip } from './tooltip';
 import { useChartTooltip } from '@/hooks/use-chart-tooltip';
+import { BRAND_GRADIENT } from '@/lib/constants';
 
 interface SparklineProps {
     data: number[];
@@ -19,7 +20,7 @@ interface SparklineProps {
 
 export function Sparkline({
     data,
-    color = '#98EF5A',
+    color = BRAND_GRADIENT.from,
     height = 32,
     showDots = false,
     className,
