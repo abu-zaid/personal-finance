@@ -80,7 +80,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex flex-1 flex-col min-h-0">
           <Header title={getPageTitle()} />
           <main className={cn(
-            "flex-1 overflow-x-hidden scrollbar-hide",
+            "flex-1 overflow-x-hidden scrollbar-hide max-w-[100vw]",
             pathname === '/transactions' ? "flex flex-col overflow-hidden" : "overflow-y-auto"
           )}>
             <ErrorBoundary>

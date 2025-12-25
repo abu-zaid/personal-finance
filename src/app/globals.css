@@ -43,7 +43,7 @@
 
   /* Brand Colors */
   --color-brand-primary: #22C55E;
-  --color-brand-secondary: #935AEF;
+  --color-brand-secondary: #3B82F6;
   --color-brand-surface: #1A1A1A;
   --color-brand-danger: #EF4444;
   --color-brand-warning: #FACC15;
@@ -80,7 +80,7 @@
   --popover-foreground: #FFFFFF;
   --primary: #22C55E;
   --primary-foreground: #101010;
-  --secondary: #935AEF;
+  --secondary: #3B82F6;
   --secondary-foreground: #FFFFFF;
   --muted: #1A1A1A;
   --muted-foreground: #B3B3B3;
@@ -91,7 +91,7 @@
   --input: #1A1A1A;
   --ring: #22C55E;
   --chart-1: #22C55E;
-  --chart-2: #935AEF;
+  --chart-2: #3B82F6;
   --chart-3: #22C55E;
   --chart-4: #FACC15;
   --chart-5: #3B82F6;
@@ -115,7 +115,7 @@
   --popover-foreground: #101010;
   --primary: #16A34A;
   --primary-foreground: #FFFFFF;
-  --secondary: #7C3AED;
+  --secondary: #3B82F6;
   --secondary-foreground: #FFFFFF;
   --muted: #F5F5F5;
   --muted-foreground: #6B7280;
@@ -126,7 +126,7 @@
   --input: #FFFFFF;
   --ring: #16A34A;
   --chart-1: #16A34A;
-  --chart-2: #7C3AED;
+  --chart-2: #3B82F6;
   --chart-3: #22C55E;
   --chart-4: #F59E0B;
   --chart-5: #3B82F6;
@@ -196,7 +196,7 @@
   }
 
   .gradient-accent {
-    background: linear-gradient(135deg, #A06BF5 0%, #935AEF 50%, #7A3AED 100%);
+    background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
   }
 
   /* Gradient Text */
@@ -208,7 +208,7 @@
   }
 
   .gradient-text-accent {
-    background: linear-gradient(135deg, #A06BF5 0%, #7A3AED 100%);
+    background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
