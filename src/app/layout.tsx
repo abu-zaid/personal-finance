@@ -43,7 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${plusJakarta.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
+      <body className={`${plusJakarta.variable} ${jetbrainsMono.variable} antialiased font-sans max-w-[100vw] overflow-x-hidden`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

@@ -44,40 +44,6 @@ export interface DailyStat {
 }
 
 // Type definitions
-interface TransactionsState {
-    items: SerializableTransactionWithCategory[];
-    totalCount: number;
-    status: 'idle' | 'loading' | 'succeeded' | 'failed';
-    error: string | null;
-    hasMore: boolean;
-    filters: Omit<TransactionFilters, 'startDate' | 'endDate'> & { startDate?: string; endDate?: string };
-    aggregates: {
-        monthlyExpenses: Record<string, number>;
-        monthlyIncome: Record<string, number>;
-        categoryTotals: Record<string, number>; // key: `${categoryId}-${month || 'all'}`
-        dailyStats: Record<string, DailyStat[]>; // key: month 'yyyy-MM'
-    };
-}
-
-const initialFilters: TransactionsState['filters'] = {
-    startDate: undefined,
-    endDate: undefined,
-};
-
-const initialState: TransactionsState = {
-    items: [],
-    totalCount: 0,
-    status: 'idle',
-    error: null,
-    hasMore: true,
-    filters: initialFilters,
-    aggregates: {
-        monthlyExpenses: {},
-        monthlyIncome: {},
-        categoryTotals: {},
-        dailyStats: {},
-    },
-};
 
 // Helper: Map DB row to SerializableTransaction
 function mapDbToTransaction(row: any): SerializableTransaction {
@@ -87,12 +53,40 @@ function mapDbToTransaction(row: any): SerializableTransaction {
         amount: Number(row.amount),
         type: (row.type as 'expense' | 'income') || 'expense',
         categoryId: row.category_id,
-        date: row.date, // Keep as string or ISO string from DB
+        date: row.date,
         notes: row.notes || undefined,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
     };
 }
+
+// Helper: Apply filters to Supabase query
+const applyQueryFilters = (query: any, filters: any) => {
+    if (filters.startDate) {
+        query = query.gte('date', new Date(filters.startDate).toISOString());
+    }
+    if (filters.endDate) {
+        const endOfDay = new Date(filters.endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        query = query.lte('date', endOfDay.toISOString());
+    }
+    if (filters.categoryIds && filters.categoryIds.length > 0) {
+        query = query.in('category_id', filters.categoryIds);
+    }
+    if (filters.type && filters.type !== 'all') {
+        query = query.eq('type', filters.type);
+    }
+    if (filters.minAmount !== undefined) {
+        query = query.gte('amount', filters.minAmount);
+    }
+    if (filters.maxAmount !== undefined) {
+        query = query.lte('amount', filters.maxAmount);
+    }
+    if (filters.search) {
+        query = query.ilike('notes', `%${filters.search}%`);
+    }
+    return query;
+};
 
 // Async Thunks
 
@@ -118,33 +112,10 @@ export const fetchTransactions = createAsyncThunk(
           categories:category_id (
             id, name, icon, color
           )
-        `)
+        `, { count: 'exact' })
                 .eq('user_id', user.id);
 
-            // Apply Filters
-            if (filters.startDate) {
-                query = query.gte('date', new Date(filters.startDate).toISOString());
-            }
-            if (filters.endDate) {
-                const endOfDay = new Date(filters.endDate);
-                endOfDay.setHours(23, 59, 59, 999);
-                query = query.lte('date', endOfDay.toISOString());
-            }
-            if (filters.categoryIds && filters.categoryIds.length > 0) {
-                query = query.in('category_id', filters.categoryIds);
-            }
-            if (filters.type && filters.type !== 'all') {
-                query = query.eq('type', filters.type);
-            }
-            if (filters.minAmount !== undefined) {
-                query = query.gte('amount', filters.minAmount);
-            }
-            if (filters.maxAmount !== undefined) {
-                query = query.lte('amount', filters.maxAmount);
-            }
-            if (filters.search) {
-                query = query.ilike('notes', `%${filters.search}%`);
-            }
+            query = applyQueryFilters(query, filters);
 
             const { data, error, count } = await query
                 .order('date', { ascending: false })
@@ -164,6 +135,43 @@ export const fetchTransactions = createAsyncThunk(
             }));
 
             return { transactions, count, append };
+        } catch (err: any) {
+            return rejectWithValue(err.message);
+        }
+    }
+);
+
+export const fetchFilteredStats = createAsyncThunk(
+    'transactions/fetchFilteredStats',
+    async (_, { getState, rejectWithValue }) => {
+        const state = getState() as any;
+        const { filters } = state.transactions;
+        const { user } = state.auth;
+        const supabase = createClient();
+
+        if (!user || !supabase) return rejectWithValue('User not authenticated');
+
+        try {
+            // Fetch minimal data for aggregation
+            let query = supabase
+                .from('transactions')
+                .select('amount, type')
+                .eq('user_id', user.id);
+
+            query = applyQueryFilters(query, filters);
+
+            const { data, error } = await query;
+
+            if (error) throw error;
+
+            const stats = (data || []).reduce((acc: any, curr: any) => {
+                const amount = Number(curr.amount);
+                if (curr.type === 'income') acc.income += amount;
+                else acc.expense += amount;
+                return acc;
+            }, { income: 0, expense: 0 });
+
+            return stats;
         } catch (err: any) {
             return rejectWithValue(err.message);
         }
@@ -214,6 +222,50 @@ export const createTransaction = createAsyncThunk(
         }
     }
 );
+
+const initialFilters: TransactionsState['filters'] = {
+    startDate: undefined,
+    endDate: undefined,
+};
+
+// Update State Interface
+interface TransactionsState {
+    items: SerializableTransactionWithCategory[];
+    totalCount: number;
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
+    error: string | null;
+    hasMore: boolean;
+    filters: Omit<TransactionFilters, 'startDate' | 'endDate'> & { startDate?: string; endDate?: string };
+    aggregates: {
+        monthlyExpenses: Record<string, number>;
+        monthlyIncome: Record<string, number>;
+        categoryTotals: Record<string, number>;
+        dailyStats: Record<string, DailyStat[]>;
+    };
+    filteredStats: {
+        income: number;
+        expense: number;
+    };
+}
+
+const initialState: TransactionsState = {
+    items: [],
+    totalCount: 0,
+    status: 'idle',
+    error: null,
+    hasMore: true,
+    filters: initialFilters,
+    aggregates: {
+        monthlyExpenses: {},
+        monthlyIncome: {},
+        categoryTotals: {},
+        dailyStats: {},
+    },
+    filteredStats: { income: 0, expense: 0 },
+};
+
+// ... (Rest of the file)
+
 
 export const updateTransaction = createAsyncThunk(
     'transactions/updateTransaction',
@@ -459,6 +511,11 @@ const transactionsSlice = createSlice({
                 state.error = action.payload as string;
             })
 
+            // Filtered Stats
+            .addCase(fetchFilteredStats.fulfilled, (state, action) => {
+                state.filteredStats = action.payload;
+            })
+
             // Create
             .addCase(createTransaction.fulfilled, (state, action) => {
                 state.items = [action.payload, ...state.items];
@@ -520,5 +577,6 @@ export const selectTransactionsStatus = (state: any) => state.transactions.statu
 export const selectTransactionsError = (state: any) => state.transactions.error;
 export const selectMonthlyAggregates = (state: any) => state.transactions.aggregates;
 export const selectDailyStats = (state: any) => state.transactions.aggregates.dailyStats;
+export const selectFilteredStats = (state: any) => state.transactions.filteredStats;
 
 export default transactionsSlice.reducer;
