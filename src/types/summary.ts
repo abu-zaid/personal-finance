@@ -62,6 +62,7 @@ export interface FinancialHealthScore {
 }
 
 export interface SmartInsight {
+  id: string;
   type: 'opportunity' | 'warning' | 'achievement' | 'tip';
   title: string;
   message: string;

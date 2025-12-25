@@ -84,9 +84,11 @@ export function DailySpendingChart({ data, onBarClick, selectedDate }: DailySpen
                             dataKey="amount"
                             radius={[4, 4, 0, 0]}
                             maxBarSize={50}
-                            onClick={(data) => {
-                                if (onBarClick && data && data.activePayload && data.activePayload[0]) {
-                                    onBarClick(data.activePayload[0].payload.date);
+                            onClick={(data: any) => {
+                                // Recharts passes the payload in the data object for Bar clicks
+                                const date = data?.payload?.date || data?.date;
+                                if (onBarClick && date) {
+                                    onBarClick(date);
                                 }
                             }}
                             className="cursor-pointer"

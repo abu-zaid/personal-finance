@@ -86,21 +86,6 @@ export function ExpenseDonutChart({ data, totalAmount }: ExpenseDonutChartProps)
                     </PieChart>
                 </ResponsiveContainer>
             </ChartContainer>
-
-            <div className="grid grid-cols-2 gap-3 w-full mt-4 max-w-sm">
-                {data.map((item, index) => {
-                    const percentage = totalAmount > 0 ? (item.value / totalAmount) * 100 : 0;
-                    return (
-                        <div key={index} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-border/50">
-                            <div className="flex items-center gap-2.5 overflow-hidden">
-                                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                                <span className="text-xs font-medium truncate max-w-[80px]">{item.name}</span>
-                            </div>
-                            <span className="text-xs font-bold text-muted-foreground">{percentage.toFixed(0)}%</span>
-                        </div>
-                    );
-                })}
-            </div>
         </div>
     );
 }
