@@ -471,6 +471,54 @@ export const fetchDailyTransactionStats = createAsyncThunk(
     }
 );
 
+export const fetchTransactionsForExport = createAsyncThunk(
+    'transactions/fetchForExport',
+    async ({ startMonth, endMonth }: { startMonth: string; endMonth: string }, { getState, rejectWithValue }) => {
+        const state = getState() as any;
+        const { user } = state.auth;
+        const supabase = createClient();
+
+        if (!user || !supabase) return rejectWithValue('User not authenticated');
+
+        const startDate = new Date(`${startMonth}-01`);
+        const nextMonthDate = new Date(`${endMonth}-01`);
+        nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+        const endDateIso = nextMonthDate.toISOString();
+
+        try {
+            const { data, error } = await supabase
+                .from('transactions')
+                .select(`
+                    *,
+                    categories:category_id (
+                        id, name, icon, color
+                    )
+                `)
+                .eq('user_id', user.id)
+                .gte('date', startDate.toISOString())
+                .lt('date', endDateIso)
+                .order('date', { ascending: false })
+                .limit(1000);
+
+            if (error) throw error;
+
+            const transactions: SerializableTransactionWithCategory[] = (data || []).map((row: any) => ({
+                ...mapDbToTransaction(row),
+                category: row.categories || {
+                    id: row.category_id,
+                    name: 'Unknown',
+                    icon: 'more-horizontal',
+                    color: '#6b7280',
+                },
+            }));
+
+            return transactions;
+        } catch (err: any) {
+            return rejectWithValue(err.message);
+        }
+    }
+);
+
 // Slice
 const transactionsSlice = createSlice({
     name: 'transactions',
