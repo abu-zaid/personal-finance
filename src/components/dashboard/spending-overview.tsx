@@ -86,8 +86,8 @@ export function SpendingOverview({
                                             className="space-y-1"
                                         >
                                             <div className="flex items-center justify-between text-sm">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="p-1 rounded-md" style={{ backgroundColor: `${item.color}20` }}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${item.color}20` }}>
                                                         <CategoryIcon icon={item.icon} color={item.color} size="sm" />
                                                     </div>
                                                     <span className="font-medium text-xs">{item.name}</span>

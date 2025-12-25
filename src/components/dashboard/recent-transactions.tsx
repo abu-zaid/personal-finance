@@ -26,7 +26,7 @@ function TransactionItem({ transaction, category, index, formatCurrency }: Trans
     // If Notes exist: Main = Notes, Sub = Category Name
     // Else: Main = Category Name, Sub = Time
     const mainText = transaction.notes || category?.name || (isExpense ? 'Expense' : 'Income');
-    const subText = transaction.notes ? category?.name : format(new Date(transaction.date), 'h:mm a');
+    const subText = transaction.notes ? category?.name : '';
 
     return (
         <motion.div

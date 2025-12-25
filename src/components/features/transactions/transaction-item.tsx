@@ -103,10 +103,6 @@ export const TransactionItem = memo(function TransactionItem({
                                 <p className="text-xs text-muted-foreground truncate">
                                     {transaction.category.name}
                                 </p>
-                                <span className="text-xs text-muted-foreground">•</span>
-                                <p className="text-xs text-muted-foreground">
-                                    {format(new Date(transaction.date), 'h:mm a')}
-                                </p>
                             </div>
                         </div>
                     </div>

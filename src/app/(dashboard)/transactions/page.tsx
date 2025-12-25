@@ -12,11 +12,14 @@ import { TransactionsToolbar } from '@/components/features/transactions/transact
 import { TransactionList } from '@/components/features/transactions/transaction-list';
 import { BatchActions } from '@/components/features/transactions/batch-actions';
 
+import { DeleteTransactionDialog } from '@/components/features/transactions/delete-transaction-dialog';
+
 export default function TransactionsPage() {
   const view = useTransactionsView();
 
   // Modal State (UI only)
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<TransactionWithCategory | null>(null);
 
   const handleCreate = () => {
@@ -77,7 +80,7 @@ export default function TransactionsPage() {
         isVisible={view.isBatchMode && view.selectedIds.size > 0}
         selectedCount={view.selectedIds.size}
         onClearSelection={() => view.setSelectedIds(new Set())}
-        onDelete={view.onBatchDelete}
+        onDelete={() => setDeleteAlertOpen(true)}
       />
 
       {/* Edit/Create Modal */}
@@ -85,6 +88,14 @@ export default function TransactionsPage() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         transaction={editingTransaction}
+      />
+
+      {/* Delete Confirmation Alert */}
+      <DeleteTransactionDialog
+        open={deleteAlertOpen}
+        onOpenChange={setDeleteAlertOpen}
+        onConfirm={view.onBatchDelete}
+        count={view.selectedIds.size}
       />
     </PageTransition>
   );
