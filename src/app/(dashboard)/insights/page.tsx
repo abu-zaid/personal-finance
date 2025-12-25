@@ -19,8 +19,6 @@ import { Badge } from '@/components/ui/badge';
 import { PageTransition } from '@/components/animations';
 import { CategoryIcon } from '@/components/features/categories';
 import { useInsightsData } from '@/hooks/use-insights-data';
-import { useFinancialHealth } from '@/hooks/use-financial-health';
-import { useSmartInsights } from '@/hooks/use-smart-insights';
 import { cn } from '@/lib/utils';
 
 export default function InsightsPage() {
@@ -38,10 +36,15 @@ export default function InsightsPage() {
         projectedTotal,
         sixMonthAverage,
         isLoading,
+        financialHealth, // New
+        smartInsights    // New
     } = useInsightsData();
 
-    const { overall: healthScore, status: healthStatus, savingsRate: savingsRateScore, budgetAdherence } = useFinancialHealth();
-    const insights = useSmartInsights();
+    const healthScore = financialHealth?.overall || 0;
+    const healthStatus = financialHealth?.status || 'poor';
+    const savingsRateScore = financialHealth?.savingsRate || 0;
+    const budgetAdherence = financialHealth?.budgetAdherence || 0;
+    const insights = smartInsights;
 
     if (isLoading) {
         return (
@@ -77,7 +80,8 @@ export default function InsightsPage() {
     }
 
     // Empty state
-    if (transactions.length === 0) {
+    // Empty state - check if we have any spending data
+    if (!isLoading && currentMonthTotal === 0 && monthlyTrendData.every(m => m.value === 0)) {
         return (
             <PageTransition className="min-h-screen bg-background pb-24 lg:pb-8">
                 <div className="max-w-md lg:max-w-7xl mx-auto px-4 lg:px-8 pt-6">
@@ -100,15 +104,10 @@ export default function InsightsPage() {
 
     // Top 3 categories with percentage
     const topCategories = useMemo(() => {
-        const total = categoryBreakdown.reduce((sum, item) => sum + item.total, 0);
         return categoryBreakdown
-            .filter(c => c.total > 0)
-            .sort((a, b) => b.total - a.total)
-            .slice(0, 3)
-            .map(item => ({
-                ...item,
-                percentage: total > 0 ? (item.total / total) * 100 : 0
-            }));
+            .filter(c => c.amount > 0)
+            .sort((a, b) => b.amount - a.amount)
+            .slice(0, 3);
     }, [categoryBreakdown]);
 
     // Get health color
@@ -296,26 +295,26 @@ export default function InsightsPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {topCategories.map((item) => (
-                            <div key={item.category.id} className="space-y-2">
+                            <div key={item.categoryId} className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div
                                             className="h-10 w-10 rounded-xl flex items-center justify-center"
-                                            style={{ backgroundColor: `${item.category.color}20` }}
+                                            style={{ backgroundColor: `${item.categoryColor}20` }}
                                         >
                                             <CategoryIcon
-                                                icon={item.category.icon}
-                                                color={item.category.color}
+                                                icon={item.categoryIcon}
+                                                color={item.categoryColor}
                                                 size="sm"
                                             />
                                         </div>
                                         <div>
-                                            <p className="font-semibold text-sm">{item.category.name}</p>
+                                            <p className="font-semibold text-sm">{item.categoryName}</p>
                                             <p className="text-xs text-muted-foreground">{item.count} transactions</p>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-bold tabular-nums">{formatCurrency(item.total)}</p>
+                                        <p className="font-bold tabular-nums">{formatCurrency(item.amount)}</p>
                                         <p className="text-xs text-muted-foreground">{item.percentage.toFixed(1)}%</p>
                                     </div>
                                 </div>
@@ -324,7 +323,7 @@ export default function InsightsPage() {
                                         className="absolute inset-y-0 left-0 rounded-full transition-all"
                                         style={{
                                             width: `${item.percentage}%`,
-                                            backgroundColor: item.category.color
+                                            backgroundColor: item.categoryColor
                                         }}
                                     />
                                 </div>

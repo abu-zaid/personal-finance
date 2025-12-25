@@ -1,8 +1,8 @@
 'use client';
 
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
@@ -36,7 +36,19 @@ interface BottomNavProps {
 
 export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Prefetch "More" menu routes on mount to ensure instant loading
+  useEffect(() => {
+    // We use a small timeout to let the main page load first
+    const timer = setTimeout(() => {
+      ['/insights', '/goals', '/recurring', '/settings', '/settings/categories'].forEach(path => {
+        router.prefetch(path);
+      });
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [router]);
 
   // Determine active tab
   const activeId = useMemo(() => {
@@ -63,9 +75,9 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
         <nav className="pointer-events-auto">
           <div
             className={cn(
-              "flex items-center gap-1 p-1.5 rounded-full",
-              "bg-background/80 backdrop-blur-xl border border-border",
-              "shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] shadow-black/10",
+              "flex items-center gap-1 p-2 rounded-full",
+              "bg-card border border-border shadow-lg",
+              "shadow-black/5 dark:shadow-black/20",
               "transition-all duration-300 ease-out"
             )}
           >
@@ -81,9 +93,8 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                       onClick={onAddExpense}
                       size="icon"
                       className={cn(
-                        "h-12 w-12 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95",
-                        "gradient-primary text-[#101010] border-0",
-                        "shadow-[0_0_20px_rgba(152,239,90,0.4)]"
+                        "h-12 w-12 rounded-full shadow-md transition-transform hover:scale-105 active:scale-95",
+                        "bg-primary text-primary-foreground border-0"
                       )}
                     >
                       <Plus className="h-6 w-6" strokeWidth={2.5} />
@@ -102,14 +113,14 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                       <div
                         className={cn(
                           "relative flex items-center justify-center h-11 w-11 rounded-full transition-colors duration-200",
-                          isActive ? "text-[#101010]" : "text-muted-foreground hover:text-foreground"
+                          isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                         )}
                       >
                         {/* Active Background Pill (if menu was somehow active route) */}
                         {isActive && (
                           <motion.div
                             layoutId="nav-pill"
-                            className="absolute inset-0 gradient-brand rounded-full shadow-[0_0_12px_rgba(152,239,90,0.3)]"
+                            className="absolute inset-0 bg-primary/15 rounded-full"
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                           />
                         )}
@@ -130,14 +141,14 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                   <div
                     className={cn(
                       "relative flex items-center justify-center h-11 w-11 rounded-full transition-colors duration-200",
-                      isActive ? "text-[#101010]" : "text-muted-foreground hover:text-foreground"
+                      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {/* Active Background Pill */}
                     {isActive && (
                       <motion.div
                         layoutId="nav-pill"
-                        className="absolute inset-0 gradient-brand rounded-full shadow-[0_0_12px_rgba(152,239,90,0.3)]"
+                        className="absolute inset-0 bg-primary/15 rounded-full"
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                       />
                     )}

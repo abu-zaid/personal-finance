@@ -3,11 +3,11 @@
 import { motion } from 'framer-motion';
 import { Lightbulb, AlertTriangle, Trophy, Zap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useSmartInsights } from '@/hooks/use-smart-insights';
+import { useInsightsData } from '@/hooks/use-insights-data';
 import { cn } from '@/lib/utils';
 
 export function SmartInsights() {
-  const insights = useSmartInsights();
+  const { smartInsights: insights } = useInsightsData();
 
   if (insights.length === 0) {
     return null;

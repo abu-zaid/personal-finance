@@ -45,33 +45,7 @@ export function TransactionListSkeleton({ count = 5 }: { count?: number }) {
   );
 }
 
-export function DashboardSkeleton() {
-  return (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <CardSkeleton key={i} />
-        ))}
-      </div>
 
-      {/* Main Content */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Chart */}
-        <div className="rounded-xl border p-6">
-          <Skeleton className="mb-4 h-6 w-32" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-
-        {/* Recent Transactions */}
-        <div className="rounded-xl border p-6">
-          <Skeleton className="mb-4 h-6 w-40" />
-          <TransactionListSkeleton count={5} />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function PageSkeleton() {
   return (

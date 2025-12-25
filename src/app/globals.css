@@ -42,7 +42,7 @@
   --color-chart-5: var(--chart-5);
 
   /* Brand Colors */
-  --color-brand-primary: #98EF5A;
+  --color-brand-primary: #22C55E;
   --color-brand-secondary: #935AEF;
   --color-brand-surface: #1A1A1A;
   --color-brand-danger: #EF4444;
@@ -63,9 +63,10 @@
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-floating: 0 12px 40px rgba(0, 0, 0, 0.45);
-  --shadow-focus: 0 0 0 2px rgba(152, 239, 90, 0.4);
+  /* Shadows */
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-floating: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --shadow-focus: 0 0 0 2px rgba(34, 197, 94, 0.4);
 }
 
 /* Dark Mode Design (Primary - from design.json) */
@@ -77,7 +78,7 @@
   --card-foreground: #FFFFFF;
   --popover: #1A1A1A;
   --popover-foreground: #FFFFFF;
-  --primary: #98EF5A;
+  --primary: #22C55E;
   --primary-foreground: #101010;
   --secondary: #935AEF;
   --secondary-foreground: #FFFFFF;
@@ -88,20 +89,20 @@
   --destructive: #EF4444;
   --border: #2A2A2A;
   --input: #1A1A1A;
-  --ring: #98EF5A;
-  --chart-1: #98EF5A;
+  --ring: #22C55E;
+  --chart-1: #22C55E;
   --chart-2: #935AEF;
   --chart-3: #22C55E;
   --chart-4: #FACC15;
   --chart-5: #3B82F6;
   --sidebar: #101010;
   --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #98EF5A;
+  --sidebar-primary: #22C55E;
   --sidebar-primary-foreground: #101010;
   --sidebar-accent: #1A1A1A;
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: #2A2A2A;
-  --sidebar-ring: #98EF5A;
+  --sidebar-ring: #22C55E;
 }
 
 /* Light Mode (Inverted) */
@@ -184,25 +185,23 @@
 @layer components {
 
   /* Primary Gradient Card - Enhanced with glow */
-  /* Primary Gradient Card - Enhanced with glow */
+  /* Primary Gradient Card - Simple */
   .gradient-primary {
-    background: linear-gradient(135deg, #98EF5A 0%, #3B82F6 100%);
-    box-shadow: 0 0 40px rgba(152, 239, 90, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
   }
 
   /* Brand Gradient (Matches Logo) */
   .gradient-brand {
-    background: linear-gradient(135deg, #98EF5A 0%, #3B82F6 100%);
+    background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
   }
 
   .gradient-accent {
     background: linear-gradient(135deg, #A06BF5 0%, #935AEF 50%, #7A3AED 100%);
-    box-shadow: 0 0 40px rgba(147, 90, 239, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
   }
 
   /* Gradient Text */
   .gradient-text {
-    background: linear-gradient(135deg, #98EF5A 0%, #3B82F6 100%);
+    background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -234,27 +233,21 @@
 
   @media (min-width: 768px) {
     .glass {
-      background: rgba(26, 26, 26, 0.7);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      background: rgba(26, 26, 26, 0.95);
       border-bottom: 0;
       border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .glass-light {
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(12px) saturate(150%);
-      -webkit-backdrop-filter: blur(12px) saturate(150%);
+      background: rgba(255, 255, 255, 0.95);
       border-bottom: 0;
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .glass-card {
-      background: rgba(26, 26, 26, 0.85);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      background: rgba(26, 26, 26, 0.98);
       box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 4px 12px rgba(0, 0, 0, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
   }
@@ -263,15 +256,14 @@
   .card-modern {
     background: #1A1A1A;
     border: 1px solid rgba(255, 255, 255, 0.06);
-    /* Minimal shadow on mobile */
   }
 
   @media (min-width: 768px) {
     .card-modern {
-      background: linear-gradient(145deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
+      background: #1A1A1A;
       box-shadow:
         0 0 0 1px rgba(0, 0, 0, 0.5),
-        0 8px 24px rgba(0, 0, 0, 0.35),
+        0 4px 12px rgba(0, 0, 0, 0.25),
         inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
   }
@@ -280,26 +272,8 @@
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow:
       0 0 0 1px rgba(0, 0, 0, 0.5),
-      0 12px 32px rgba(0, 0, 0, 0.4),
+      0 8px 24px rgba(0, 0, 0, 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  }
-
-  /* Glow Effects */
-  .glow-primary {
-    box-shadow: 0 0 20px rgba(152, 239, 90, 0.15);
-  }
-
-  .glow-accent {
-    box-shadow: 0 0 20px rgba(147, 90, 239, 0.15);
-  }
-
-  .glow-hover {
-    transition: box-shadow 0.3s ease, transform 0.2s ease;
-  }
-
-  .glow-hover:hover {
-    box-shadow: 0 0 30px rgba(152, 239, 90, 0.25);
-    transform: translateY(-1px);
   }
 
   /* Subtle hover lift */
@@ -309,7 +283,7 @@
 
   .hover-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   }
 
   /* Smooth scale animation */
@@ -319,11 +293,11 @@
   }
 
   .smooth-scale:hover {
-    transform: scale(1.02);
+    transform: scale(1.01);
   }
 
   .smooth-scale:active {
-    transform: scale(0.98);
+    transform: scale(0.99);
   }
 
   /* Safe area for mobile bottom nav */
@@ -347,61 +321,8 @@
 
   /* Modern input focus */
   .input-modern:focus-within {
-    border-color: rgba(152, 239, 90, 0.5);
-    box-shadow: 0 0 0 3px rgba(152, 239, 90, 0.1);
-  }
-
-  /* Shimmer animation for loading states */
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-
-    100% {
-      background-position: 200% 0;
-    }
-  }
-
-  .shimmer {
-    background: linear-gradient(90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.05) 50%,
-        rgba(255, 255, 255, 0) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite;
-  }
-
-  /* Micro animations */
-  @keyframes micro-bounce {
-
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-
-    50% {
-      transform: translateY(-2px);
-    }
-  }
-
-  .micro-bounce {
-    animation: micro-bounce 0.6s ease-in-out;
-  }
-
-  @keyframes pulse-glow {
-
-    0%,
-    100% {
-      box-shadow: 0 0 20px rgba(152, 239, 90, 0.2);
-    }
-
-    50% {
-      box-shadow: 0 0 30px rgba(152, 239, 90, 0.4);
-    }
-  }
-
-  .pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
   }
 }
 

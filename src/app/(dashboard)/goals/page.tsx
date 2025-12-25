@@ -178,8 +178,7 @@ export default function GoalsPage() {
                         <Button
                             onClick={handleAddGoal}
                             size="sm"
-                            className="h-9 w-9 p-0 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-[#101010]"
-                            style={{ background: BRAND_GRADIENT.css }}
+                            className="size-9 rounded-full shadow-sm hover:shadow-md transition-all"
                         >
                             <Plus className="h-5 w-5" strokeWidth={3} />
                         </Button>

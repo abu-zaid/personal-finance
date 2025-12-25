@@ -19,6 +19,9 @@ export interface CategorySpending {
   percentage: number; // % of total spending
   budgetAmount?: number;
   isOverBudget: boolean;
+  prevAmount?: number;
+  change?: number; // % change vs previous month
+  count?: number;
 }
 
 export interface TopCategory {
@@ -56,4 +59,12 @@ export interface FinancialHealthScore {
   spendingTrend: number;
   recommendations: string[];
   status: 'excellent' | 'good' | 'fair' | 'poor';
+}
+
+export interface SmartInsight {
+  type: 'opportunity' | 'warning' | 'achievement' | 'tip';
+  title: string;
+  message: string;
+  action?: string;
+  impact?: string;
 }

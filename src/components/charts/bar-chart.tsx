@@ -84,7 +84,7 @@ export function BarChart({
                     {data.map((bar, index) => {
                         const barHeight = (bar.value / maxValue) * 100;
                         const isHovered = hoveredBar === index;
-                        const barColor = bar.color || BRAND_GRADIENT.from;
+                        const barColor = bar.color || '#22C55E';
 
                         return (
                             <div
@@ -112,8 +112,7 @@ export function BarChart({
                                     onMouseLeave={handleBarLeave}
                                     onClick={() => handleBarClick(bar, index)}
                                 >
-                                    {/* Shimmer effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/10" />
+
 
                                     {/* Value label */}
                                     {showValues && barHeight > 15 && (
@@ -158,7 +157,7 @@ export function BarChart({
                 {data.map((bar, index) => {
                     const barWidth = (bar.value / maxValue) * 100;
                     const isHovered = hoveredBar === index;
-                    const barColor = bar.color || BRAND_GRADIENT.from;
+                    const barColor = bar.color || '#22C55E';
 
                     return (
                         <div key={index} className="space-y-1">
@@ -198,8 +197,7 @@ export function BarChart({
                                     onMouseLeave={handleBarLeave}
                                     onClick={() => handleBarClick(bar, index)}
                                 >
-                                    {/* Shimmer effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
                                 </motion.div>
                             </div>
                         </div>
