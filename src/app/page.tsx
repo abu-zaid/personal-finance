@@ -6,56 +6,52 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   ArrowRight,
-  Wallet,
-  PieChart,
-  TrendingUp,
-  Shield,
-  Sparkles,
-  CheckCircle2,
-  BarChart3,
-  Target,
+  ShieldCheck,
   Zap,
+  TrendingUp,
+  Wallet,
   Loader2
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { APP_NAME, APP_DESCRIPTION, BRAND_GRADIENT } from '@/lib/constants';
+import { APP_NAME } from '@/lib/constants';
 import { useAuth } from '@/context/auth-context';
+import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
+
+// Brand Configuration
+const BRAND_ICON = "/icon.svg";
+
+// Using standard green-500 (#22C55E) as requested
+const ACCENT_BG = "bg-green-500";
 
 const features = [
   {
-    icon: PieChart,
-    title: 'Budget Tracking',
-    description: 'Set monthly budgets for each category and track your spending in real-time.',
-    color: BRAND_GRADIENT.from,
+    icon: Wallet,
+    title: 'Smart Budgeting',
+    description: 'Set category-based budgets and track your actual spending in real-time.',
   },
   {
     icon: TrendingUp,
-    title: 'Smart Insights',
-    description: 'Understand your spending patterns with beautiful charts and actionable insights.',
-    color: '#60A5FA',
+    title: 'Deep Analytics',
+    description: 'Visualize your spending patterns with beautiful, interactive charts.',
   },
   {
-    icon: Shield,
-    title: 'Privacy First',
-    description: 'Your financial data stays private. We never sell or share your information.',
-    color: '#F472B6',
+    icon: Zap,
+    title: 'Instant Insights',
+    description: 'Get AI-powered recommendations to optimize your financial health.',
   },
-];
-
-const benefits = [
-  'Track all your expenses in one place',
-  'Set and monitor monthly budgets',
-  'Visualize spending patterns',
-  'Get smart financial insights',
-  'Works on all devices',
-  'Secure Google sign-in',
+  {
+    icon: ShieldCheck,
+    title: 'Private & Secure',
+    description: 'Your data is encrypted and never sold. Privacy is our priority.',
+  },
 ];
 
 const stats = [
-  { value: '10K+', label: 'Active Users' },
-  { value: '$2M+', label: 'Tracked Monthly' },
-  { value: '4.9', label: 'App Rating' },
+  { value: '15K+', label: 'Active Users' },
+  { value: '$50M+', label: 'Tracked' },
+  { value: '4.9', label: 'Rating' },
 ];
 
 export default function Home() {
@@ -71,44 +67,41 @@ export default function Home() {
   if (isLoading || isAuthenticated) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-green-500" />
       </div>
     );
   }
 
   return (
-    <div className="bg-background min-h-screen overflow-hidden">
+    <div className="bg-background min-h-screen selection:bg-green-500/20 font-sans">
+
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
           <div className="flex h-16 items-center justify-between">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-2.5"
+              className="flex items-center gap-2"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden shadow-sm">
-                <img src="/icon.svg" alt="Logo" className="h-full w-full object-cover" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10 border border-green-500/20 overflow-hidden">
+                <img src={BRAND_ICON} alt="Logo" className="h-5 w-5 object-contain" />
               </div>
-              <span className="text-lg font-bold">{APP_NAME}</span>
+              <span className="text-lg font-bold tracking-tight">{APP_NAME}</span>
             </motion.div>
+
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-3"
+              className="flex items-center gap-4"
             >
-              <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button asChild size="sm" className="gap-1.5"
-                style={{
-                  background: BRAND_GRADIENT.css,
-                  color: '#101010',
-                }}
-              >
+              <ThemeToggle />
+              <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+                Log in
+              </Link>
+              <Button asChild size="sm" className={cn("rounded-full font-medium shadow-none hover:opacity-90 transition-opacity", ACCENT_BG, "text-white hover:bg-green-600")}>
                 <Link href="/signup">
                   Get Started
-                  <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </Button>
             </motion.div>
@@ -117,352 +110,215 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 sm:pt-40 sm:pb-32">
-        {/* Background decorations */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div
-            className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-20"
-            style={{ background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)' }}
-          />
-          <div
-            className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full blur-3xl opacity-10"
-            style={{ background: 'linear-gradient(145deg, #60A5FA 0%, #3B82F6 100%)' }}
-          />
+      <section className="relative pt-32 pb-16 lg:pt-48 lg:pb-24 overflow-hidden">
+        {/* Subtle Green Glow - Ambient */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] opacity-20 pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-b from-green-500/20 to-transparent blur-[120px]" />
         </div>
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-6 md:px-8 relative z-10">
           <div className="text-center max-w-3xl mx-auto">
-            {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-6"
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 mb-8"
             >
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Now with AI insights</span>
+              <div className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">New: AI-Powered Insights</span>
             </motion.div>
 
-            {/* Headline */}
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight"
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-8 text-foreground"
             >
-              {APP_DESCRIPTION.split(' ').map((word, i) => (
-                <span key={i} className={i === 3 || i === 4 ? 'text-primary' : ''}>
-                  {word}{' '}
-                </span>
-              ))}
+              Master your money <br className="hidden sm:block" />
+              with <span className={cn("text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-green-600")}>precision.</span>
             </motion.h1>
 
-            {/* Subheadline */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto"
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed"
             >
-              Track expenses effortlessly, understand your spending patterns at a glance,
-              and stay on budget—all within a calm, premium interface.
+              Experience the evolution of personal finance. Automated tracking,
+              intelligent insights, and beautiful analytics in one premium workspace.
             </motion.p>
 
-            {/* CTA Buttons */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Button asChild size="lg" className="gap-2 h-12 px-8 text-base font-medium shadow-lg"
-                style={{
-                  background: BRAND_GRADIENT.css,
-                  color: '#101010',
-                  boxShadow: `0 8px 32px ${BRAND_GRADIENT.from}4D`,
-                }}
-              >
+              <Button asChild size="lg" className={cn("h-12 px-8 rounded-full text-base font-semibold shadow-xl shadow-green-500/10 hover:shadow-green-500/20 transition-all", ACCENT_BG, "text-white hover:bg-green-600")}>
                 <Link href="/signup">
-                  Start Free Today
-                  <ArrowRight className="h-4 w-4" />
+                  Start Your Journey
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="gap-2 h-12 px-8 text-base">
+              {/* <Button asChild size="lg" variant="outline" className="h-12 px-8 rounded-full text-base bg-background/50 backdrop-blur-sm border-border/50 hover:bg-accent/50">
                 <Link href="/login">
-                  Sign In
+                  Live Demo
                 </Link>
-              </Button>
+              </Button> */}
             </motion.div>
 
-            {/* Social proof */}
+            {/* Stats Row */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="mt-12 flex flex-wrap items-center justify-center gap-8"
+              transition={{ duration: 1, delay: 0.5 }}
+              className="mt-12 pt-8 border-t border-border/40 flex justify-center gap-8 sm:gap-16"
             >
-              {stats.map((stat, index) => (
-                <div key={index} className="text-center">
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+              {stats.map((stat, i) => (
+                <div key={i} className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold tracking-tight">{stat.value}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wider mt-1">{stat.label}</div>
                 </div>
               ))}
             </motion.div>
           </div>
-
-          {/* App Preview */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="mt-16 sm:mt-20 relative"
-          >
-            <div className="relative mx-auto max-w-4xl">
-              {/* Glow effect */}
-              <div
-                className="absolute inset-0 rounded-3xl blur-3xl opacity-30"
-                style={{ background: BRAND_GRADIENT.css }}
-              />
-
-              {/* Mock app interface */}
-              <div className="relative bg-card border border-border/50 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden">
-                {/* Header bar */}
-                <div className="flex items-center gap-2 px-4 py-3 bg-muted/30 border-b border-border/50">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                    <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                  </div>
-                  <div className="flex-1 flex justify-center">
-                    <div className="px-4 py-1 bg-background rounded-full text-xs text-muted-foreground">
-                      app.financeflow.io
-                    </div>
-                  </div>
-                </div>
-
-                {/* Content preview */}
-                <div className="p-6 sm:p-8 space-y-4">
-                  {/* Balance card mock */}
-                  <div
-                    className="p-5 rounded-2xl"
-                    style={{
-                      background: BRAND_GRADIENT.css,
-                    }}
-                  >
-                    <p className="text-[#101010]/60 text-xs font-medium uppercase">Available Balance</p>
-                    <p className="text-[#101010] text-3xl font-bold mt-1">$2,847.50</p>
-                    <div className="flex gap-4 mt-4">
-                      <div className="flex-1 bg-white/20 rounded-xl p-3">
-                        <p className="text-[#101010]/60 text-[10px] uppercase">Budget</p>
-                        <p className="text-[#101010] font-bold">$4,000</p>
-                      </div>
-                      <div className="flex-1 bg-white/20 rounded-xl p-3">
-                        <p className="text-[#101010]/60 text-[10px] uppercase">Spent</p>
-                        <p className="text-[#101010] font-bold">$1,152</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quick stats mock */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { icon: BarChart3, label: 'Analytics', color: '#60A5FA' },
-                      { icon: Target, label: 'Goals', color: '#F472B6' },
-                      { icon: Zap, label: 'Insights', color: '#FBBF24' },
-                    ].map((item, i) => (
-                      <div key={i} className="bg-muted/30 rounded-xl p-4 text-center">
-                        <div
-                          className="w-10 h-10 mx-auto rounded-xl flex items-center justify-center mb-2"
-                          style={{ background: `${item.color}20` }}
-                        >
-                          <item.icon className="h-5 w-5" style={{ color: item.color }} />
-                        </div>
-                        <p className="text-xs font-medium">{item.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 sm:py-32 bg-muted/30">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* Feature Grid - Reduced Spacing */}
+      <section className="py-16 sm:py-24 relative">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center max-w-2xl mx-auto mb-16"
+            className="mb-12 md:text-center max-w-2xl mx-auto"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold">
-              Everything you need to{' '}
-              <span className="text-primary">manage your money</span>
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Powerful features designed to help you take control of your finances.
-            </p>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">Everything needed to grow your wealth</h2>
+            <p className="text-muted-foreground text-lg">Stop relying on spreadsheets. Upgrade to a financial operating system designed for clarity.</p>
           </motion.div>
 
-          <div className="grid gap-8 md:grid-cols-3">
-            {features.map((feature, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feature, idx) => (
               <motion.div
-                key={feature.title}
+                key={idx}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="relative group"
+                transition={{ delay: idx * 0.1 }}
+                className="group relative rounded-3xl border border-border/50 bg-card/50 p-6 hover:bg-card/80 transition-colors"
               >
-                <div className="bg-card border border-border/50 rounded-2xl p-6 h-full transition-all duration-300 hover:shadow-xl hover:border-primary/20">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                    style={{ background: `${feature.color}20` }}
-                  >
-                    <feature.icon className="h-6 w-6" style={{ color: feature.color }} />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground text-sm">{feature.description}</p>
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className={cn("mb-6 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-green-500/10 text-green-500")}>
+                  <feature.icon className="h-5 w-5" />
                 </div>
+                <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">{feature.description}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-20 sm:py-32">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-                Why choose{' '}
-                <span className="text-primary">{APP_NAME}</span>?
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                Built for people who want a simple, beautiful way to manage their personal finances without the complexity.
-              </p>
-              <div className="space-y-4">
-                {benefits.map((benefit, index) => (
-                  <motion.div
-                    key={benefit}
-                    initial={{ opacity: 0, x: -10 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center gap-3"
-                  >
-                    <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                    <span className="text-foreground">{benefit}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
+      {/* Modern Dashboard Preview - Tighter & More Identical */}
+      <section className="py-16 space-y-8 bg-muted/20 border-y border-border/40 overflow-hidden relative">
+        <div className="mx-auto max-w-md px-6 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="relative rounded-[3rem] border border-border/30 shadow-2xl bg-card overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-green-500/5 pointer-events-none mix-blend-overlay" />
 
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="relative"
-            >
-              {/* Decorative cards */}
-              <div className="relative">
-                <div
-                  className="absolute -top-4 -left-4 w-full h-full rounded-2xl"
-                  style={{ background: 'linear-gradient(145deg, #98EF5A 0%, #7BEA3C 100%)', opacity: 0.1 }}
-                />
-                <div className="relative bg-card border border-border/50 rounded-2xl p-8 shadow-xl">
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                        <Wallet className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">This Month</p>
-                        <p className="text-2xl font-bold">$1,247.50</p>
-                      </div>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full w-[62%]"
-                        style={{ background: BRAND_GRADIENT.css }}
-                      />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      You&apos;ve spent 62% of your monthly budget. Keep going! 🎉
-                    </p>
+            {/* Fake UI Header */}
+            <div className="h-16 flex items-center px-8 gap-2 bg-card/50">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
+            </div>
+
+            {/* Compact Dashboard Content */}
+            <div className="px-8 pb-10 flex flex-col gap-6 bg-card">
+              {/* Balance */}
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Total Balance</p>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-4xl font-bold tracking-tight text-foreground">$12,450.00</h3>
+                  <div className="flex flex-col items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 text-[10px] font-bold px-3 py-1.5 rounded-full leading-tight text-center">
+                    <span>+12.5%</span>
+                    <span className="opacity-80 text-[8px]">THIS MONTH</span>
                   </div>
                 </div>
               </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-20 sm:py-32">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="relative overflow-hidden rounded-3xl p-8 sm:p-12 lg:p-16 text-center"
-            style={{
-              background: BRAND_GRADIENT.css,
-            }}
-          >
-            {/* Decorations */}
-            <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
-            <div className="absolute -left-20 -bottom-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
+              {/* Top Categories - White Card */}
+              <div className="p-6 rounded-3xl bg-background border border-border/30 shadow-sm space-y-4">
+                <div className="text-sm font-semibold text-foreground">Top Categories</div>
+                <div className="space-y-4">
+                  {[
+                    { l: 'Housing', c: 'bg-green-500', v: '32%' },
+                    { l: 'Food', c: 'bg-blue-500', v: '32%' },
+                    { l: 'Transport', c: 'bg-orange-500', v: '32%' }
+                  ].map((cat, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${cat.c}`} />
+                      <div className="text-sm font-medium text-foreground flex-1">{cat.l}</div>
+                      <div className="text-sm text-muted-foreground font-medium">{cat.v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-            <div className="relative">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#101010] mb-4">
-                Ready to take control?
-              </h2>
-              <p className="text-lg text-[#101010]/70 max-w-2xl mx-auto mb-8">
-                Join thousands of users who are already managing their finances smarter.
-                Get started in seconds with Google sign-in.
-              </p>
-              <Button asChild size="lg" className="h-12 px-8 text-base font-medium bg-[#101010] text-white hover:bg-[#202020]">
-                <Link href="/signup">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+              {/* Under Budget - White Card */}
+              <div className="p-4 rounded-[2rem] bg-background border border-border/30 shadow-sm flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                  <Zap className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <div className="font-semibold text-foreground text-sm">Under Budget</div>
+                  <div className="text-xs text-muted-foreground">You saved $240 this week.</div>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
       </section>
 
+      {/* CTA Section - Reduced Height */}
+      <section className="py-16 sm:py-24">
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">Ready to upgrade your wallet?</h2>
+          <p className="text-muted-foreground text-lg mb-8">Join thousands of users who have streamlined their finances with FinanceFlow.</p>
+          <Button asChild size="lg" className={cn("h-12 px-8 rounded-full text-lg font-semibold shadow-xl shadow-green-500/20 hover:shadow-green-500/30 transition-all", ACCENT_BG, "text-white hover:bg-green-600")}>
+            <Link href="/signup">
+              Get Started for Free
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+          </Button>
+          <p className="mt-6 text-sm text-muted-foreground">No credit card required. Free forever plan available.</p>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="border-t border-border/50 py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden shadow-sm">
-                <img src="/icon.svg" alt="Logo" className="h-full w-full object-cover" />
-              </div>
-              <span className="font-semibold">{APP_NAME}</span>
+      <footer className="border-t border-border/40 py-8 bg-muted/10">
+        <div className="mx-auto max-w-7xl px-6 md:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-green-500/20 text-green-500 overflow-hidden">
+              <img src={BRAND_ICON} alt="Logo" className="h-3.5 w-3.5 object-contain" />
             </div>
-            <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
-            </p>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link href="/privacy" className="hover:text-foreground transition-colors">
-                Privacy
-              </Link>
-              <Link href="/terms" className="hover:text-foreground transition-colors">
-                Terms
-              </Link>
-            </div>
+            <span className="font-semibold tracking-tight">{APP_NAME}</span>
+          </div>
+          <div className="flex gap-8 text-sm text-muted-foreground">
+            <Link href="#" className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link href="#" className="hover:text-foreground transition-colors">Terms</Link>
+            <Link href="#" className="hover:text-foreground transition-colors">Twitter</Link>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} {APP_NAME}.
           </div>
         </div>
       </footer>

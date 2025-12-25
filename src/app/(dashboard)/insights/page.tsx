@@ -20,8 +20,11 @@ import { PageTransition } from '@/components/animations';
 import { CategoryIcon } from '@/components/features/categories';
 import { useInsightsData } from '@/hooks/use-insights-data';
 import { cn } from '@/lib/utils';
+import { FinancialHealthDetailsModal } from '@/components/features/insights/financial-health-details-modal';
+import { useState } from 'react';
 
 export default function InsightsPage() {
+    const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
     const {
         transactions,
         currentMonthTotal,
@@ -135,37 +138,45 @@ export default function InsightsPage() {
                 </div>
 
                 {/* Financial Health Score */}
-                <Card className="rounded-2xl border-none shadow-sm bg-gradient-to-br from-card via-card to-primary/5">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium">Financial Health Score</p>
-                                <p className="text-xs text-muted-foreground mt-0.5 capitalize">{healthStatus}</p>
+                <div onClick={() => setIsHealthModalOpen(true)} className="cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99]">
+                    <Card className="rounded-2xl border-none shadow-sm bg-gradient-to-br from-card via-card to-primary/5 hover:shadow-md transition-shadow">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <p className="text-sm text-muted-foreground font-medium">Financial Health Score</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5 capitalize">{healthStatus}</p>
+                                </div>
+                                <div className={cn("h-12 w-12 rounded-full flex items-center justify-center", getHealthBgColor(healthScore))}>
+                                    <Activity className={cn("h-6 w-6", getHealthColor(healthScore))} />
+                                </div>
                             </div>
-                            <div className={cn("h-12 w-12 rounded-full flex items-center justify-center", getHealthBgColor(healthScore))}>
-                                <Activity className={cn("h-6 w-6", getHealthColor(healthScore))} />
+                            <div className="flex items-end gap-3 mb-3">
+                                <span className={cn("text-5xl font-bold tabular-nums", getHealthColor(healthScore))}>
+                                    {healthScore}
+                                </span>
+                                <span className="text-2xl text-muted-foreground mb-2">/100</span>
                             </div>
-                        </div>
-                        <div className="flex items-end gap-3 mb-3">
-                            <span className={cn("text-5xl font-bold tabular-nums", getHealthColor(healthScore))}>
-                                {healthScore}
-                            </span>
-                            <span className="text-2xl text-muted-foreground mb-2">/100</span>
-                        </div>
-                        <Progress value={healthScore} className="h-2" />
+                            <Progress value={healthScore} className="h-2" />
 
-                        <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-border/40">
-                            <div>
-                                <p className="text-xs text-muted-foreground mb-1">Savings Score</p>
-                                <p className="text-lg font-bold">{savingsRateScore}/100</p>
+                            <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-border/40">
+                                <div>
+                                    <p className="text-xs text-muted-foreground mb-1">Savings Score</p>
+                                    <p className="text-lg font-bold">{savingsRateScore}/100</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground mb-1">Budget Score</p>
+                                    <p className="text-lg font-bold">{budgetAdherence}/100</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground mb-1">Budget Score</p>
-                                <p className="text-lg font-bold">{budgetAdherence}/100</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <FinancialHealthDetailsModal
+                    isOpen={isHealthModalOpen}
+                    onClose={() => setIsHealthModalOpen(false)}
+                    data={financialHealth}
+                />
 
                 {/* Key Metrics Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
