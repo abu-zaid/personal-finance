@@ -143,8 +143,6 @@ export function useTransactionsView() {
     }, []);
 
     const handleBatchDelete = async () => {
-        if (!confirm(`Delete ${selectedIds.size} transactions?`)) return;
-
         const ids = Array.from(selectedIds);
         setSelectedIds(new Set());
         setIsBatchMode(false);

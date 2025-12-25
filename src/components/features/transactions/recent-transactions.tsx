@@ -62,7 +62,7 @@ export function RecentTransactions() {
                                         </div>
                                         <div className="space-y-0.5">
                                             <p className="font-semibold text-sm line-clamp-1">{category?.name || 'Uncategorized'}</p>
-                                            <p className="text-xs text-muted-foreground">{format(new Date(transaction.date), 'MMM d, h:mm a')}</p>
+                                            <p className="text-xs text-muted-foreground">{format(new Date(transaction.date), 'MMM d')}</p>
                                         </div>
                                     </div>
                                     <span className={cn(

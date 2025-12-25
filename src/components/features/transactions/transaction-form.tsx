@@ -244,7 +244,22 @@ export function TransactionForm({
                                         </button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setDate(date)} initialFocus />
+                                        <Calendar
+                                            mode="single"
+                                            selected={selectedDate}
+                                            onSelect={(date) => {
+                                                if (date) {
+                                                    const newDate = new Date(date);
+                                                    // Preserve current time
+                                                    const currentTime = selectedDate || new Date();
+                                                    newDate.setHours(currentTime.getHours());
+                                                    newDate.setMinutes(currentTime.getMinutes());
+                                                    newDate.setSeconds(currentTime.getSeconds());
+                                                    setDate(newDate);
+                                                }
+                                            }}
+                                            initialFocus
+                                        />
                                     </PopoverContent>
                                 </Popover>
                             </div>

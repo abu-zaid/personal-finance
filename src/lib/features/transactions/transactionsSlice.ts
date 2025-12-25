@@ -188,9 +188,11 @@ export const createTransaction = createAsyncThunk(
         if (!user || !supabase) return rejectWithValue('User not authenticated');
 
         try {
+
             // Use local date format to avoid timezone issues
-            const localDate = `${input.date.getFullYear()}-${String(input.date.getMonth() + 1).padStart(2, '0')}-${String(input.date.getDate()).padStart(2, '0')}`;
-            const localTime = `${String(input.date.getHours()).padStart(2, '0')}:${String(input.date.getMinutes()).padStart(2, '0')}:00`;
+            const d = new Date(input.date);
+            const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const localTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:00`;
             const dateTimeString = `${localDate}T${localTime}`;
 
             const { data, error } = await supabase
@@ -282,7 +284,7 @@ export const updateTransaction = createAsyncThunk(
             if (input.type !== undefined) updateData.type = input.type;
             if (input.categoryId !== undefined) updateData.category_id = input.categoryId;
             if (input.date !== undefined) {
-                const d = input.date;
+                const d = new Date(input.date);
                 const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 const localTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:00`;
                 updateData.date = `${localDate}T${localTime}`;
@@ -614,12 +616,22 @@ export const { setFilters, clearFilters } = transactionsSlice.actions;
 
 // Selectors
 export const selectTransactions = (state: any): TransactionWithCategory[] => {
-    return state.transactions.items.map((item: SerializableTransactionWithCategory) => ({
-        ...item,
-        date: new Date(item.date),
-        createdAt: new Date(item.createdAt),
-        updatedAt: new Date(item.updatedAt),
-    }));
+    return state.transactions.items.map((item: SerializableTransactionWithCategory) => {
+        // Handle date parsing (fix for 5:30 AM issue on date-only strings)
+        let dateObj = new Date(item.date);
+        if (typeof item.date === 'string' && item.date.length === 10) {
+            // If it's a date-only string (YYYY-MM-DD), parse as local midnight
+            // Appending T00:00:00 makes new Date() treat it as local
+            dateObj = new Date(`${item.date}T00:00:00`);
+        }
+
+        return {
+            ...item,
+            date: dateObj,
+            createdAt: new Date(item.createdAt),
+            updatedAt: new Date(item.updatedAt),
+        };
+    });
 };
 export const selectTransactionsStatus = (state: any) => state.transactions.status;
 export const selectTransactionsError = (state: any) => state.transactions.error;
