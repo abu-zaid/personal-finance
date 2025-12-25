@@ -41,16 +41,7 @@ export function DailySpendingChart({ data, onBarClick, selectedDate }: DailySpen
                             interval="preserveStartEnd"
                             minTickGap={30}
                         />
-                        <defs>
-                            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#98EF5A" stopOpacity={0.8} />
-                                <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.8} />
-                            </linearGradient>
-                            <linearGradient id="barGradientHover" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#98EF5A" stopOpacity={1} />
-                                <stop offset="100%" stopColor="#3B82F6" stopOpacity={1} />
-                            </linearGradient>
-                        </defs>
+
                         <ChartTooltip
                             cursor={{ fill: 'var(--primary)', opacity: 0.05 }}
                             content={({ active, payload, label }) => {
@@ -106,8 +97,8 @@ export function DailySpendingChart({ data, onBarClick, selectedDate }: DailySpen
                                 const isAnySelected = !!selectedDate;
                                 // Use gradient for active/selected items, solid transparent for unselected
                                 const fill = !isAnySelected || isSelected
-                                    ? "url(#barGradient)"
-                                    : "var(--primary)";
+                                    ? "#22C55E"
+                                    : "#22C55E";
                                 const opacity = !isAnySelected || isSelected ? 1 : 0.1;
 
                                 return (

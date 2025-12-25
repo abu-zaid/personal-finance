@@ -30,6 +30,13 @@ interface SerializableTransactionWithCategory extends Omit<SerializableTransacti
     };
 }
 
+export interface DailyStat {
+    date: string;
+    amount: number;
+    count: number;
+    topCategory: string;
+}
+
 // Type definitions
 interface TransactionsState {
     items: SerializableTransactionWithCategory[];
@@ -42,6 +49,7 @@ interface TransactionsState {
         monthlyExpenses: Record<string, number>;
         monthlyIncome: Record<string, number>;
         categoryTotals: Record<string, number>; // key: `${categoryId}-${month || 'all'}`
+        dailyStats: Record<string, DailyStat[]>; // key: month 'yyyy-MM'
     };
 }
 
@@ -61,6 +69,7 @@ const initialState: TransactionsState = {
         monthlyExpenses: {},
         monthlyIncome: {},
         categoryTotals: {},
+        dailyStats: {},
     },
 };
 
@@ -308,6 +317,83 @@ export const fetchMonthlyAggregates = createAsyncThunk(
     }
 );
 
+export const fetchDailyTransactionStats = createAsyncThunk(
+    'transactions/fetchDailyStats',
+    async (month: string, { getState }) => {
+        const state = getState() as any;
+        const { user } = state.auth;
+        const supabase = createClient();
+
+        if (!user || !supabase) throw new Error('User not authenticated');
+
+        // Calculate next month for range
+        const [year, monthNum] = month.split('-').map(Number);
+        const nextDate = new Date(year, monthNum, 1);
+        const nextMonth = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+
+        // Fetch all expenses for the month to aggregate
+        const { data, error } = await supabase
+            .from('transactions')
+            .select(`
+                amount,
+                date,
+                categories:category_id (name)
+            `)
+            .eq('user_id', user.id)
+            .eq('type', 'expense')
+            .gte('date', `${month}-01`)
+            .lt('date', `${nextMonth}-01`);
+
+        if (error) throw error;
+
+        // Aggregate by day
+        const dayMap = new Map<string, { amount: number; count: number; cats: Map<string, number> }>();
+
+        data?.forEach((t: any) => {
+            // Local date string YYYY-MM-DD
+            const dayStr = new Date(t.date).toISOString().split('T')[0];
+
+            const existing = dayMap.get(dayStr) || { amount: 0, count: 0, cats: new Map() };
+            existing.amount += Number(t.amount);
+            existing.count += 1;
+
+            const catName = t.categories?.name || 'Uncategorized';
+            existing.cats.set(catName, (existing.cats.get(catName) || 0) + Number(t.amount));
+
+            dayMap.set(dayStr, existing);
+        });
+
+        const stats: DailyStat[] = Array.from(dayMap.entries()).map(([date, val]) => {
+            // Find top category
+            let topCat = '';
+            let maxVal = 0;
+            val.cats.forEach((amt, name) => {
+                if (amt > maxVal) {
+                    maxVal = amt;
+                    topCat = name;
+                }
+            });
+
+            return {
+                date,
+                amount: val.amount,
+                count: val.count,
+                topCategory: topCat
+            };
+        });
+
+        return { month, stats };
+    },
+    {
+        condition: (month, { getState }) => {
+            const state = getState() as any;
+            // Avoid refetch if we have data for this month already
+            if (state.transactions.aggregates.dailyStats[month]) return false;
+            return true;
+        }
+    }
+);
+
 // Slice
 const transactionsSlice = createSlice({
     name: 'transactions',
@@ -378,6 +464,11 @@ const transactionsSlice = createSlice({
                     state.aggregates.monthlyIncome[month] = total;
                 }
             })
+            // Daily Stats
+            .addCase(fetchDailyTransactionStats.fulfilled, (state, action) => {
+                const { month, stats } = action.payload;
+                state.aggregates.dailyStats[month] = stats;
+            })
             // Sync from Budget Fetch
             .addCase(fetchBudgetWithSpending.fulfilled, (state, action) => {
                 if (action.payload) {
@@ -403,5 +494,6 @@ export const selectTransactions = (state: any): TransactionWithCategory[] => {
 export const selectTransactionsStatus = (state: any) => state.transactions.status;
 export const selectTransactionsError = (state: any) => state.transactions.error;
 export const selectMonthlyAggregates = (state: any) => state.transactions.aggregates;
+export const selectDailyStats = (state: any) => state.transactions.aggregates.dailyStats;
 
 export default transactionsSlice.reducer;

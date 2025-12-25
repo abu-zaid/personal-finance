@@ -3,11 +3,20 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Target, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useFinancialHealth } from '@/hooks/use-financial-health';
+import { useInsightsData } from '@/hooks/use-insights-data';
 import { cn } from '@/lib/utils';
 
 export function FinancialHealthScore() {
-  const health = useFinancialHealth();
+  const { financialHealth } = useInsightsData();
+
+  const health = financialHealth || {
+    overall: 0,
+    status: 'poor',
+    savingsRate: 0,
+    budgetAdherence: 0,
+    spendingTrend: 0,
+    recommendations: []
+  };
 
   const getStatusColor = () => {
     switch (health.status) {
@@ -15,6 +24,7 @@ export function FinancialHealthScore() {
       case 'good': return 'text-primary';
       case 'fair': return 'text-amber-500';
       case 'poor': return 'text-destructive';
+      default: return 'text-destructive'; // Fallback
     }
   };
 

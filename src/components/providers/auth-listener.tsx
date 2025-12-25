@@ -34,18 +34,47 @@ export default function AuthListener() {
     const supabase = createClient();
 
     useEffect(() => {
-        if (!supabase) return;
+        // If supabase client fails to initialize, stop loading immediately
+        if (!supabase) {
+            console.error('Supabase client failed to initialize');
+            dispatch(setUser(null));
+            return;
+        }
 
-        // Initial session check
+        let mounted = true;
+
+        // Initial session check with timeout
         const initAuth = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                dispatch(setUser(mapSupabaseUserToSerializable(session.user)));
-                dispatch(fetchUserPreferences(session.user.id));
-                dispatch(fetchCategories());
-                dispatch(fetchTransactions({ page: 0 }));
-            } else {
-                dispatch(setUser(null));
+            try {
+                // Create a timeout promise that rejects after 5 seconds
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Auth check timeout')), 5000);
+                });
+
+                // Race the session check against the timeout
+                const sessionPromise = supabase.auth.getSession();
+
+                const { data: { session } } = await Promise.race([
+                    sessionPromise,
+                    timeoutPromise
+                ]) as { data: { session: any } };
+
+                if (mounted) {
+                    if (session?.user) {
+                        dispatch(setUser(mapSupabaseUserToSerializable(session.user)));
+                        dispatch(fetchUserPreferences(session.user.id));
+                        dispatch(fetchCategories());
+                        dispatch(fetchTransactions({ page: 0 }));
+                    } else {
+                        dispatch(setUser(null));
+                    }
+                }
+            } catch (error) {
+                console.error('Auth initialization error:', error);
+                // On error (including timeout), default to logged out state to allow app to load
+                if (mounted) {
+                    dispatch(setUser(null));
+                }
             }
         };
 
@@ -53,6 +82,8 @@ export default function AuthListener() {
 
         // Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (!mounted) return;
+
             if (session?.user) {
                 dispatch(setUser(mapSupabaseUserToSerializable(session.user)));
                 // Only fetch if explicitly signed in or token refreshed, but initAuth covers page load
@@ -69,6 +100,7 @@ export default function AuthListener() {
         });
 
         return () => {
+            mounted = false;
             subscription.unsubscribe();
         };
     }, [dispatch, supabase]);

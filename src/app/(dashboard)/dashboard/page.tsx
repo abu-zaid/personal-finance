@@ -25,6 +25,7 @@ import { DailySpendingChart } from '@/components/features/charts/daily-spending-
 import { RecentTransactions } from '@/components/features/transactions/recent-transactions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardSkeleton, TransactionSkeleton, ChartSkeleton } from '@/components/skeletons/skeleton-loaders';
+import { DashboardSkeleton } from '@/components/skeletons/dashboard-skeleton';
 
 // Redux
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
@@ -33,7 +34,9 @@ import {
     selectTransactions,
     fetchMonthlyAggregates,
     selectMonthlyAggregates,
-    fetchTransactions
+    fetchTransactions,
+    fetchDailyTransactionStats,
+    selectDailyStats
 } from '@/lib/features/transactions/transactionsSlice';
 import {
     selectCurrentBudget,
@@ -69,9 +72,11 @@ export default function DashboardPage() {
     const transactions = useAppSelector(selectTransactions);
     const currentBudget = useAppSelector(selectCurrentBudget);
     const aggregates = useAppSelector(selectMonthlyAggregates);
+    const dailyStatsMap = useAppSelector(selectDailyStats);
     // const transactionsStatus = useAppSelector(selectTransactionsStatus);
 
     const { symbol } = useCurrency();
+    const [isDashboardLoading, setIsDashboardLoading] = useState(true);
 
     const [timeRange, setTimeRange] = useState<'weekly' | 'monthly'>('weekly');
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -92,32 +97,35 @@ export default function DashboardPage() {
     // We only trigger this on MOUNT or when currentMonth changes.
     // We do NOT rely on `currentBudget` or `aggregates` in the dependency array
     // because that causes re-runs when data arrives, potentially triggering double-fetches.
+    // Fetch monthly totals and budget
+    // We synchronize loading to ensure no partial content is shown
     useEffect(() => {
         const loadDashboardData = async () => {
-            // 1. Fetch Budget
-            dispatch(fetchBudgetWithSpending(currentMonth));
-
-            // 2. Fetch Aggregates (Income)
-            // We check store state directly to avoid redundant dispatch if already loaded
-            // (though the thunk condition handles this, safe double-checking doesn't hurt)
-            const state = (window as any).store?.getState?.() || {};
-            // fallback if window.store isn't exposed (it usually isn't in prod), 
-            // so we rely on the thunk's internal condition.
-
-            // Dispatching these will basically check the "condition" in the slice 
-            // and abort if data is there. This is safe to call once on mount.
-            dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' }));
-            dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' }));
+            setIsDashboardLoading(true);
+            try {
+                // We use Promise.all to fetch everything needed for the view
+                // This prevents the "dollar sign" flash by ensuring currency prefs and data are ready
+                await Promise.all([
+                    dispatch(fetchBudgetWithSpending(currentMonth)).unwrap(),
+                    dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' })).unwrap(),
+                    dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' })).unwrap(),
+                    dispatch(fetchDailyTransactionStats(currentMonth)).unwrap(),
+                    // Also fetch initial transactions
+                    dispatch(fetchTransactions({ page: 0, pageSize: 20 })).unwrap(),
+                    // Short timeout to prevent layout jumping if data loads too fast (~300ms min)
+                    new Promise(resolve => setTimeout(resolve, 300))
+                ]);
+            } catch (err) {
+                console.error('Failed to load dashboard data:', err);
+            } finally {
+                setIsDashboardLoading(false);
+            }
         };
 
         loadDashboardData();
     }, [dispatch, currentMonth]);
 
-    // Separate effect for Transactions List to avoid infinite loops
-    // This should only run when currentMonth changes, not when aggregates/budget update
-    useEffect(() => {
-        dispatch(fetchTransactions({ page: 0, pageSize: 1000 }));
-    }, [dispatch, currentMonth]);
+
 
     // Calculate today's spending
     const todaySpending = useMemo(() => {
@@ -216,86 +224,37 @@ export default function DashboardPage() {
             });
         }
 
+        const currentMonthStats = dailyStatsMap[currentMonth] || [];
+
         return days.map(day => {
             const dayStr = format(day, 'yyyy-MM-dd');
             const dayName = timeRange === 'weekly' ? format(day, 'EEE') : format(day, 'd');
 
-            const dayTransactions = transactions
-                .filter(t =>
-                    t.type === 'expense' &&
-                    format(new Date(t.date), 'yyyy-MM-dd') === dayStr
-                );
-
-            const dayAmount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
-
-            // Find top category
-            const categoryTotals = new Map<string, number>();
-            dayTransactions.forEach(t => {
-                const catName = t.category?.name || 'Uncategorized';
-                categoryTotals.set(catName, (categoryTotals.get(catName) || 0) + t.amount);
-            });
-
-            let topCategory = '';
-            let maxVal = 0;
-            categoryTotals.forEach((val, key) => {
-                if (val > maxVal) {
-                    maxVal = val;
-                    topCategory = key;
-                }
-            });
+            // Find stat for this day from Redux
+            const stat = currentMonthStats.find((s: any) => s.date === dayStr);
 
             return {
                 date: dayName,
-                amount: dayAmount,
-                count: dayTransactions.length,
-                topCategory: topCategory
+                // If we have stats, use them. If not, fallback to 0. 
+                // Note: The previous logic filtered `transactions` array which might be incomplete.
+                amount: stat?.amount || 0,
+                count: stat?.count || 0,
+                topCategory: stat?.topCategory || ''
             };
         });
-    }, [transactions, timeRange]);
+    }, [dailyStatsMap, currentMonth, timeRange]);
 
     // Loading State
-    if (!user) { // Basic auth loading or while fetching initial data
+    if (!user || isDashboardLoading) { // Wait for both auth and data
         return (
             <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">
                 <div className="max-w-md lg:max-w-7xl mx-auto px-4 lg:px-8 space-y-6 lg:space-y-8">
-                    {/* Header Skeleton */}
-                    <div className="flex items-center justify-between py-4 px-2">
-                        <div className="flex items-center gap-3">
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                            <div className="space-y-2">
-                                <Skeleton className="h-3 w-24" />
-                                <Skeleton className="h-5 w-32" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-                        {/* Main Content Skeleton */}
-                        <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-                            <CardSkeleton />
-                            <div className="space-y-4">
-                                <div className="flex justify-between">
-                                    <Skeleton className="h-6 w-32" />
-                                    <Skeleton className="h-8 w-24 rounded-full" />
-                                </div>
-                                <ChartSkeleton />
-                            </div>
-                        </div>
-
-                        {/* Side Content Skeleton */}
-                        <div className="lg:col-span-1 space-y-6">
-                            <div className="space-y-4">
-                                <Skeleton className="h-6 w-40" />
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <TransactionSkeleton key={i} />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                    <DashboardSkeleton />
                 </div>
             </div>
         );
     }
+
 
     return (
         <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">

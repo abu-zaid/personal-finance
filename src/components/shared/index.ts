@@ -4,7 +4,6 @@ export {
   CardSkeleton,
   ListItemSkeleton,
   TransactionListSkeleton,
-  DashboardSkeleton,
   PageSkeleton,
 } from './loading-skeleton';
 export { ErrorBoundary, ErrorFallback, withErrorBoundary } from './error-boundary';

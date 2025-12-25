@@ -5,6 +5,7 @@ import transactionsReducer from './features/transactions/transactionsSlice';
 import categoriesReducer from './features/categories/categoriesSlice';
 import budgetsReducer from './features/budgets/budgetsSlice';
 import recurringReducer from './features/recurring/recurringSlice';
+import insightsReducer from './features/insights/insightsSlice';
 
 export const makeStore = () => {
     return configureStore({
@@ -14,6 +15,7 @@ export const makeStore = () => {
             categories: categoriesReducer,
             budgets: budgetsReducer,
             recurring: recurringReducer,
+            insights: insightsReducer,
         },
     });
 };
