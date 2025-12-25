@@ -4,13 +4,10 @@ import {
     TransactionWithCategory,
     TransactionFilters,
     CreateTransactionInput,
-    UpdateTransactionInput,
-    TransactionSort
+    UpdateTransactionInput
 } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 import { fetchBudgetWithSpending } from '@/lib/features/budgets/budgetsSlice';
-// import { RootState } from '@/lib/store';
-import { getMonthString } from '@/lib/utils';
 import { toast } from 'sonner';
 
 // Helper to define Serializable Transaction for Redux
@@ -30,11 +27,20 @@ interface SerializableTransactionWithCategory extends Omit<SerializableTransacti
     };
 }
 
+export interface CategoryBreakdownItem {
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+    value: number;
+}
+
 export interface DailyStat {
     date: string;
     amount: number;
     count: number;
     topCategory: string;
+    breakdown: CategoryBreakdownItem[];
 }
 
 // Type definitions
@@ -337,7 +343,7 @@ export const fetchDailyTransactionStats = createAsyncThunk(
             .select(`
                 amount,
                 date,
-                categories:category_id (name)
+                categories:category_id (id, name, icon, color)
             `)
             .eq('user_id', user.id)
             .eq('type', 'expense')
@@ -347,7 +353,11 @@ export const fetchDailyTransactionStats = createAsyncThunk(
         if (error) throw error;
 
         // Aggregate by day
-        const dayMap = new Map<string, { amount: number; count: number; cats: Map<string, number> }>();
+        const dayMap = new Map<string, {
+            amount: number;
+            count: number;
+            cats: Map<string, CategoryBreakdownItem>
+        }>();
 
         data?.forEach((t: any) => {
             // Local date string YYYY-MM-DD
@@ -357,8 +367,19 @@ export const fetchDailyTransactionStats = createAsyncThunk(
             existing.amount += Number(t.amount);
             existing.count += 1;
 
-            const catName = t.categories?.name || 'Uncategorized';
-            existing.cats.set(catName, (existing.cats.get(catName) || 0) + Number(t.amount));
+            const cat = t.categories;
+            if (cat) {
+                const catId = cat.id;
+                const existingCat = existing.cats.get(catId) || {
+                    id: catId,
+                    name: cat.name,
+                    icon: cat.icon,
+                    color: cat.color,
+                    value: 0
+                };
+                existingCat.value += Number(t.amount);
+                existing.cats.set(catId, existingCat);
+            }
 
             dayMap.set(dayStr, existing);
         });
@@ -367,10 +388,13 @@ export const fetchDailyTransactionStats = createAsyncThunk(
             // Find top category
             let topCat = '';
             let maxVal = 0;
-            val.cats.forEach((amt, name) => {
-                if (amt > maxVal) {
-                    maxVal = amt;
-                    topCat = name;
+
+            const breakdown: CategoryBreakdownItem[] = Array.from(val.cats.values());
+
+            breakdown.forEach((item) => {
+                if (item.value > maxVal) {
+                    maxVal = item.value;
+                    topCat = item.name;
                 }
             });
 
@@ -378,7 +402,8 @@ export const fetchDailyTransactionStats = createAsyncThunk(
                 date,
                 amount: val.amount,
                 count: val.count,
-                topCategory: topCat
+                topCategory: topCat,
+                breakdown
             };
         });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { format, startOfDay, subDays } from 'date-fns';
+import { format } from 'date-fns';
 
 import { useCurrency } from '@/hooks/use-currency';
 
@@ -104,35 +104,48 @@ export default function DashboardPage() {
     }, [monthlyIncome, monthlyExpense]);
 
     const expenseData = useMemo(() => {
-        let filteredTransactions = transactions.filter(t => t.type === 'expense');
-
-        // Weekly filter: last 7 days
-        // Weekly filter: last 7 days (including today)
-        const today = new Date();
-        const startOfRange = startOfDay(subDays(today, 6));
-        filteredTransactions = filteredTransactions.filter(t => new Date(t.date) >= startOfRange);
-
-        // Filter by selected date if one is clicked on the chart
-        if (selectedDate) {
-            filteredTransactions = filteredTransactions.filter(t => {
-                const dateVal = new Date(t.date);
-                return format(dateVal, 'EEE') === selectedDate;
-            });
-        }
-
-        // Group by category
+        const currentMonthStats = dailyStatsMap[currentMonth] || [];
         const categoryMap = new Map<string, { name: string; value: number; color: string; icon: string }>();
 
-        filteredTransactions.forEach(t => {
-            const existing = categoryMap.get(t.categoryId) || {
-                name: t.category?.name || 'Unknown',
-                value: 0,
-                color: t.category?.color || '#cbd5e1',
-                icon: t.category?.icon || 'help-circle'
-            };
-            existing.value += t.amount;
-            categoryMap.set(t.categoryId, existing);
-        });
+        // Helper to process a specific date
+        const processDate = (dateStr: string) => {
+            const stat = currentMonthStats.find((s: any) => s.date === dateStr);
+            if (stat && stat.breakdown) {
+                stat.breakdown.forEach((item: any) => {
+                    const existing = categoryMap.get(item.id) || {
+                        name: item.name,
+                        value: 0,
+                        color: item.color,
+                        icon: item.icon
+                    };
+                    existing.value += item.value;
+                    categoryMap.set(item.id, existing);
+                });
+            }
+        };
+
+        if (selectedDate) {
+            // If a specific day is selected (e.g. "Mon"), we need to find which date in the last week matches it
+            const today = new Date();
+            const days = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(today);
+                d.setDate(today.getDate() - (6 - i));
+                return d;
+            });
+
+            const matchingDate = days.find(d => format(d, 'EEE') === selectedDate);
+            if (matchingDate) {
+                processDate(format(matchingDate, 'yyyy-MM-dd'));
+            }
+        } else {
+            // Weekly: Process last 7 days
+            const today = new Date();
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                processDate(format(d, 'yyyy-MM-dd'));
+            }
+        }
 
         // Convert to array and sort by value
         const sortedCategories = Array.from(categoryMap.values())
@@ -143,8 +156,25 @@ export default function DashboardPage() {
             return [{ name: 'No Data', value: 1, color: '#e2e8f0', icon: 'circle-off' }];
         }
 
-        return sortedCategories.slice(0, 4);
-    }, [transactions, selectedDate]);
+        // If customized to top items, accumulate the rest into "Other"
+        if (sortedCategories.length <= 4) {
+            return sortedCategories;
+        }
+
+        const topCategories = sortedCategories.slice(0, 3);
+        const otherCategories = sortedCategories.slice(3);
+        const otherValue = otherCategories.reduce((sum, cat) => sum + cat.value, 0);
+
+        return [
+            ...topCategories,
+            {
+                name: 'Other',
+                value: otherValue,
+                color: '#94a3b8',
+                icon: 'more-horizontal'
+            }
+        ];
+    }, [dailyStatsMap, currentMonth, selectedDate]);
 
     const trendData = useMemo(() => {
         const today = new Date();
