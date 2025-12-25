@@ -326,8 +326,18 @@ const budgetsSlice = createSlice({
                 state.status = 'failed';
                 state.error = action.payload as string;
             })
+            // Fetch Budget With Spending
+            .addCase(fetchBudgetWithSpending.pending, (state) => {
+                state.status = 'loading';
+                state.error = null;
+            })
             .addCase(fetchBudgetWithSpending.fulfilled, (state, action) => {
+                state.status = 'succeeded';
                 state.currentBudget = action.payload;
+            })
+            .addCase(fetchBudgetWithSpending.rejected, (state, action) => {
+                state.status = 'failed';
+                state.error = action.payload as string;
             })
             .addCase(createBudget.fulfilled, (state, action) => {
                 state.items.unshift(action.payload);
