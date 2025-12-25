@@ -109,9 +109,17 @@ export const updatePreferences = createAsyncThunk(
 
 export const updateProfile = createAsyncThunk(
     'auth/updateProfile',
-    async (name: string, { getState }) => {
-        // Note: Supabase user metadata update might be needed if we want to persist name there too
-        // For now, just updating local state as per original context
+    async (name: string, { rejectWithValue }) => {
+        const supabase = createClient();
+        if (!supabase) throw new Error('Supabase not configured');
+
+        const { data, error } = await supabase.auth.updateUser({
+            data: { full_name: name }
+        });
+
+        if (error) throw error;
+
+        // Return the name to update local state
         return name;
     }
 );

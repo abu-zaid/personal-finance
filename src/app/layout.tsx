@@ -33,6 +33,16 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FAFAFA' },
+    { media: '(prefers-color-scheme: dark)', color: '#101010' }, // Matches default start background
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 import StoreProvider from '@/components/providers/store-provider';
 import AuthListener from '@/components/providers/auth-listener';
 
