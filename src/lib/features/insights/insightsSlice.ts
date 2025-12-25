@@ -229,6 +229,7 @@ export const fetchInsightsData = createAsyncThunk(
             const avgDaily = currentExpenses / (new Date().getDate() || 1);
             if (maxDaily > avgDaily * 3 && maxDaily > 100) {
                 smartInsights.push({
+                    id: 'spike-warning',
                     type: 'warning',
                     title: 'Spending Spike',
                     message: `Unusually high spending detected on a single day.`,
@@ -239,6 +240,7 @@ export const fetchInsightsData = createAsyncThunk(
             // Savings Opportunity
             if (categoryBreakdown.length > 0 && categoryBreakdown[0].percentage > 40) {
                 smartInsights.push({
+                    id: 'savings-opportunity',
                     type: 'opportunity',
                     title: 'Savings Opportunity',
                     message: `${categoryBreakdown[0].categoryName} accounts for ${categoryBreakdown[0].percentage.toFixed(0)}% of spending.`,
