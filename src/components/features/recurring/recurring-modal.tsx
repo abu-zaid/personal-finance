@@ -262,7 +262,10 @@ export const RecurringModal = memo(function RecurringModal({
     if (isDesktop) {
         return (
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-md rounded-[32px] p-6">
+                <DialogContent
+                    className="sm:max-w-md rounded-[32px] p-6"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             {isEditMode ? <Edit2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
@@ -283,6 +286,7 @@ export const RecurringModal = memo(function RecurringModal({
             <SheetContent
                 side="bottom"
                 className="h-[85vh] max-h-[85vh] rounded-t-[2rem] p-6 gap-0 border-t-0 bg-background text-foreground shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.3)] flex flex-col"
+                onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <SheetHeader className="mb-2">
                     <SheetTitle className="flex items-center gap-2">

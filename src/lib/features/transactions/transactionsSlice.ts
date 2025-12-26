@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import {
     Transaction,
     TransactionWithCategory,
@@ -638,5 +638,28 @@ export const selectTransactionsError = (state: any) => state.transactions.error;
 export const selectMonthlyAggregates = (state: any) => state.transactions.aggregates;
 export const selectDailyStats = (state: any) => state.transactions.aggregates.dailyStats;
 export const selectFilteredStats = (state: any) => state.transactions.filteredStats;
+
+// Memoized selectors for better performance
+
+// Selector for monthly expense for a specific month
+export const selectMonthlyExpenseForMonth = (month: string) =>
+    createSelector(
+        [selectMonthlyAggregates],
+        (aggregates) => aggregates.monthlyExpenses[month] || 0
+    );
+
+// Selector for monthly income for a specific month
+export const selectMonthlyIncomeForMonth = (month: string) =>
+    createSelector(
+        [selectMonthlyAggregates],
+        (aggregates) => aggregates.monthlyIncome[month] || 0
+    );
+
+// Selector for daily stats for a specific month
+export const selectDailyStatsForMonth = (month: string) =>
+    createSelector(
+        [selectDailyStats],
+        (dailyStats) => dailyStats[month] || []
+    );
 
 export default transactionsSlice.reducer;

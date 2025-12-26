@@ -52,11 +52,12 @@ export default function DashboardPage() {
         const loadDashboardData = async () => {
             setIsDashboardLoading(true);
             try {
-                // We use Promise.all to fetch everything needed for the view
+                // Optimized: fetchBudgetWithSpending already populates monthlyExpenses in Redux
+                // so we don't need a separate call for expense aggregates
                 await Promise.all([
                     dispatch(fetchBudgetWithSpending(currentMonth)).unwrap(),
                     dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' })).unwrap(),
-                    dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'expense' })).unwrap(),
+                    // Removed redundant expense aggregate call - budget fetch handles this
                     dispatch(fetchDailyTransactionStats(currentMonth)).unwrap(),
                     // Also fetch initial transactions
                     dispatch(fetchTransactions({ page: 0, pageSize: 20 })).unwrap(),
