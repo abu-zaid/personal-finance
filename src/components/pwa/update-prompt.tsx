@@ -12,13 +12,14 @@ export function UpdatePrompt() {
         }
 
         // With skipWaiting enabled in build-sw.js, new SW activates immediately
-        // Just listen for controllerchange and reload the page automatically
+        // Force HARD reload to clear all cached JS/CSS
         let refreshing = false;
 
         const handleControllerChange = () => {
             if (!refreshing) {
                 refreshing = true;
-                console.log('New service worker activated, reloading page...');
+                console.log('[UPDATE] New service worker activated, forcing HARD reload...');
+                // Force hard reload to bypass all caches
                 window.location.reload();
             }
         };
