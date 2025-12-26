@@ -209,13 +209,7 @@ export default function DashboardPage() {
 
     const isAuthLoading = useAppSelector(state => state.auth.isLoading);
 
-    // Effect handles redirection if auth finishes and no user is found?
-    // Middleware usually handles this, but client-side cleanup:
-    /* useEffect(() => {
-        if (!isAuthLoading && !user) {
-            // router.push('/login');
-        }
-    }, [isAuthLoading, user]); */
+    console.log('[DASHBOARD] Render state:', { isAuthLoading, hasUser: !!user, isDashboardLoading });
 
     // Loading State
     // Show skeleton if:
@@ -224,6 +218,7 @@ export default function DashboardPage() {
     // 3. User is present (implying we are just waiting for data)
     // If !user AND !isAuthLoading, we render nothing (or let middleware redirect)
     if (isAuthLoading || (user && isDashboardLoading)) {
+        console.log('[DASHBOARD] Showing skeleton');
         return (
             <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">
                 <div className="max-w-md lg:max-w-7xl mx-auto px-4 lg:px-8 space-y-6 lg:space-y-8">
@@ -233,7 +228,12 @@ export default function DashboardPage() {
         );
     }
 
-    if (!user) return null; // Prevent rendering if not authenticated
+    if (!user) {
+        console.log('[DASHBOARD] No user, returning null');
+        return null; // Prevent rendering if not authenticated
+    }
+
+    console.log('[DASHBOARD] Rendering dashboard content');
 
     return (
         <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">

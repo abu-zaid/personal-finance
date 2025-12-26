@@ -41,24 +41,40 @@ const initialState: AuthState = {
 export const initializeAuth = createAsyncThunk(
     'auth/initialize',
     async (_, { dispatch }) => {
+        console.log('[AUTH] initializeAuth started');
+
         // Check for Demo Mode cookie first (client-side check purely for state sync)
         const isDemo = document.cookie.includes('demo_mode=true');
+        console.log('[AUTH] Demo mode check:', isDemo);
+
         if (isDemo) {
             const serializableDemoUser: SerializableUser = {
                 ...DEMO_USER,
                 createdAt: DEMO_USER.createdAt.toISOString(),
                 updatedAt: DEMO_USER.updatedAt.toISOString(),
             };
+            console.log('[AUTH] Returning demo user');
             return { isConfigured: true, user: serializableDemoUser, isDemo: true };
         }
 
         const supabase = createClient();
-        if (!supabase) return { isConfigured: false, user: null, isDemo: false };
+        console.log('[AUTH] Supabase client created:', !!supabase);
 
+        if (!supabase) {
+            console.log('[AUTH] No supabase client, returning unconfigured');
+            return { isConfigured: false, user: null, isDemo: false };
+        }
+
+        console.log('[AUTH] Getting session...');
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('[AUTH] Session retrieved:', !!session, 'User:', !!session?.user);
+
         if (session?.user) {
+            console.log('[AUTH] Returning authenticated user');
             return { isConfigured: true, user: mapSupabaseUserToSerializable(session.user), isDemo: false };
         }
+
+        console.log('[AUTH] No session, returning null user');
         return { isConfigured: true, user: null, isDemo: false };
     }
 );
@@ -244,6 +260,13 @@ const authSlice = createSlice({
                     state.isDemo = action.payload.isDemo;
                 }
                 state.isLoading = false;
+            })
+            .addCase(initializeAuth.rejected, (state, action) => {
+                // Even on error, mark as configured and stop loading
+                state.isConfigured = true;
+                state.isLoading = false;
+                state.error = action.error.message || 'Auth initialization failed';
+                console.error('Auth initialization failed:', action.error);
             })
             // Enter Demo Mode
             .addCase(enterDemoMode.fulfilled, (state, action) => {

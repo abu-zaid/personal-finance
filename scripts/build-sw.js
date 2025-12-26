@@ -1,4 +1,9 @@
 const { generateSW } = require('workbox-build');
+const { version } = require('../package.json');
+
+// Use app version + build timestamp for guaranteed cache busting
+const BUILD_TIMESTAMP = Date.now();
+const CACHE_VERSION = `${version.replace(/\./g, '-')}-${BUILD_TIMESTAMP}`;
 
 generateSW({
     globDirectory: '.next/static',
@@ -7,17 +12,21 @@ generateSW({
     modifyURLPrefix: {
         '': '/_next/static/',
     },
+    // CRITICAL: Force immediate activation of new service workers
+    skipWaiting: true,
+    clientsClaim: true,
+    // Use versioned cache names to force cache invalidation
+    cacheId: `finance-flow-v${CACHE_VERSION}`,
     // Don't cache everything, just safe static assets
-    // We can also add runtime caching here
     runtimeCaching: [
         {
             urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-                cacheName: 'google-fonts',
+                cacheName: `google-fonts-v${CACHE_VERSION}`,
                 expiration: {
                     maxEntries: 4,
-                    maxAgeSeconds: 365 * 24 * 60 * 60, // 365 days
+                    maxAgeSeconds: 365 * 24 * 60 * 60,
                 },
             },
         },
@@ -25,10 +34,10 @@ generateSW({
             urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-                cacheName: 'static-font-assets',
+                cacheName: `static-font-assets-v${CACHE_VERSION}`,
                 expiration: {
                     maxEntries: 4,
-                    maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+                    maxAgeSeconds: 7 * 24 * 60 * 60,
                 },
             },
         },
@@ -36,10 +45,10 @@ generateSW({
             urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-                cacheName: 'static-image-assets',
+                cacheName: `static-image-assets-v${CACHE_VERSION}`,
                 expiration: {
                     maxEntries: 64,
-                    maxAgeSeconds: 24 * 60 * 60, // 24 hours
+                    maxAgeSeconds: 24 * 60 * 60,
                 },
             },
         },
@@ -47,33 +56,21 @@ generateSW({
             urlPattern: /\/_next\/image\?url=.+$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-                cacheName: 'next-image',
+                cacheName: `next-image-v${CACHE_VERSION}`,
                 expiration: {
                     maxEntries: 64,
-                    maxAgeSeconds: 24 * 60 * 60, // 24 hours
+                    maxAgeSeconds: 24 * 60 * 60,
                 },
             },
         },
-        {
-            urlPattern: /\.(?:mp3|wav|mp4)$/i,
-            handler: 'CacheFirst',
-            options: {
-                cacheName: 'static-media-assets',
-                expiration: {
-                    maxEntries: 32,
-                    maxAgeSeconds: 24 * 60 * 60, // 24 hours
-                },
-            },
-        },
-        // Cache external scripts/styles if needed, but be careful
         {
             urlPattern: /\.(?:js)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-                cacheName: 'static-js-assets',
+                cacheName: `static-js-assets-v${CACHE_VERSION}`,
                 expiration: {
                     maxEntries: 32,
-                    maxAgeSeconds: 24 * 60 * 60, // 24 hours
+                    maxAgeSeconds: 24 * 60 * 60,
                 },
             },
         },
@@ -81,20 +78,16 @@ generateSW({
             urlPattern: /\.(?:css|less)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-                cacheName: 'static-style-assets',
+                cacheName: `static-style-assets-v${CACHE_VERSION}`,
                 expiration: {
                     maxEntries: 32,
-                    maxAgeSeconds: 24 * 60 * 60, // 24 hours
+                    maxAgeSeconds: 24 * 60 * 60,
                 },
             },
         },
-        // Navigation routes (HTML) - NetworkFirst ensures fresh content but falls back to cache
-        // However, for an app that depends on auth state, NetworkFirst can sometimes show stale data if network fails.
-        // Given the "blank screen" issue, restricting this is safer.
-        // We will NOT cache API calls (default is NetworkOnly for everything else).
+        // API calls should NOT be cached
+        // Removed the catch-all handler to prevent API caching
     ],
-    skipWaiting: true,
-    clientsClaim: true,
 }).then(({ count, size }) => {
-    console.log(`Generated new Service Worker with ${count} precached files, totaling ${size} bytes.`);
+    console.log(`Generated new Service Worker v${version} with ${count} precached files, totaling ${size} bytes.`);
 });
