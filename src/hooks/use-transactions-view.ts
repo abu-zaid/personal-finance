@@ -10,11 +10,9 @@ import { useDebounce } from './use-debounce';
 import {
     fetchTransactions,
     deleteTransaction,
-    fetchFilteredStats,
     selectTransactions,
     selectTransactionsStatus,
     selectTransactionsError,
-    selectFilteredStats,
     setFilters
 } from '@/lib/features/transactions/transactionsSlice';
 import { selectCategories } from '@/lib/features/categories/categoriesSlice';
@@ -30,19 +28,27 @@ export function useTransactionsView() {
     const error = useAppSelector(selectTransactionsError);
     const categories = useAppSelector(selectCategories);
     const { hasMore, filters: ReduxFilters, totalCount } = useAppSelector((state) => state.transactions);
-    const filteredStats = useAppSelector(selectFilteredStats);
 
     // Initial Loading State
     const isLoading = status === 'loading';
     const isInitialLoading = isLoading && transactions.length === 0;
 
-    const currentMonth = format(new Date(), 'yyyy-MM'); // Keep for safety if needed, or remove?
-    // Logic for stats:
-    const stats = useMemo(() => ({
-        income: filteredStats.income,
-        expense: filteredStats.expense,
-        net: filteredStats.income - filteredStats.expense
-    }), [filteredStats]);
+    // Calculate stats from existing transaction data instead of separate API call
+    const stats = useMemo(() => {
+        const income = transactions
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        const expense = transactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        return {
+            income,
+            expense,
+            net: income - expense
+        };
+    }, [transactions]);
 
     // Local UI State
     const [search, setSearch] = useState(ReduxFilters.search || '');
@@ -52,18 +58,23 @@ export function useTransactionsView() {
     const [isBatchMode, setIsBatchMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-    // Active Filters Calculation
-    const activeFilterCount = [
-        ReduxFilters.startDate || ReduxFilters.endDate,
-        (ReduxFilters.categoryIds?.length || 0) > 0,
-        ReduxFilters.type && ReduxFilters.type !== 'all'
-    ].filter(Boolean).length;
+    // Active Filters Calculation (memoized)
+    const activeFilterCount = useMemo(() => {
+        return [
+            ReduxFilters.startDate || ReduxFilters.endDate,
+            (ReduxFilters.categoryIds?.length || 0) > 0,
+            ReduxFilters.type && ReduxFilters.type !== 'all'
+        ].filter(Boolean).length;
+    }, [ReduxFilters]);
 
 
     // --- Effects ---
 
-    // 0. Set Default Filters (This Month) on Mount
+    // Consolidated initialization effect
     useEffect(() => {
+        if (!user?.id) return;
+
+        // Set default filters if not set
         if (!ReduxFilters.startDate && !ReduxFilters.endDate) {
             const now = new Date();
             dispatch(setFilters({
@@ -71,39 +82,31 @@ export function useTransactionsView() {
                 startDate: startOfMonth(now).toISOString(),
                 endDate: endOfMonth(now).toISOString()
             }));
-            // Fetch immediately with new filters
+        }
+
+        // Fetch only if we don't have data
+        if (transactions.length === 0 && status === 'idle') {
             dispatch(fetchTransactions({ page: 0 }));
         }
-    }, [dispatch]); // Run once on mount to set defaults
+    }, [user?.id, dispatch]); // Only run on mount or user change
 
-    // 1. Fetch Filtered Stats (Total Income/Expense for current view)
+    // Handle search changes
     useEffect(() => {
-        dispatch(fetchFilteredStats());
-    }, [dispatch, ReduxFilters]);
-
-    // 2. Fetch Initial Transactions (and re-fetch on filter change)
-    // We listen to ReduxFilters changes + User + Debounced Search
-    useEffect(() => {
-        if (!user?.id) return;
-
-        // Sync local search to Redux filter if changed
-        // Optimization: Only update Redux if debounced value is different from current store value
         const currentSearch = ReduxFilters.search || '';
         const newSearch = debouncedSearch || '';
 
         if (newSearch !== currentSearch) {
             dispatch(setFilters({ ...ReduxFilters, search: newSearch }));
-            dispatch(fetchTransactions({ page: 0 }));
         }
+    }, [debouncedSearch, dispatch, ReduxFilters]);
 
-    }, [debouncedSearch, dispatch, ReduxFilters, user?.id]);
-
-    // 3. Initial Load if empty
+    // Fetch transactions when filters change
     useEffect(() => {
-        if (user?.id && transactions.length === 0 && status === 'idle') {
-            dispatch(fetchTransactions({ page: 0 }));
-        }
-    }, [user?.id, dispatch, transactions.length, status]);
+        if (!user?.id) return;
+        if (transactions.length === 0 && status === 'idle') return; // Skip if initial load
+
+        dispatch(fetchTransactions({ page: 0 }));
+    }, [ReduxFilters, dispatch, user?.id]);
 
 
     // --- Handlers ---
@@ -115,13 +118,14 @@ export function useTransactionsView() {
         }
     }, [hasMore, isLoading, transactions.length, dispatch]);
 
-    const handleFilterChange = (updates: any) => {
+    const handleFilterChange = useCallback((updates: any) => {
         const newFilters = { ...ReduxFilters, ...updates };
         dispatch(setFilters(newFilters));
-        dispatch(fetchTransactions({ page: 0 }));
-    };
+        // fetchTransactions will be triggered by the filter change effect
+        // No need to call it here to avoid duplicate calls
+    }, [ReduxFilters, dispatch]);
 
-    const handleClearFilters = () => {
+    const handleClearFilters = useCallback(() => {
         setSearch(''); // Clear local search too
         // Reset to Default (This Month) instead of All Time
         const now = new Date();
@@ -130,8 +134,8 @@ export function useTransactionsView() {
             endDate: endOfMonth(now).toISOString()
         }));
         setSortConfig({ field: 'date', order: 'desc' });
-        dispatch(fetchTransactions({ page: 0 }));
-    };
+        // fetchTransactions will be triggered by the filter change effect
+    }, [dispatch]);
 
     const handleToggleSelection = useCallback((id: string) => {
         setSelectedIds(prev => {
@@ -150,8 +154,8 @@ export function useTransactionsView() {
         try {
             await Promise.all(ids.map(id => dispatch(deleteTransaction(id)).unwrap()));
             toast.success(`Deleted ${ids.length} transactions`);
-            // Refresh totals
-            dispatch(fetchFilteredStats());
+            // Stats will be recalculated automatically from updated transactions
+            // No need to call fetchFilteredStats
         } catch (err) {
             toast.error("Some transactions failed to delete");
         }

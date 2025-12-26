@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo, useState, useEffect } from 'react';
+import { memo, useMemo, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,6 +30,15 @@ const NAV_ITEMS = [
   { href: null, icon: LayoutGrid, label: 'Menu', id: 'menu' },
 ] as const;
 
+// Menu items configuration (moved outside to prevent recreation)
+const MENU_ITEMS = [
+  { label: 'Insights', icon: BarChart2, href: '/insights', color: 'bg-blue-500/20 text-blue-500' },
+  { label: 'Goals', icon: Target, href: '/goals', color: 'bg-emerald-500/20 text-emerald-500' },
+  { label: 'Recurring', icon: Repeat, href: '/recurring', color: 'bg-purple-500/20 text-purple-500' },
+  { label: 'Categories', icon: Tags, href: '/settings/categories', color: 'bg-pink-500/20 text-pink-500' },
+  { label: 'Settings', icon: Settings, href: '/settings', color: 'bg-muted text-foreground' },
+] as const;
+
 interface BottomNavProps {
   onAddExpense?: () => void;
 }
@@ -39,14 +48,25 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Prefetch "More" menu routes on mount to ensure instant loading
+  // Memoized menu close handler
+  const handleMenuItemClick = useCallback(() => {
+    setIsMenuOpen(false);
+  }, []);
+
+  // Prefetch routes for instant navigation
   useEffect(() => {
-    // We use a small timeout to let the main page load first
+    // Prefetch main nav routes immediately for instant navigation
+    ['/dashboard', '/transactions', '/budgets'].forEach(path => {
+      router.prefetch(path);
+    });
+
+    // Prefetch menu routes after short delay
     const timer = setTimeout(() => {
-      ['/insights', '/goals', '/recurring', '/settings', '/settings/categories'].forEach(path => {
-        router.prefetch(path);
+      MENU_ITEMS.forEach(item => {
+        router.prefetch(item.href);
       });
-    }, 2000);
+    }, 1000); // Reduced from 2000ms
+
     return () => clearTimeout(timer);
   }, [router]);
 
@@ -174,17 +194,11 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
             <div className="w-12 h-1.5 bg-muted rounded-full" />
           </div>
           <div className="grid grid-cols-4 gap-4">
-            {[
-              { label: 'Insights', icon: BarChart2, href: '/insights', color: 'bg-blue-500/20 text-blue-500' },
-              { label: 'Goals', icon: Target, href: '/goals', color: 'bg-emerald-500/20 text-emerald-500' },
-              { label: 'Recurring', icon: Repeat, href: '/recurring', color: 'bg-purple-500/20 text-purple-500' },
-              { label: 'Categories', icon: Tags, href: '/settings/categories', color: 'bg-pink-500/20 text-pink-500' },
-              { label: 'Settings', icon: Settings, href: '/settings', color: 'bg-muted text-foreground' },
-            ].map((menuItem) => (
+            {MENU_ITEMS.map((menuItem) => (
               <Link
                 key={menuItem.label}
                 href={menuItem.href}
-                onClick={() => setIsMenuOpen(false)}
+                onClick={handleMenuItemClick}
                 className="flex flex-col items-center gap-3 p-2 rounded-2xl hover:bg-accent transition-colors"
               >
                 <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center", menuItem.color)}>

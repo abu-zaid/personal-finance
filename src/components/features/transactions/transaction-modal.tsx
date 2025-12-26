@@ -40,7 +40,10 @@ export function TransactionModal({
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[480px] p-0 bg-card border-border shadow-2xl">
+        <DialogContent
+          className="sm:max-w-[480px] p-0 bg-card border-border shadow-2xl"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogTitle className="sr-only">
             {isEditMode ? 'Edit Transaction' : 'Add Transaction'}
           </DialogTitle>
@@ -61,6 +64,7 @@ export function TransactionModal({
       <SheetContent
         side="bottom"
         className="h-[90vh] max-h-[90vh] rounded-t-[2rem] p-0 gap-0 border-t-0 bg-background text-foreground shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.3)] flex flex-col after:hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <SheetTitle className="sr-only">
           {isEditMode ? 'Edit Transaction' : 'Add Transaction'}

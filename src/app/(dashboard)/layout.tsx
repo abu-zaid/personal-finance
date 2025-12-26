@@ -82,8 +82,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <Header title={getPageTitle()} />
           <main className={cn(
             "flex-1 overflow-x-hidden scrollbar-hide max-w-[100vw]",
-            pathname === '/transactions' ? "flex flex-col overflow-hidden" : "overflow-y-auto"
-          )}>
+            pathname === '/transactions' ? "flex flex-col overflow-hidden" : "overflow-y-auto",
+            "will-change-contents" // Hint to browser for optimization
+          )}
+            style={{ contentVisibility: 'auto' }} // Render optimization
+          >
             <ErrorBoundary>
               {children}
             </ErrorBoundary>
