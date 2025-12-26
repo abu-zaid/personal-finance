@@ -10,9 +10,11 @@ import { useDebounce } from './use-debounce';
 import {
     fetchTransactions,
     deleteTransaction,
+    fetchFilteredStats,
     selectTransactions,
     selectTransactionsStatus,
     selectTransactionsError,
+    selectFilteredStats,
     setFilters
 } from '@/lib/features/transactions/transactionsSlice';
 import { selectCategories } from '@/lib/features/categories/categoriesSlice';
@@ -28,27 +30,18 @@ export function useTransactionsView() {
     const error = useAppSelector(selectTransactionsError);
     const categories = useAppSelector(selectCategories);
     const { hasMore, filters: ReduxFilters, totalCount } = useAppSelector((state) => state.transactions);
+    const filteredStats = useAppSelector(selectFilteredStats);
 
     // Initial Loading State
     const isLoading = status === 'loading';
     const isInitialLoading = isLoading && transactions.length === 0;
 
-    // Calculate stats from existing transaction data instead of separate API call
-    const stats = useMemo(() => {
-        const income = transactions
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + t.amount, 0);
-
-        const expense = transactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
-
-        return {
-            income,
-            expense,
-            net: income - expense
-        };
-    }, [transactions]);
+    // Stats from filtered data (all transactions, not just paginated)
+    const stats = useMemo(() => ({
+        income: filteredStats.income,
+        expense: filteredStats.expense,
+        net: filteredStats.income - filteredStats.expense
+    }), [filteredStats]);
 
     // Local UI State
     const [search, setSearch] = useState(ReduxFilters.search || '');
@@ -89,6 +82,12 @@ export function useTransactionsView() {
             dispatch(fetchTransactions({ page: 0 }));
         }
     }, [user?.id, dispatch]); // Only run on mount or user change
+
+    // Fetch filtered stats when filters change
+    useEffect(() => {
+        if (!user?.id) return;
+        dispatch(fetchFilteredStats());
+    }, [dispatch, ReduxFilters, user?.id]);
 
     // Handle search changes
     useEffect(() => {
