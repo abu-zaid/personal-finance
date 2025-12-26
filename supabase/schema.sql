@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS public.recurring_transactions (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+  type TEXT NOT NULL DEFAULT 'expense' CHECK (type IN ('expense', 'income')),
   category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
   frequency TEXT NOT NULL CHECK (frequency IN ('daily', 'weekly', 'monthly', 'yearly')),
   next_date DATE NOT NULL,
@@ -246,3 +247,60 @@ CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW
 EXECUTE FUNCTION public.create_default_user_data();
+
+-- ---------- RECURRING TRANSACTION PROCESSING ----------
+CREATE OR REPLACE FUNCTION public.process_recurring_transactions(p_user_id UUID)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public AS $$
+DECLARE
+  r RECORD;
+  v_processed_count INTEGER := 0;
+  v_next_date DATE;
+BEGIN
+  -- Loop through active recurring transactions that are due
+  FOR r IN 
+    SELECT * FROM public.recurring_transactions
+    WHERE user_id = p_user_id
+    AND status = 'active'
+    AND next_date <= CURRENT_DATE
+  LOOP
+    -- Insert into transactions table
+    INSERT INTO public.transactions (
+      user_id,
+      amount,
+      type,
+      category_id,
+      date,
+      notes
+    ) VALUES (
+      r.user_id,
+      r.amount,
+      r.type,
+      r.category_id,
+      r.next_date, -- Use the due date, not today's date, to keep history accurate
+      'Auto-generated: ' || r.name
+    );
+
+    -- Calculate next date
+    CASE r.frequency
+      WHEN 'daily' THEN v_next_date := r.next_date + INTERVAL '1 day';
+      WHEN 'weekly' THEN v_next_date := r.next_date + INTERVAL '1 week';
+      WHEN 'monthly' THEN v_next_date := r.next_date + INTERVAL '1 month';
+      WHEN 'yearly' THEN v_next_date := r.next_date + INTERVAL '1 year';
+      ELSE v_next_date := r.next_date + INTERVAL '1 month'; -- Fallback
+    END CASE;
+
+    -- Update recurring transaction with new next_date
+    UPDATE public.recurring_transactions
+    SET next_date = v_next_date,
+        updated_at = now()
+    WHERE id = r.id;
+
+    v_processed_count := v_processed_count + 1;
+  END LOOP;
+
+  RETURN v_processed_count;
+END;
+$$;

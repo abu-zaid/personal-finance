@@ -168,7 +168,8 @@ export const DEMO_RECURRING: RecurringTransaction[] = [
         user_id: DEMO_USER.id,
         amount: 5000,
         name: 'Salary', // Changed from description to name as per Type
-        category_id: 'cat-6',
+        type: 'expense',
+        category_id: 'cat_1',
         frequency: 'monthly',
         next_date: startOfMonth(new Date(new Date().setMonth(new Date().getMonth() + 1))).toISOString(),
         status: 'active',
@@ -180,6 +181,7 @@ export const DEMO_RECURRING: RecurringTransaction[] = [
         user_id: DEMO_USER.id,
         amount: 15.99,
         name: 'Netflix Subscription',
+        type: 'expense',
         category_id: 'cat-4',
         frequency: 'monthly',
         next_date: new Date().toISOString(),

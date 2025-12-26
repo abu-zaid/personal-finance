@@ -92,6 +92,7 @@ export type GoalFormData = z.infer<typeof goalSchema>;
 export const recurringSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   amount: z.number().positive('Amount must be greater than 0'),
+  type: z.enum(['expense', 'income']),
   category_id: z.string().min(1, 'Please select a category'),
   frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
   next_date: z.date(),

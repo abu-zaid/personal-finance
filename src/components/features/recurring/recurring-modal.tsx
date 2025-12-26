@@ -50,17 +50,20 @@ import { cn } from '@/lib/utils';
 import { RecurringTransaction } from '@/types';
 import { CategoryIcon } from '@/components/features/categories/category-icon';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface RecurringModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     recurring?: RecurringTransaction | null;
+    defaultType?: 'income' | 'expense';
 }
 
 export const RecurringModal = memo(function RecurringModal({
     open,
     onOpenChange,
-    recurring
+    recurring,
+    defaultType = 'expense'
 }: RecurringModalProps) {
     const dispatch = useAppDispatch();
     const categories = useAppSelector(selectCategories);
@@ -82,6 +85,7 @@ export const RecurringModal = memo(function RecurringModal({
         resolver: zodResolver(recurringSchema),
         defaultValues: {
             frequency: 'monthly',
+            type: 'expense',
             status: 'active',
             next_date: new Date(),
         },
@@ -93,6 +97,7 @@ export const RecurringModal = memo(function RecurringModal({
                 reset({
                     name: recurring.name,
                     amount: recurring.amount,
+                    type: recurring.type || 'expense',
                     category_id: recurring.category_id || '',
                     frequency: recurring.frequency,
                     status: recurring.status,
@@ -102,6 +107,7 @@ export const RecurringModal = memo(function RecurringModal({
                 reset({
                     name: '',
                     amount: undefined as any,
+                    type: defaultType,
                     category_id: '',
                     frequency: 'monthly',
                     status: 'active',
@@ -109,10 +115,11 @@ export const RecurringModal = memo(function RecurringModal({
                 });
             }
         }
-    }, [open, recurring, reset]);
+    }, [open, recurring, reset, defaultType]);
 
     const nextDate = watch('next_date');
     const frequency = watch('frequency');
+    const type = watch('type');
     const selectedCategoryId = watch('category_id');
 
     const onSubmit = useCallback(async (data: RecurringFormData) => {
@@ -152,6 +159,16 @@ export const RecurringModal = memo(function RecurringModal({
                         {...register('name')}
                     />
                     {errors.name && <p className="text-destructive text-[10px]">{errors.name.message}</p>}
+                </div>
+
+                <div className="space-y-1.5">
+                    <Label>Type</Label>
+                    <Tabs value={type} onValueChange={(val: any) => setValue('type', val)} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 rounded-xl h-11 bg-muted/30 p-1">
+                            <TabsTrigger value="expense" className="rounded-lg data-[state=active]:bg-background data-[state=active]:text-destructive data-[state=active]:shadow-sm transition-all duration-200">Expense</TabsTrigger>
+                            <TabsTrigger value="income" className="rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all duration-200">Income</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
