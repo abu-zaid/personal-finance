@@ -18,9 +18,13 @@ export function PwaInstallPrompt() {
         setIsStandalone(window.matchMedia("(display-mode: standalone)").matches);
 
         const handleBeforeInstallPrompt = (e: any) => {
+            // Prevent the mini-infobar from appearing on mobile
             e.preventDefault();
+            // Stash the event so it can be triggered later.
             setDeferredPrompt(e);
+            // Update UI notify the user they can install the PWA
             setIsVisible(true);
+            console.log('PWA: beforeinstallprompt captured');
         };
 
         window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -34,16 +38,21 @@ export function PwaInstallPrompt() {
     }, []);
 
     const handleInstallClick = async () => {
-        if (!deferredPrompt) return;
+        if (!deferredPrompt) {
+            console.error('PWA: No deferred prompt available');
+            return;
+        }
 
+        // Show the install prompt
         deferredPrompt.prompt();
 
+        // Wait for the user to respond to the prompt
         const { outcome } = await deferredPrompt.userChoice;
+        console.log(`PWA: User response to install prompt: ${outcome}`);
 
-        if (outcome === "accepted") {
-            setDeferredPrompt(null);
-            setIsVisible(false);
-        }
+        // We've used the prompt, and can't use it again, throw it away
+        setDeferredPrompt(null);
+        setIsVisible(false);
     };
 
     const handleDismiss = () => {
