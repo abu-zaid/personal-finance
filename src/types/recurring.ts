@@ -10,6 +10,7 @@ export interface RecurringTransaction {
     amount: number;
     category_id: string | null;
     category?: Category;
+    type: 'income' | 'expense';
     frequency: RecurringFrequency;
     next_date: string;
     status: RecurringStatus;

@@ -16,6 +16,7 @@ import {
     StaggerContainer,
     StaggerItem
 } from '@/components/animations';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'; // Import Tabs
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,8 @@ import {
     selectRecurring,
     selectRecurringStatus,
     fetchRecurring,
-    deleteRecurring
+    deleteRecurring,
+    checkRecurringTransactions
 } from '@/lib/features/recurring/recurringSlice';
 import { useAppDispatch, useAppSelector, useAppStore } from '@/lib/hooks';
 
@@ -43,9 +45,12 @@ export default function RecurringPage() {
     const status = useAppSelector(selectRecurringStatus);
     const isLoading = status === 'loading' && recurringTransactions.length === 0;
 
-    // Fetch data
+    const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
+
+    // Fetch data & Check for auto-generation
     useEffect(() => {
         dispatch(fetchRecurring());
+        dispatch(checkRecurringTransactions());
     }, [dispatch]);
 
     // Modal state
@@ -73,17 +78,22 @@ export default function RecurringPage() {
         }
     };
 
-    const monthlyCommitment = useMemo(() => {
-        return recurringTransactions
+    const filteredTransactions = useMemo(() => {
+        return recurringTransactions.filter(t => (t.type || 'expense') === activeTab);
+    }, [recurringTransactions, activeTab]);
+
+    const monthlyTotal = useMemo(() => {
+        return filteredTransactions
             .filter(t => t.status === 'active')
             .reduce((sum, t) => {
                 const amount = Number(t.amount);
                 if (t.frequency === 'monthly') return sum + amount;
                 if (t.frequency === 'weekly') return sum + (amount * 4);
+                if (t.frequency === 'daily') return sum + (amount * 30);
                 if (t.frequency === 'yearly') return sum + (amount / 12);
                 return sum + amount;
             }, 0);
-    }, [recurringTransactions]);
+    }, [filteredTransactions]);
 
     // Loading State
     if (isLoading) {
@@ -149,22 +159,40 @@ export default function RecurringPage() {
                         </Button>
                     </div>
 
+                    {/* Tabs */}
+                    <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 rounded-xl h-12 bg-muted/40 p-1">
+                            <TabsTrigger value="expense" className="rounded-lg data-[state=active]:bg-background data-[state=active]:text-destructive data-[state=active]:shadow-sm transition-all duration-200 font-medium">Expenses</TabsTrigger>
+                            <TabsTrigger value="income" className="rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all duration-200 font-medium">Income</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+
                     {/* Summary Card */}
                     <FadeIn>
-                        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                        <Card className="bg-gradient-to-br from-card to-muted/20 border-border/60">
                             <CardContent className="p-5 md:p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground">Monthly Commitment</p>
-                                        <p className="text-2xl md:text-3xl font-bold mt-1 text-foreground">{formatCurrency(monthlyCommitment)}</p>
+                                        <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                                            {activeTab === 'expense' ? 'Monthly Commitment' : 'Monthly Income'}
+                                        </p>
+                                        <p className={cn(
+                                            "text-2xl md:text-3xl font-bold mt-1",
+                                            activeTab === 'expense' ? "text-foreground" : "text-primary"
+                                        )}>
+                                            {formatCurrency(monthlyTotal)}
+                                        </p>
                                     </div>
-                                    <div className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-foreground/5 flex items-center justify-center">
-                                        <RotateCw size={24} className="text-foreground md:w-7 md:h-7" />
+                                    <div className={cn(
+                                        "h-10 w-10 md:h-12 md:w-12 rounded-2xl flex items-center justify-center",
+                                        activeTab === 'expense' ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+                                    )}>
+                                        <RotateCw size={24} className="md:w-7 md:h-7" />
                                     </div>
                                 </div>
                                 <div className="mt-4 flex items-center gap-2">
                                     <span className="text-[10px] md:text-xs font-bold px-2 py-1 rounded-lg bg-foreground/5 text-foreground">
-                                        {recurringTransactions.filter(t => t.status === 'active').length} Active Subscriptions
+                                        {filteredTransactions.filter(t => t.status === 'active').length} Active {activeTab === 'expense' ? 'Subscriptions' : 'Streams'}
                                     </span>
                                 </div>
                             </CardContent>
@@ -175,103 +203,121 @@ export default function RecurringPage() {
                     <div className="space-y-4 pb-6">
                         <h2 className="text-base md:text-lg font-semibold flex items-center gap-2">
                             <Bell size={18} className="text-primary md:w-5 md:h-5" />
-                            Upcoming Payments
+                            Upcoming {activeTab === 'expense' ? 'Payments' : 'Deposits'}
                         </h2>
 
-                        <StaggerContainer className="grid gap-3 md:gap-4">
-                            {recurringTransactions.map((item) => {
-                                const category = getCategory(item.category_id || '');
-                                const isPaused = item.status === 'paused';
+                        {filteredTransactions.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <div className="h-16 w-16 bg-muted/30 rounded-full flex items-center justify-center mb-4">
+                                    <RotateCw className="h-8 w-8 text-muted-foreground/50" />
+                                </div>
+                                <h3 className="text-lg font-medium text-foreground">No recurring {activeTab}s</h3>
+                                <p className="text-sm text-muted-foreground max-w-xs mt-1">
+                                    Add a recurring {activeTab} to track your regular {activeTab === 'expense' ? 'bills' : 'earnings'}.
+                                </p>
+                                <Button variant="outline" size="sm" className="mt-4" onClick={handleAdd}>
+                                    Add {activeTab}
+                                </Button>
+                            </div>
+                        ) : (
+                            <StaggerContainer className="grid gap-3 md:gap-4">
+                                {filteredTransactions.map((item) => {
+                                    const category = getCategory(item.category_id || '');
+                                    const isPaused = item.status === 'paused';
 
-                                return (
-                                    <StaggerItem key={item.id}>
-                                        <Card className={cn(
-                                            "overflow-hidden transition-all duration-200 border-border/40 hover:border-primary/30 hover:shadow-md",
-                                            isPaused && "opacity-60"
-                                        )}>
-                                            <CardContent className="p-0">
-                                                <div className="grid grid-cols-[auto_1fr_auto] gap-3 p-3 md:p-4 items-center">
-                                                    {/* Icon */}
-                                                    <div
-                                                        className="h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                                                        style={{ backgroundColor: `${category?.color || '#ccc'}22` }}
-                                                    >
-                                                        <CategoryIcon
-                                                            icon={category?.icon || 'Package'}
-                                                            color={category?.color || '#ccc'}
-                                                            size="sm"
-                                                        />
-                                                    </div>
-
-                                                    {/* Main Content */}
-                                                    <div className="min-w-0 flex flex-col gap-0.5">
-                                                        <div className="flex items-center gap-2">
-                                                            <h3 className="font-semibold text-sm md:text-base truncate">
-                                                                {item.name}
-                                                            </h3>
-                                                            {isPaused && (
-                                                                <Badge variant="outline" className="text-[10px] h-5 px-1.5 uppercase hidden sm:flex">Paused</Badge>
-                                                            )}
+                                    return (
+                                        <StaggerItem key={item.id}>
+                                            <Card className={cn(
+                                                "overflow-hidden transition-all duration-200 border-border/40 hover:border-primary/30 hover:shadow-md",
+                                                isPaused && "opacity-60"
+                                            )}>
+                                                <CardContent className="p-0">
+                                                    <div className="grid grid-cols-[auto_1fr_auto] gap-3 p-3 md:p-4 items-center">
+                                                        {/* Icon */}
+                                                        <div
+                                                            className="h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                                                            style={{ backgroundColor: `${category?.color || '#ccc'}22` }}
+                                                        >
+                                                            <CategoryIcon
+                                                                icon={category?.icon || 'Package'}
+                                                                color={category?.color || '#ccc'}
+                                                                size="sm"
+                                                            />
                                                         </div>
 
-                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                            <span className="flex items-center gap-1 uppercase tracking-wider font-medium text-[10px] md:text-xs">
-                                                                {item.frequency}
-                                                            </span>
-                                                            <span className="text-border">•</span>
-                                                            <span className="flex items-center gap-1 truncate">
-                                                                <Calendar size={12} className="md:w-3.5 md:h-3.5" />
-                                                                Next: {item.next_date}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Right Side: Amount & Actions */}
-                                                    <div className="flex items-center gap-3 md:gap-4 pl-2">
-                                                        <div className="text-right">
-                                                            <p className="text-base md:text-lg font-bold whitespace-nowrap">{formatCurrency(item.amount)}</p>
-                                                            <div className="flex justify-end sm:hidden mt-0.5">
-                                                                {isPaused ? (
-                                                                    <span className="text-[10px] uppercase text-muted-foreground font-medium">Paused</span>
-                                                                ) : (
-                                                                    <span className="text-[10px] uppercase text-primary font-bold">Active</span>
+                                                        {/* Main Content */}
+                                                        <div className="min-w-0 flex flex-col gap-0.5">
+                                                            <div className="flex items-center gap-2">
+                                                                <h3 className="font-semibold text-sm md:text-base truncate">
+                                                                    {item.name}
+                                                                </h3>
+                                                                {isPaused && (
+                                                                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 uppercase hidden sm:flex">Paused</Badge>
                                                                 )}
                                                             </div>
-                                                            <div className="hidden sm:block">
-                                                                {!isPaused && (
-                                                                    <Badge className="bg-primary/20 text-primary border-none text-[10px] uppercase font-bold hover:bg-primary/30">Active</Badge>
-                                                                )}
+
+                                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                                <span className="flex items-center gap-1 uppercase tracking-wider font-medium text-[10px] md:text-xs">
+                                                                    {item.frequency}
+                                                                </span>
+                                                                <span className="text-border">•</span>
+                                                                <span className="flex items-center gap-1 truncate">
+                                                                    <Calendar size={12} className="md:w-3.5 md:h-3.5" />
+                                                                    Next: {item.next_date}
+                                                                </span>
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex gap-1 group">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 md:h-9 md:w-9 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                                                                onClick={() => handleEdit(item)}
-                                                            >
-                                                                <Edit2 size={16} className="md:w-[18px] md:h-[18px]" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 md:h-9 md:w-9 text-destructive rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                                                                onClick={() => handleDelete(item.id)}
-                                                            >
-                                                                <Trash2 size={16} className="md:w-[18px] md:h-[18px]" />
-                                                            </Button>
+                                                        {/* Right Side: Amount & Actions */}
+                                                        <div className="flex items-center gap-3 md:gap-4 pl-2">
+                                                            <div className="text-right">
+                                                                <p className={cn(
+                                                                    "text-base md:text-lg font-bold whitespace-nowrap",
+                                                                    activeTab === 'income' ? "text-primary" : ""
+                                                                )}>
+                                                                    {activeTab === 'income' ? '+' : ''}{formatCurrency(item.amount)}
+                                                                </p>
+                                                                <div className="flex justify-end sm:hidden mt-0.5">
+                                                                    {isPaused ? (
+                                                                        <span className="text-[10px] uppercase text-muted-foreground font-medium">Paused</span>
+                                                                    ) : (
+                                                                        <span className="text-[10px] uppercase text-primary font-bold">Active</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="hidden sm:block">
+                                                                    {!isPaused && (
+                                                                        <Badge className="bg-primary/20 text-primary border-none text-[10px] uppercase font-bold hover:bg-primary/30">Active</Badge>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex gap-1 group">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 md:h-9 md:w-9 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                                                                    onClick={() => handleEdit(item)}
+                                                                >
+                                                                    <Edit2 size={16} className="md:w-[18px] md:h-[18px]" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 md:h-9 md:w-9 text-destructive rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                                                                    onClick={() => handleDelete(item.id)}
+                                                                >
+                                                                    <Trash2 size={16} className="md:w-[18px] md:h-[18px]" />
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </StaggerItem>
-                                );
-                            })}
-                        </StaggerContainer>
-
-                        {/* Insight Section */}
+                                                </CardContent>
+                                            </Card>
+                                        </StaggerItem>
+                                    );
+                                })}
+                            </StaggerContainer>
+                        )}
                         <FadeIn>
                             <Card className="border-dashed border-2 bg-muted/30 mt-6">
                                 <CardContent className="p-8 text-center flex flex-col items-center">
@@ -293,6 +339,7 @@ export default function RecurringPage() {
                 open={modalOpen}
                 onOpenChange={setModalOpen}
                 recurring={editingRecurring}
+                defaultType={activeTab}
             />
         </PageTransition>
     );

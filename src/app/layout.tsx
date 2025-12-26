@@ -21,6 +21,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 import { PwaInstallPrompt } from '@/components/pwa/install-prompt';
 import { ServiceWorkerRegistration } from '@/components/pwa/service-worker-registration';
+import { UpdatePrompt } from '@/components/pwa/update-prompt';
 
 export const metadata: Metadata = {
   title: {
@@ -66,6 +67,7 @@ export default function RootLayout({
         >
           <StoreProvider>
             <ServiceWorkerRegistration />
+            <UpdatePrompt />
             <AuthListener />
             <AuthProvider>
               {children}

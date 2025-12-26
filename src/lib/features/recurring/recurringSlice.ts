@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { RecurringTransaction, CreateRecurringInput, UpdateRecurringInput } from '@/types';
+import { DEMO_RECURRING } from '@/lib/demo-data';
 import { createClient } from '@/lib/supabase/client';
 
 // Helper to define Serializable Recurring Transaction for Redux
@@ -40,6 +41,7 @@ function mapDbToRecurring(row: any): SerializableRecurringTransaction {
         user_id: row.user_id,
         name: row.name,
         amount: Number(row.amount),
+        type: row.type || 'expense', // Default to expense for safety
         frequency: row.frequency,
         status: row.status,
         category_id: row.category_id,
@@ -60,11 +62,32 @@ function mapDbToRecurring(row: any): SerializableRecurringTransaction {
     };
 }
 
-import { DEMO_RECURRING } from '@/lib/demo-data';
-
 // ...
 
 // Async Thunks
+export const checkRecurringTransactions = createAsyncThunk(
+    'recurring/checkRecurring',
+    async (_, { getState, rejectWithValue }) => {
+        const state = getState() as any;
+        const { user } = state.auth;
+        const supabase = createClient();
+
+        if (!user || !supabase) return rejectWithValue('User not authenticated');
+
+        try {
+            const { data, error } = await supabase.rpc('process_recurring_transactions', {
+                p_user_id: user.id
+            });
+
+            if (error) throw error;
+            return data;
+        } catch (err: any) {
+            // We usually don't want to block the app for this background task
+            return rejectWithValue(err.message);
+        }
+    }
+);
+
 export const fetchRecurring = createAsyncThunk(
     'recurring/fetchRecurring',
     async (_, { getState, rejectWithValue }) => {
@@ -78,6 +101,7 @@ export const fetchRecurring = createAsyncThunk(
                 user_id: r.user_id,
                 name: r.name,
                 amount: r.amount,
+                type: (r as any).type || 'expense',
                 frequency: r.frequency,
                 status: r.status,
                 category_id: r.category_id,
@@ -217,6 +241,13 @@ const recurringSlice = createSlice({
             // Delete
             .addCase(deleteRecurring.fulfilled, (state, action) => {
                 state.items = state.items.filter(r => r.id !== action.payload);
+            })
+            // Check
+            .addCase(checkRecurringTransactions.fulfilled, (state, action) => {
+                // If transactions were processed (count > 0), we should probably re-fetch transactions/recurring
+                // But for now, we just log it or maybe trigger a reload of recurring items?
+                // Actually, if we processed items, the `next_date` changed in DB.
+                // We should re-fetch recurring items to get updated next dates.
             });
     },
 });
