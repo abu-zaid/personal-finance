@@ -35,13 +35,31 @@ function mapDbToCategory(row: any): SerializableCategory {
     };
 }
 
+import { DEMO_CATEGORIES } from '@/lib/demo-data';
+
+// ...
+
 // Async Thunks
 export const fetchCategories = createAsyncThunk(
     'categories/fetchCategories',
     async (_, { getState, rejectWithValue }) => {
         const state = getState() as any;
-        const { user } = state.auth;
+        const { user, isDemo } = state.auth;
         const supabase = createClient();
+
+        if (isDemo) {
+            return DEMO_CATEGORIES.map(c => ({
+                id: c.id,
+                userId: c.userId,
+                name: c.name,
+                icon: c.icon,
+                color: c.color,
+                isDefault: c.isDefault,
+                order: c.order,
+                createdAt: c.createdAt.toISOString(),
+                updatedAt: c.updatedAt.toISOString(),
+            }));
+        }
 
         if (!user || !supabase) return rejectWithValue('User not authenticated');
 

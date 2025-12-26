@@ -33,11 +33,49 @@ const initialState: InsightsState = {
 };
 
 // Async Thunks
+import { DEMO_INSIGHTS } from '@/lib/demo-data';
+
+// ...
+
 export const fetchInsightsData = createAsyncThunk(
     'insights/fetchAll',
     async (_, { getState, dispatch, rejectWithValue }) => {
         const state = getState() as RootState;
-        const { user } = state.auth;
+        const { user, isDemo } = state.auth;
+
+        if (isDemo) {
+            // Mock Data for Demo
+            return {
+                financialHealth: {
+                    overall: 85,
+                    savingsRate: 75,
+                    budgetAdherence: 90,
+                    spendingTrend: 80,
+                    recommendations: [
+                        'Great job sticking to your budget!',
+                        'Consider increasing your savings goal by 5%.'
+                    ],
+                    status: 'excellent' as const
+                },
+                smartInsights: DEMO_INSIGHTS,
+                spendingTrends: [
+                    { label: 'Jul', value: 2100 },
+                    { label: 'Aug', value: 2300 },
+                    { label: 'Sep', value: 1950 },
+                    { label: 'Oct', value: 2400 },
+                    { label: 'Nov', value: 2100 },
+                    { label: 'Dec', value: 2600 },
+                ],
+                categoryBreakdown: [
+                    { categoryId: 'cat-1', categoryName: 'Housing', categoryIcon: 'home', categoryColor: '#EF4444', amount: 1500, percentage: 50, isOverBudget: false },
+                    { categoryId: 'cat-2', categoryName: 'Food', categoryIcon: 'utensils-crossed', categoryColor: '#F97316', amount: 600, percentage: 20, isOverBudget: false },
+                    { categoryId: 'cat-4', categoryName: 'Entertainment', categoryIcon: 'film', categoryColor: '#8B5CF6', amount: 400, percentage: 13, isOverBudget: false },
+                    { categoryId: 'cat-3', categoryName: 'Transport', categoryIcon: 'car', categoryColor: '#EAB308', amount: 300, percentage: 10, isOverBudget: false },
+                    { categoryId: 'cat-5', categoryName: 'Shopping', categoryIcon: 'shopping-bag', categoryColor: '#EC4899', amount: 200, percentage: 7, isOverBudget: false },
+                ]
+            };
+        }
+
         const supabase = createClient();
 
         if (!user || !supabase) return rejectWithValue('User not authenticated');

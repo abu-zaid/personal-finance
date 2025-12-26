@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useAppDispatch } from '@/lib/hooks';
 import { createClient } from '@/lib/supabase/client';
-import { setUser, fetchUserPreferences } from '@/lib/features/auth/authSlice';
+import { setUser, fetchUserPreferences, initializeAuth } from '@/lib/features/auth/authSlice';
 import { fetchCategories } from '@/lib/features/categories/categoriesSlice';
 import { fetchTransactions } from '@/lib/features/transactions/transactionsSlice';
 
@@ -32,9 +32,11 @@ const mapSupabaseUserToSerializable = (supaUser: any) => {
 export default function AuthListener() {
     const dispatch = useAppDispatch();
     const supabase = createClient();
+    // We need to check if we are already in demo mode to prevent overwrites
+    // But we can't easily access store state inside the callback without a ref or repeated selectors.
+    // However, initializeAuth returns the state.
 
     useEffect(() => {
-        // If supabase client fails to initialize, stop loading immediately
         if (!supabase) {
             console.error('Supabase client failed to initialize');
             dispatch(setUser(null));
@@ -43,58 +45,46 @@ export default function AuthListener() {
 
         let mounted = true;
 
-        // Initial session check with timeout
-        const initAuth = async () => {
+        const init = async () => {
             try {
-                // Create a timeout promise that rejects after 5 seconds
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Auth check timeout')), 5000);
-                });
+                // Use the centralized initialization logic
+                const result = await dispatch(initializeAuth()).unwrap();
 
-                // Race the session check against the timeout
-                const sessionPromise = supabase.auth.getSession();
-
-                const { data: { session } } = await Promise.race([
-                    sessionPromise,
-                    timeoutPromise
-                ]) as { data: { session: any } };
-
-                if (mounted) {
-                    if (session?.user) {
-                        dispatch(setUser(mapSupabaseUserToSerializable(session.user)));
-                        // Await preferences before fetching other data to ensure currency is loaded
-                        await dispatch(fetchUserPreferences(session.user.id)).unwrap();
-                        dispatch(fetchCategories());
-                        dispatch(fetchTransactions({ page: 0 }));
-                    } else {
-                        dispatch(setUser(null));
-                    }
+                if (mounted && result.user) {
+                    // Fetch data for both Real and Demo users
+                    // Demo mode slices will handle serving mock data
+                    await dispatch(fetchUserPreferences(result.user.id));
+                    dispatch(fetchCategories());
+                    dispatch(fetchTransactions({ page: 0 }));
+                    // Add other initial fetches here if needed (budgets, etc)
                 }
             } catch (error) {
-                console.error('Auth initialization error:', error);
-                // On error (including timeout), default to logged out state to allow app to load
-                if (mounted) {
-                    dispatch(setUser(null));
-                }
+                console.error('Auth initialization failed:', error);
+                if (mounted) dispatch(setUser(null)); // Fallback
             }
         };
 
-        initAuth();
+        init();
 
-        // Listen for changes
+        // Listen for Supabase auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
 
+            // Check if we are in demo mode via cookie to avoid race conditions with Redux state
+            const isDemo = document.cookie.includes('demo_mode=true');
+
             if (session?.user) {
+                // Real user logged in - this supersedes Demo mode
                 dispatch(setUser(mapSupabaseUserToSerializable(session.user)));
-                // Await preferences to ensure currency is loaded before UI renders
-                await dispatch(fetchUserPreferences(session.user.id)).unwrap();
-                // Fetch data if just signed in
-                if (event === 'SIGNED_IN') {
+                await dispatch(fetchUserPreferences(session.user.id)).unwrap(); // Ensure prefs loaded
+
+                if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                     dispatch(fetchCategories());
                     dispatch(fetchTransactions({ page: 0 }));
                 }
-            } else {
+            } else if (!isDemo) {
+                // Only clear user if NOT in demo mode
+                // If isDemo is true, we ignore Supabase's "no user" state
                 dispatch(setUser(null));
             }
         });
@@ -105,5 +95,5 @@ export default function AuthListener() {
         };
     }, [dispatch, supabase]);
 
-    return null; // This component doesn't render anything
+    return null;
 }

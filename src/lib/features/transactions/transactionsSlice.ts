@@ -90,17 +90,69 @@ const applyQueryFilters = (query: any, filters: any) => {
 
 // Async Thunks
 
+import { selectIsDemo } from '@/lib/features/auth/authSlice';
+import { DEMO_TRANSACTIONS } from '@/lib/demo-data';
+
+// ...
+
 export const fetchTransactions = createAsyncThunk(
     'transactions/fetchTransactions',
     async ({ page = 0, append = false, pageSize = 20 }: { page?: number; append?: boolean; pageSize?: number }, { getState, rejectWithValue }) => {
         const state = getState() as any;
         const { filters } = state.transactions;
-        const { user } = state.auth;
+        const { user, isDemo } = state.auth;
         const supabase = createClient();
+
+        if (isDemo) {
+            // Mock Data Implementation
+            let data = [...DEMO_TRANSACTIONS];
+
+            // Apply basic filters (simplified for demo)
+            if (filters.type && filters.type !== 'all') {
+                data = data.filter(t => t.type === filters.type);
+            }
+            if (filters.search) {
+                const search = filters.search.toLowerCase();
+                data = data.filter(t => t.notes?.toLowerCase().includes(search));
+            }
+
+            const count = data.length;
+            const PAGE_SIZE = pageSize;
+            const from = page * PAGE_SIZE;
+            const to = from + PAGE_SIZE;
+            const paginatedData = data.slice(from, to);
+
+            // Transform to serializable
+            const transactions: SerializableTransactionWithCategory[] = paginatedData.map((row: any) => ({
+                id: row.id,
+                userId: row.userId,
+                amount: row.amount,
+                type: row.type,
+                categoryId: row.categoryId,
+                date: row.date.toISOString(), // Ensure ISO string
+                notes: row.notes,
+                createdAt: row.createdAt.toISOString(),
+                updatedAt: row.updatedAt.toISOString(),
+                category: {
+                    id: row.categoryId, // In demo data, we might want to lookup category details
+                    name: 'Demo Category', // Placeholder or lookup
+                    icon: 'more-horizontal',
+                    color: '#6b7280'
+                }
+            }));
+
+            // Better Category Lookup for Demo
+            // We can import DEMO_CATEGORIES if we want better realism, but strict dependency might be annoying.
+            // Let's simpler: just map categoryId to a color/name if possible or leave generic.
+            // Actually, let's just leave generic for now or quick map.
+
+            return { transactions, count, append };
+        }
 
         if (!user || !supabase) return rejectWithValue('User not authenticated');
 
         const PAGE_SIZE = pageSize;
+        // ... existing Supabase logic
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
@@ -146,8 +198,38 @@ export const fetchFilteredStats = createAsyncThunk(
     async (_, { getState, rejectWithValue }) => {
         const state = getState() as any;
         const { filters } = state.transactions;
-        const { user } = state.auth;
+        const { user, isDemo } = state.auth;
         const supabase = createClient();
+
+        if (isDemo) {
+            let data = [...DEMO_TRANSACTIONS];
+            // Apply Filters (Basic)
+            if (filters.type && filters.type !== 'all') {
+                data = data.filter(t => t.type === filters.type);
+            }
+            if (filters.search) {
+                const search = filters.search.toLowerCase();
+                data = data.filter(t => t.notes?.toLowerCase().includes(search));
+            }
+            // Date filters if present
+            if (filters.startDate) {
+                const start = new Date(filters.startDate);
+                data = data.filter(t => t.date >= start);
+            }
+            if (filters.endDate) {
+                const end = new Date(filters.endDate);
+                end.setHours(23, 59, 59, 999);
+                data = data.filter(t => t.date <= end);
+            }
+
+            const stats = data.reduce((acc: any, curr: any) => {
+                const amount = Number(curr.amount);
+                if (curr.type === 'income') acc.income += amount;
+                else acc.expense += amount;
+                return acc;
+            }, { income: 0, expense: 0 });
+            return stats;
+        }
 
         if (!user || !supabase) return rejectWithValue('User not authenticated');
 
@@ -248,6 +330,7 @@ interface TransactionsState {
         income: number;
         expense: number;
     };
+    lastModified: number; // Timestamp for cache invalidation
 }
 
 const initialState: TransactionsState = {
@@ -264,10 +347,8 @@ const initialState: TransactionsState = {
         dailyStats: {},
     },
     filteredStats: { income: 0, expense: 0 },
+    lastModified: 0,
 };
-
-// ... (Rest of the file)
-
 
 export const updateTransaction = createAsyncThunk(
     'transactions/updateTransaction',
@@ -344,12 +425,20 @@ export const fetchMonthlyAggregates = createAsyncThunk(
     'transactions/fetchAggregates',
     async ({ month, type }: { month: string; type: 'expense' | 'income' }, { getState }) => {
         const state = getState() as any;
-        const { user } = state.auth;
+        const { user, isDemo } = state.auth;
+
+        if (isDemo) {
+            // Calculate from DEMO_TRANSACTIONS
+            const total = DEMO_TRANSACTIONS
+                .filter(t => t.type === type && t.date.toISOString().startsWith(month))
+                .reduce((sum, t) => sum + Number(t.amount), 0);
+            return { month, type, total };
+        }
+
         const supabase = createClient();
 
         if (!user || !supabase) throw new Error('User not authenticated');
 
-        // Calculate next month for range
         const [year, monthNum] = month.split('-').map(Number);
         const nextDate = new Date(year, monthNum, 1);
         const nextMonth = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
@@ -369,7 +458,6 @@ export const fetchMonthlyAggregates = createAsyncThunk(
         condition: ({ month, type }, { getState }) => {
             const state = getState() as any;
             const aggregates = state.transactions.aggregates;
-            // Don't fetch if we already have the data
             if (type === 'expense' && aggregates.monthlyExpenses[month] !== undefined) return false;
             if (type === 'income' && aggregates.monthlyIncome[month] !== undefined) return false;
             return true;
@@ -381,7 +469,76 @@ export const fetchDailyTransactionStats = createAsyncThunk(
     'transactions/fetchDailyStats',
     async (month: string, { getState }) => {
         const state = getState() as any;
-        const { user } = state.auth;
+        const { user, isDemo } = state.auth;
+
+        if (isDemo) {
+            const [year, monthNum] = month.split('-').map(Number);
+            const targetMonthStr = `${year}-${String(monthNum).padStart(2, '0')}`;
+
+            const data = DEMO_TRANSACTIONS.filter(t => {
+                // Convert to YYYY-MM
+                const tDate = t.date;
+                const tMonthStr = `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, '0')}`;
+                return t.type === 'expense' && tMonthStr === targetMonthStr;
+            });
+
+            // Aggregate
+            const dayMap = new Map<string, {
+                amount: number;
+                count: number;
+                cats: Map<string, CategoryBreakdownItem>
+            }>();
+
+            // Needs category info. In demo, we might not have full category object joined.
+            // But we can infer from DEMO_CATEGORIES if we import it, or just use placeholders.
+            // Let's verify if DEMO_CATEGORIES is available. 
+            // We can check categoriesSlice state actually!
+            const categories = state.categories.items;
+
+            data.forEach(t => {
+                const dayStr = t.date.toISOString().split('T')[0];
+                const existing = dayMap.get(dayStr) || { amount: 0, count: 0, cats: new Map() };
+                existing.amount += Number(t.amount);
+                existing.count += 1;
+
+                // Find category
+                const cat = categories.find((c: any) => c.id === t.categoryId);
+                const catId = t.categoryId;
+
+                const existingCat = existing.cats.get(catId) || {
+                    id: catId,
+                    name: cat?.name || 'Unknown',
+                    icon: cat?.icon || 'circle',
+                    color: cat?.color || '#ccc',
+                    value: 0
+                };
+                existingCat.value += Number(t.amount);
+                existing.cats.set(catId, existingCat);
+
+                dayMap.set(dayStr, existing);
+            });
+
+            const stats: DailyStat[] = Array.from(dayMap.entries()).map(([date, val]) => {
+                let topCat = '';
+                let maxVal = 0;
+                const breakdown: CategoryBreakdownItem[] = Array.from(val.cats.values());
+                breakdown.forEach((item) => {
+                    if (item.value > maxVal) {
+                        maxVal = item.value;
+                        topCat = item.name;
+                    }
+                });
+                return {
+                    date,
+                    amount: val.amount,
+                    count: val.count,
+                    topCategory: topCat,
+                    breakdown
+                };
+            });
+            return { month, stats };
+        }
+
         const supabase = createClient();
 
         if (!user || !supabase) throw new Error('User not authenticated');
@@ -570,7 +727,11 @@ const transactionsSlice = createSlice({
             .addCase(createTransaction.fulfilled, (state, action) => {
                 state.items = [action.payload, ...state.items];
                 state.totalCount += 1;
-                // Invalidate aggregates potentially?
+                // Invalidate aggregates
+                state.lastModified = Date.now();
+                state.aggregates.monthlyExpenses = {};
+                state.aggregates.monthlyIncome = {};
+                state.aggregates.dailyStats = {};
             })
 
             // Update
@@ -579,12 +740,22 @@ const transactionsSlice = createSlice({
                 if (index !== -1) {
                     state.items[index] = action.payload;
                 }
+                // Invalidate aggregates
+                state.lastModified = Date.now();
+                state.aggregates.monthlyExpenses = {};
+                state.aggregates.monthlyIncome = {};
+                state.aggregates.dailyStats = {};
             })
 
             // Delete
             .addCase(deleteTransaction.fulfilled, (state, action) => {
                 state.items = state.items.filter(t => t.id !== action.payload);
                 state.totalCount -= 1;
+                // Invalidate aggregates
+                state.lastModified = Date.now();
+                state.aggregates.monthlyExpenses = {};
+                state.aggregates.monthlyIncome = {};
+                state.aggregates.dailyStats = {};
             })
 
             // Aggregates
@@ -638,6 +809,7 @@ export const selectTransactionsError = (state: any) => state.transactions.error;
 export const selectMonthlyAggregates = (state: any) => state.transactions.aggregates;
 export const selectDailyStats = (state: any) => state.transactions.aggregates.dailyStats;
 export const selectFilteredStats = (state: any) => state.transactions.filteredStats;
+export const selectLastModified = (state: any) => state.transactions.lastModified;
 
 // Memoized selectors for better performance
 

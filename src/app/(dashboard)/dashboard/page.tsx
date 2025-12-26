@@ -20,7 +20,8 @@ import {
     selectMonthlyAggregates,
     fetchTransactions,
     fetchDailyTransactionStats,
-    selectDailyStats
+    selectDailyStats,
+    selectLastModified
 } from '@/lib/features/transactions/transactionsSlice';
 import { selectCategories } from '@/lib/features/categories/categoriesSlice';
 import {
@@ -36,6 +37,7 @@ export default function DashboardPage() {
     const currentBudget = useAppSelector(selectCurrentBudget);
     const aggregates = useAppSelector(selectMonthlyAggregates);
     const dailyStatsMap = useAppSelector(selectDailyStats);
+    const lastModified = useAppSelector(selectLastModified);
 
     const { symbol } = useCurrency();
     const [isDashboardLoading, setIsDashboardLoading] = useState(true);
@@ -72,7 +74,7 @@ export default function DashboardPage() {
         };
 
         loadDashboardData();
-    }, [dispatch, currentMonth]);
+    }, [dispatch, currentMonth, lastModified]);
 
     // Calculate today's spending
     const todaySpending = useMemo(() => {

@@ -18,6 +18,9 @@ import { APP_NAME } from '@/lib/constants';
 import { useAuth } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { useAppDispatch } from '@/lib/hooks';
+import { enterDemoMode } from '@/lib/features/auth/authSlice';
+import { PlayCircle } from 'lucide-react';
 
 // Brand Configuration
 const BRAND_ICON = "/icon.svg";
@@ -57,6 +60,12 @@ const stats = [
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const dispatch = useAppDispatch();
+
+  const handleDemo = async () => {
+    await dispatch(enterDemoMode());
+    router.push('/dashboard');
+  };
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -162,6 +171,15 @@ export default function Home() {
                   Start Your Journey
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={handleDemo}
+                className="h-12 px-8 rounded-full text-base bg-background/50 backdrop-blur-sm border-border/50 hover:bg-accent/50 gap-2"
+              >
+                <PlayCircle className="h-4 w-4" />
+                Try Live Demo
               </Button>
               {/* <Button asChild size="lg" variant="outline" className="h-12 px-8 rounded-full text-base bg-background/50 backdrop-blur-sm border-border/50 hover:bg-accent/50">
                 <Link href="/login">

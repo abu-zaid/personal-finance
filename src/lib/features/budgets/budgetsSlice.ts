@@ -51,12 +51,29 @@ function mapDbToBudget(budgetRow: any, allocations: any[]): SerializableBudget {
     };
 }
 
+import { DEMO_BUDGETS } from '@/lib/demo-data';
+
+// ...
+
 // Async Thunks
 export const fetchBudgets = createAsyncThunk(
     'budgets/fetchBudgets',
     async (_, { getState, rejectWithValue }) => {
         const state = getState() as any;
-        const { user } = state.auth;
+        const { user, isDemo } = state.auth;
+
+        if (isDemo) {
+            return DEMO_BUDGETS.map((b) => ({
+                id: b.id,
+                userId: b.userId,
+                month: b.month,
+                totalAmount: b.totalAmount,
+                allocations: b.allocations,
+                createdAt: b.createdAt.toISOString(),
+                updatedAt: b.updatedAt.toISOString(),
+            }));
+        }
+
         const supabase = createClient();
 
         if (!user || !supabase) return rejectWithValue('User not authenticated');
@@ -68,6 +85,7 @@ export const fetchBudgets = createAsyncThunk(
                 .eq('user_id', user.id)
                 .order('month', { ascending: false });
 
+            // ... (rest of logic)
             if (budgetsError) throw budgetsError;
             if (!budgetsData) return [];
 
@@ -79,9 +97,9 @@ export const fetchBudgets = createAsyncThunk(
 
             if (allocationsError) throw allocationsError;
 
-            return budgetsData.map((budgetRow) => {
+            return budgetsData.map((budgetRow: any) => {
                 const budgetAllocations = (allocationsData || []).filter(
-                    (a) => a.budget_id === budgetRow.id
+                    (a: any) => a.budget_id === budgetRow.id
                 );
                 return mapDbToBudget(budgetRow, budgetAllocations);
             });
@@ -95,7 +113,42 @@ export const fetchBudgetWithSpending = createAsyncThunk(
     'budgets/fetchBudgetWithSpending',
     async (month: string, { getState, rejectWithValue }) => {
         const state = getState() as any;
-        const { user } = state.auth;
+        const { user, isDemo } = state.auth;
+
+        if (isDemo) {
+            // Mock Demo Budget Spending
+            const budget = DEMO_BUDGETS.find(b => b.month === month);
+            if (!budget) return null;
+
+            const allocationsWithSpending = budget.allocations.map(a => {
+                const spent = Math.floor(Math.random() * (a.amount * 1.1)); // Random spending for demo visual
+                const remaining = a.amount - spent;
+                const percentageUsed = (spent / a.amount) * 100;
+                return {
+                    ...a,
+                    spent,
+                    remaining,
+                    percentageUsed,
+                    isOverBudget: spent > a.amount
+                };
+            });
+
+            const totalSpent = allocationsWithSpending.reduce((acc, curr) => acc + curr.spent, 0);
+            const totalRemaining = budget.totalAmount - totalSpent;
+
+            return {
+                id: budget.id,
+                userId: budget.userId,
+                month: budget.month,
+                totalAmount: budget.totalAmount,
+                allocations: allocationsWithSpending,
+                totalSpent,
+                totalRemaining,
+                createdAt: budget.createdAt.toISOString(),
+                updatedAt: budget.updatedAt.toISOString(),
+            } as SerializableBudgetWithSpending;
+        }
+
         const supabase = createClient();
 
         if (!user || !supabase) return rejectWithValue('User not authenticated');
@@ -108,6 +161,7 @@ export const fetchBudgetWithSpending = createAsyncThunk(
                 .eq('user_id', user.id)
                 .eq('month', month)
                 .single();
+            // ... (rest of function)
 
             if (budgetError && budgetError.code !== 'PGRST116') throw budgetError; // PGRST116 is "no rows found"
             if (!budgetData) return null;
@@ -372,7 +426,18 @@ const budgetsSlice = createSlice({
                         })
                     } as SerializableBudgetWithSpending;
                 }
-            });
+            })
+            // Listen for transaction changes to invalidate budget spending data
+            .addMatcher(
+                (action) =>
+                    action.type === 'transactions/createTransaction/fulfilled' ||
+                    action.type === 'transactions/updateTransaction/fulfilled' ||
+                    action.type === 'transactions/deleteTransaction/fulfilled',
+                (state) => {
+                    // Invalidate current budget to force refetch next time it is accessed
+                    state.currentBudget = null;
+                }
+            );
     },
 });
 

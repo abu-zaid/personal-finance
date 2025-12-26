@@ -180,6 +180,7 @@ export const GoalModal = memo(function GoalModal({
                                 id="target_amount"
                                 type="number"
                                 placeholder="0"
+                                autoFocus={false}
                                 className="bg-muted/30 border-none h-12 pl-8 rounded-xl"
                                 {...register('target_amount', { valueAsNumber: true })}
                             />

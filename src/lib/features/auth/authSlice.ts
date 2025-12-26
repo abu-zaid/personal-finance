@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { User, UserPreferences, Currency, DateFormat, Theme } from '@/types';
 import { createClient } from '@/lib/supabase/client';
-// import { RootState } from '@/lib/store';
+import { DEMO_USER } from '@/lib/demo-data';
 
 // Helper to define Serializable User for Redux
 interface SerializableUser extends Omit<User, 'createdAt' | 'updatedAt' | 'preferences'> {
@@ -13,6 +13,7 @@ interface SerializableUser extends Omit<User, 'createdAt' | 'updatedAt' | 'prefe
 interface AuthState {
     user: SerializableUser | null;
     isAuthenticated: boolean;
+    isDemo: boolean;
     isLoading: boolean;
     isConfigured: boolean;
     preferencesLoaded: boolean;
@@ -29,6 +30,7 @@ const defaultPreferences: UserPreferences = {
 const initialState: AuthState = {
     user: null,
     isAuthenticated: false,
+    isDemo: false,
     isLoading: true,
     isConfigured: false,
     preferencesLoaded: false,
@@ -39,22 +41,51 @@ const initialState: AuthState = {
 export const initializeAuth = createAsyncThunk(
     'auth/initialize',
     async (_, { dispatch }) => {
+        // Check for Demo Mode cookie first (client-side check purely for state sync)
+        const isDemo = document.cookie.includes('demo_mode=true');
+        if (isDemo) {
+            const serializableDemoUser: SerializableUser = {
+                ...DEMO_USER,
+                createdAt: DEMO_USER.createdAt.toISOString(),
+                updatedAt: DEMO_USER.updatedAt.toISOString(),
+            };
+            return { isConfigured: true, user: serializableDemoUser, isDemo: true };
+        }
+
         const supabase = createClient();
-        if (!supabase) return { isConfigured: false, user: null };
+        if (!supabase) return { isConfigured: false, user: null, isDemo: false };
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-            // We can trigger preference fetch here or let the listener handle it
-            // For now, let's just return the user
-            return { isConfigured: true, user: mapSupabaseUserToSerializable(session.user) };
+            return { isConfigured: true, user: mapSupabaseUserToSerializable(session.user), isDemo: false };
         }
-        return { isConfigured: true, user: null };
+        return { isConfigured: true, user: null, isDemo: false };
+    }
+);
+
+export const enterDemoMode = createAsyncThunk(
+    'auth/enterDemoMode',
+    async () => {
+        // Set cookie to bypass middleware
+        document.cookie = "demo_mode=true; path=/; max-age=3600; SameSite=Lax";
+
+        const serializableDemoUser: SerializableUser = {
+            ...DEMO_USER,
+            createdAt: DEMO_USER.createdAt.toISOString(),
+            updatedAt: DEMO_USER.updatedAt.toISOString(),
+        };
+        return serializableDemoUser;
     }
 );
 
 export const fetchUserPreferences = createAsyncThunk(
     'auth/fetchPreferences',
-    async (userId: string) => {
+    async (userId: string, { getState }) => {
+        const state = getState() as any;
+        if (state.auth.isDemo) {
+            return state.auth.user.preferences;
+        }
+
         const supabase = createClient();
         if (!supabase) throw new Error('Supabase not configured');
 
@@ -85,12 +116,19 @@ export const updatePreferences = createAsyncThunk(
     async (preferences: Partial<UserPreferences>, { getState }) => {
         const state = getState() as any;
         const user = state.auth.user;
-        const supabase = createClient();
+        const isDemo = state.auth.isDemo;
 
-        if (!user || !supabase) throw new Error('Cannot update preferences');
+        if (!user) throw new Error('Cannot update preferences');
 
         const currentPreferences = user.preferences;
         const updatedPreferences = { ...currentPreferences, ...preferences };
+
+        if (isDemo) {
+            return updatedPreferences;
+        }
+
+        const supabase = createClient();
+        if (!supabase) throw new Error('Supabase not configured');
 
         const { error } = await supabase
             .from('user_preferences')
@@ -111,7 +149,12 @@ export const updatePreferences = createAsyncThunk(
 
 export const updateProfile = createAsyncThunk(
     'auth/updateProfile',
-    async (name: string, { rejectWithValue }) => {
+    async (name: string, { getState }) => {
+        const state = getState() as any;
+        if (state.auth.isDemo) {
+            return name;
+        }
+
         const supabase = createClient();
         if (!supabase) throw new Error('Supabase not configured');
 
@@ -128,7 +171,14 @@ export const updateProfile = createAsyncThunk(
 
 export const logout = createAsyncThunk(
     'auth/logout',
-    async () => {
+    async (_, { getState }) => {
+        const state = getState() as any;
+        if (state.auth.isDemo) {
+            // Clear demo cookie
+            document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+            return;
+        }
+
         const supabase = createClient();
         if (supabase) {
             await supabase.auth.signOut();
@@ -189,9 +239,17 @@ const authSlice = createSlice({
             .addCase(initializeAuth.fulfilled, (state, action) => {
                 state.isConfigured = action.payload.isConfigured;
                 if (action.payload.user) {
-                    state.user = action.payload.user;
+                    state.user = action.payload.user as SerializableUser;
                     state.isAuthenticated = true;
+                    state.isDemo = action.payload.isDemo;
                 }
+                state.isLoading = false;
+            })
+            // Enter Demo Mode
+            .addCase(enterDemoMode.fulfilled, (state, action) => {
+                state.isDemo = true;
+                state.isAuthenticated = true;
+                state.user = action.payload;
                 state.isLoading = false;
             })
             // Fetch Preferences
@@ -226,6 +284,7 @@ const authSlice = createSlice({
             .addCase(logout.fulfilled, (state) => {
                 state.user = null;
                 state.isAuthenticated = false;
+                state.isDemo = false;
                 state.preferencesLoaded = false;
             });
     },
@@ -246,6 +305,7 @@ export const selectUser = (state: any) => {
     } as User;
 };
 export const selectIsAuthenticated = (state: any): boolean => state.auth.isAuthenticated;
+export const selectIsDemo = (state: any): boolean => state.auth.isDemo;
 export const selectPreferencesLoaded = (state: any): boolean => state.auth.preferencesLoaded;
 
 export default authSlice.reducer;

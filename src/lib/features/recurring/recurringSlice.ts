@@ -60,13 +60,33 @@ function mapDbToRecurring(row: any): SerializableRecurringTransaction {
     };
 }
 
+import { DEMO_RECURRING } from '@/lib/demo-data';
+
+// ...
+
 // Async Thunks
 export const fetchRecurring = createAsyncThunk(
     'recurring/fetchRecurring',
     async (_, { getState, rejectWithValue }) => {
         const state = getState() as any;
-        const { user } = state.auth;
+        const { user, isDemo } = state.auth;
         const supabase = createClient();
+
+        if (isDemo) {
+            return DEMO_RECURRING.map(r => ({
+                id: r.id,
+                user_id: r.user_id,
+                name: r.name,
+                amount: r.amount,
+                frequency: r.frequency,
+                status: r.status,
+                category_id: r.category_id,
+                next_date: r.next_date,
+                created_at: r.created_at,
+                updated_at: r.updated_at,
+                category: undefined // In demo, we might skip category detail for simplicity or join manually from DEMO_CATEGORIES
+            }));
+        }
 
         if (!user || !supabase) return rejectWithValue('User not authenticated');
 

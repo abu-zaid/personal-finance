@@ -41,11 +41,13 @@ export async function updateSession(request: NextRequest) {
 
   // Protected routes - redirect to login if not authenticated
   const protectedPaths = ['/dashboard', '/transactions', '/budgets', '/insights', '/settings'];
-  const isProtectedPath = protectedPaths.some(path => 
+  const isProtectedPath = protectedPaths.some(path =>
     request.nextUrl.pathname.startsWith(path)
   );
 
-  if (isProtectedPath && !user) {
+  const isDemo = request.cookies.get('demo_mode')?.value === 'true';
+
+  if (isProtectedPath && !user && !isDemo) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
@@ -55,7 +57,7 @@ export async function updateSession(request: NextRequest) {
   const authPaths = ['/login', '/signup'];
   const isAuthPath = authPaths.includes(request.nextUrl.pathname);
 
-  if (isAuthPath && user) {
+  if (isAuthPath && (user || isDemo)) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
