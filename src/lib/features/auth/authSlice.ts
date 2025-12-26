@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import { User, UserPreferences, Currency, DateFormat, Theme } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 import { DEMO_USER } from '@/lib/demo-data';
@@ -294,16 +294,18 @@ export const { setUser, setLoading } = authSlice.actions;
 
 // Selectors
 export const selectAuth = (state: any) => state.auth;
-export const selectUser = (state: any) => {
-    const user = state.auth.user;
-    if (!user) return null;
-    // Convert strings back to Dates for component consumption
-    return {
-        ...user,
-        createdAt: new Date(user.createdAt),
-        updatedAt: new Date(user.updatedAt),
-    } as User;
-};
+export const selectUser = createSelector(
+    [(state: any) => state.auth.user],
+    (user: SerializableUser | null) => {
+        if (!user) return null;
+        // Convert strings back to Dates for component consumption
+        return {
+            ...user,
+            createdAt: new Date(user.createdAt),
+            updatedAt: new Date(user.updatedAt),
+        } as User;
+    }
+);
 export const selectIsAuthenticated = (state: any): boolean => state.auth.isAuthenticated;
 export const selectIsDemo = (state: any): boolean => state.auth.isDemo;
 export const selectPreferencesLoaded = (state: any): boolean => state.auth.preferencesLoaded;

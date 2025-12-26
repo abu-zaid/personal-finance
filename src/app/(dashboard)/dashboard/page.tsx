@@ -76,7 +76,7 @@ export default function DashboardPage() {
         };
 
         loadDashboardData();
-    }, [dispatch, currentMonth, lastModified, user]);
+    }, [dispatch, currentMonth, lastModified, user ? user.id : null]);
 
     // Calculate today's spending
     const todaySpending = useMemo(() => {
