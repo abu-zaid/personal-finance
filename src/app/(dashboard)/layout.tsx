@@ -20,7 +20,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, preferencesLoaded } = useAuth();
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
 
   // Initialize global shortcuts
@@ -36,8 +36,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // Show loading state
-  if (isLoading) {
+  // Show loading state while auth is loading OR preferences are loading
+  // This prevents flash of wrong currency symbol
+  if (isLoading || (isAuthenticated && !preferencesLoaded)) {
     return (
       <div className="bg-background flex h-screen overflow-hidden">
         <aside className="bg-sidebar border-sidebar-border hidden h-full w-64 border-r lg:block">

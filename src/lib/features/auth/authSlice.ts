@@ -15,6 +15,7 @@ interface AuthState {
     isAuthenticated: boolean;
     isLoading: boolean;
     isConfigured: boolean;
+    preferencesLoaded: boolean;
     error: string | null;
 }
 
@@ -30,6 +31,7 @@ const initialState: AuthState = {
     isAuthenticated: false,
     isLoading: true,
     isConfigured: false,
+    preferencesLoaded: false,
     error: null,
 };
 
@@ -193,10 +195,18 @@ const authSlice = createSlice({
                 state.isLoading = false;
             })
             // Fetch Preferences
+            .addCase(fetchUserPreferences.pending, (state) => {
+                state.preferencesLoaded = false;
+            })
             .addCase(fetchUserPreferences.fulfilled, (state, action) => {
                 if (state.user) {
                     state.user.preferences = action.payload;
                 }
+                state.preferencesLoaded = true;
+            })
+            .addCase(fetchUserPreferences.rejected, (state) => {
+                // Even on error, mark as loaded to prevent infinite loading
+                state.preferencesLoaded = true;
             })
             // Update Preferences
             .addCase(updatePreferences.fulfilled, (state, action) => {
@@ -216,6 +226,7 @@ const authSlice = createSlice({
             .addCase(logout.fulfilled, (state) => {
                 state.user = null;
                 state.isAuthenticated = false;
+                state.preferencesLoaded = false;
             });
     },
 });
@@ -235,5 +246,6 @@ export const selectUser = (state: any) => {
     } as User;
 };
 export const selectIsAuthenticated = (state: any): boolean => state.auth.isAuthenticated;
+export const selectPreferencesLoaded = (state: any): boolean => state.auth.preferencesLoaded;
 
 export default authSlice.reducer;

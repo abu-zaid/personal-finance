@@ -6,6 +6,7 @@ import { User, UserPreferences } from '@/types';
 import {
   selectUser,
   selectIsAuthenticated,
+  selectPreferencesLoaded,
   updatePreferences as updatePreferencesThunk,
   updateProfile as updateProfileThunk,
   logout as logoutThunk,
@@ -19,6 +20,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isConfigured: boolean;
+  preferencesLoaded: boolean;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updatePreferences: (preferences: Partial<UserPreferences>) => Promise<void>;
@@ -33,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // AuthListener handles the actual fetching and updating of this state.
   const user = useAppSelector(selectUser);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const preferencesLoaded = useAppSelector(selectPreferencesLoaded);
   const { isLoading, isConfigured } = useAppSelector(selectAuth);
 
   const signInWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
@@ -88,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated,
         isConfigured,
+        preferencesLoaded,
         signInWithGoogle,
         logout,
         updatePreferences,

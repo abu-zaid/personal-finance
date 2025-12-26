@@ -62,7 +62,8 @@ export default function AuthListener() {
                 if (mounted) {
                     if (session?.user) {
                         dispatch(setUser(mapSupabaseUserToSerializable(session.user)));
-                        dispatch(fetchUserPreferences(session.user.id));
+                        // Await preferences before fetching other data to ensure currency is loaded
+                        await dispatch(fetchUserPreferences(session.user.id)).unwrap();
                         dispatch(fetchCategories());
                         dispatch(fetchTransactions({ page: 0 }));
                     } else {
@@ -86,9 +87,8 @@ export default function AuthListener() {
 
             if (session?.user) {
                 dispatch(setUser(mapSupabaseUserToSerializable(session.user)));
-                // Only fetch if explicitly signed in or token refreshed, but initAuth covers page load
-                // We'll re-fetch preferences to be safe
-                dispatch(fetchUserPreferences(session.user.id));
+                // Await preferences to ensure currency is loaded before UI renders
+                await dispatch(fetchUserPreferences(session.user.id)).unwrap();
                 // Fetch data if just signed in
                 if (event === 'SIGNED_IN') {
                     dispatch(fetchCategories());
