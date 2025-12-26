@@ -52,6 +52,8 @@ export default function DashboardPage() {
     // Fetch monthly totals and budget
     useEffect(() => {
         const loadDashboardData = async () => {
+            if (!user) return;
+
             setIsDashboardLoading(true);
             try {
                 // Optimized: fetchBudgetWithSpending already populates monthlyExpenses in Redux
@@ -74,7 +76,7 @@ export default function DashboardPage() {
         };
 
         loadDashboardData();
-    }, [dispatch, currentMonth, lastModified]);
+    }, [dispatch, currentMonth, lastModified, user]);
 
     // Calculate today's spending
     const todaySpending = useMemo(() => {
@@ -205,8 +207,23 @@ export default function DashboardPage() {
         });
     }, [dailyStatsMap, currentMonth]);
 
+    const isAuthLoading = useAppSelector(state => state.auth.isLoading);
+
+    // Effect handles redirection if auth finishes and no user is found?
+    // Middleware usually handles this, but client-side cleanup:
+    /* useEffect(() => {
+        if (!isAuthLoading && !user) {
+            // router.push('/login');
+        }
+    }, [isAuthLoading, user]); */
+
     // Loading State
-    if (!user || isDashboardLoading) {
+    // Show skeleton if:
+    // 1. Auth is initializing (isAuthLoading)
+    // 2. Dashboard data is loading (isDashboardLoading)
+    // 3. User is present (implying we are just waiting for data)
+    // If !user AND !isAuthLoading, we render nothing (or let middleware redirect)
+    if (isAuthLoading || (user && isDashboardLoading)) {
         return (
             <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">
                 <div className="max-w-md lg:max-w-7xl mx-auto px-4 lg:px-8 space-y-6 lg:space-y-8">
@@ -215,6 +232,8 @@ export default function DashboardPage() {
             </div>
         );
     }
+
+    if (!user) return null; // Prevent rendering if not authenticated
 
     return (
         <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">
