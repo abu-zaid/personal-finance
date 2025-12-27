@@ -181,30 +181,65 @@ export function TransactionForm({
         </Box>
     );
 
+    const QuickAmounts = () => {
+        const quickAmounts = [50, 100, 200, 500, 1000, 2000];
+        const currentAmount = watch('amount');
+
+        return (
+            <Group justify="center" gap={2} className="flex-wrap">
+                {quickAmounts.map((amount) => (
+                    <button
+                        key={amount}
+                        type="button"
+                        onClick={() => {
+                            setValue('amount', amount, { shouldDirty: true });
+                            haptics.light();
+                        }}
+                        className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                            currentAmount === amount
+                                ? "bg-primary text-primary-foreground shadow-sm"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                    >
+                        {symbol}{amount}
+                    </button>
+                ))}
+            </Group>
+        );
+    };
+
     const AmountSection = () => (
-        <Group align="center" justify="center" gap={2} className="relative">
-            <span className={cn(
-                "font-medium text-muted-foreground",
-                isDesktop ? "text-2xl" : "text-3xl"
-            )}>
-                {symbol}
-            </span>
-            <Input
-                id="amount"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                placeholder="0"
-                className={cn(
-                    "w-full max-w-[280px] text-center font-bold bg-transparent border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 placeholder:text-muted-foreground/20 caret-primary tabular-nums",
-                    isDesktop ? "h-16 text-4xl" : "h-20 text-5xl",
-                    "!bg-transparent !border-none !shadow-none !ring-0 !outline-none",
-                    "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                    selectedType === 'income' ? "text-primary" : "text-destructive"
-                )}
-                {...register('amount', { valueAsNumber: true })}
-            />
-        </Group>
+        <Stack gap={3} align="center">
+            <Group align="center" justify="center" gap={2} className="relative">
+                <span className={cn(
+                    "font-medium text-muted-foreground",
+                    isDesktop ? "text-2xl" : "text-3xl"
+                )}>
+                    {symbol}
+                </span>
+                <Input
+                    id="amount"
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    placeholder="0"
+                    autoFocus={!isEditMode}
+                    className={cn(
+                        "w-full max-w-[280px] text-center font-bold bg-transparent border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 placeholder:text-muted-foreground/20 caret-primary tabular-nums",
+                        isDesktop ? "h-16 text-4xl" : "h-20 text-5xl",
+                        "!bg-transparent !border-none !shadow-none !ring-0 !outline-none",
+                        "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                        selectedType === 'income' ? "text-primary" : "text-destructive"
+                    )}
+                    {...register('amount', { valueAsNumber: true })}
+                />
+            </Group>
+            {!isDesktop && <QuickAmounts />}
+            {errors.amount && (
+                <p className="text-red-500 text-xs">{errors.amount.message}</p>
+            )}
+        </Stack>
     );
 
     if (isDesktop) {
