@@ -8,7 +8,7 @@ import {
     TransactionSort
 } from '@/types';
 import { createClient } from '@/lib/supabase/client';
-import { fetchBudgetWithSpending } from '@/lib/features/budgets/budgetsSlice';
+
 import { toast } from 'sonner';
 
 // ... (keep existing interfaces)
@@ -816,14 +816,7 @@ const transactionsSlice = createSlice({
                 const { month, stats } = action.payload;
                 state.aggregates.dailyStats[month] = stats;
             })
-            // Sync from Budget Fetch
-            .addCase(fetchBudgetWithSpending.fulfilled, (state, action) => {
-                if (action.payload) {
-                    const { month, totalSpent } = action.payload;
-                    // Budget fetch always gets expenses
-                    state.aggregates.monthlyExpenses[month] = totalSpent;
-                }
-            });
+
     },
 });
 

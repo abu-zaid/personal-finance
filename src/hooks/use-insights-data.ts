@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { selectCurrentBudget, fetchBudgetWithSpending } from '@/lib/features/budgets/budgetsSlice';
+import { useGetBudgetsQuery, useGetBudgetAllocationsQuery } from '@/lib/features/api/apiSlice';
 import { fetchInsightsData, selectInsights } from '@/lib/features/insights/insightsSlice';
 import { getMonthString } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
@@ -16,38 +16,46 @@ export function useInsightsData() {
         lastUpdated
     } = useAppSelector(selectInsights);
 
-    const currentBudget = useAppSelector(selectCurrentBudget);
+    // Use RTK Query for budgets
+    const { data: budgets = [] } = useGetBudgetsQuery();
+    const { data: allocations = [] } = useGetBudgetAllocationsQuery();
 
     const { symbol, formatCurrency } = useCurrency();
     const currentMonth = getMonthString(new Date());
+
+    // Find current budget
+    const currentBudget = useMemo(() => {
+        const budget = budgets.find(b => b.month === currentMonth);
+        if (!budget) return null;
+
+        const budgetAllocations = allocations.filter(a => a.budget_id === budget.id);
+
+        return {
+            id: budget.id,
+            month: budget.month,
+            totalAmount: budget.total_amount,
+            allocations: budgetAllocations.map(a => ({
+                categoryId: a.category_id,
+                amount: a.amount
+            }))
+        };
+    }, [budgets, allocations, currentMonth]);
 
     // Trigger fetch if stale or missing (simple cache policy: 5 minutes)
     useEffect(() => {
         const shouldFetch = status === 'idle' || (lastUpdated && Date.now() - lastUpdated > 5 * 60 * 1000);
         if (shouldFetch && status !== 'loading') {
             dispatch(fetchInsightsData());
-            // Also ensure budget is loaded
-            dispatch(fetchBudgetWithSpending(currentMonth));
         }
-    }, [dispatch, status, lastUpdated, currentMonth]);
+    }, [dispatch, status, lastUpdated]);
 
 
     // Derived values
     const currentMonthTotal = categoryBreakdown.reduce((sum, item) => sum + item.amount, 0);
-    // previousMonthTotal is implied by trends if needed? 
-    // Actually slice doesn't store previousMonthTotal explicitly but spendingTrends has 6 months history.
-    // Index 5 is current month? No, `subMonths(0)` is current.
-    // spendingTrends[0] is oldest (5 months ago), [5] is current.
-    // Wait, my thunk implementation:
-    // for (let i = 5; i >= 0; i--) -> push. 
-    // i=5 (5 months ago) -> index 0. i=0 (current) -> index 5.
-
-    // So current is spendingTrends[5].value?
 
     const monthlyTrendData = spendingTrends;
 
     // Calculate Month Change (Current vs Previous)
-    // Previous is index 4 (i=1).
     const prevMonthVal = spendingTrends.length >= 2 ? spendingTrends[spendingTrends.length - 2].value : 0;
     const currMonthVal = spendingTrends.length >= 1 ? spendingTrends[spendingTrends.length - 1].value : 0;
 

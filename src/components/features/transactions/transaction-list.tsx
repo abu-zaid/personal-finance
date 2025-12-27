@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { TransactionSkeleton } from '@/components/skeletons/skeleton-loaders';
 import { useCurrency } from '@/hooks/use-currency';
 import { TransactionWithCategory } from '@/types';
+import { Box, Stack, Group } from '@/components/ui/layout';
 
 import { TransactionItem } from './transaction-item';
 import { useEffect, useRef } from 'react';
@@ -22,6 +23,7 @@ interface TransactionListProps {
     isBatchMode: boolean;
     onToggleSelection: (id: string) => void;
     onEdit: (transaction: TransactionWithCategory) => void;
+    onDelete?: (id: string) => void;
 }
 
 export function TransactionList({
@@ -33,7 +35,8 @@ export function TransactionList({
     selectedIds,
     isBatchMode,
     onToggleSelection,
-    onEdit
+    onEdit,
+    onDelete
 }: TransactionListProps) {
     const { formatCurrency } = useCurrency();
     const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -62,48 +65,52 @@ export function TransactionList({
 
     if (!hasData && !isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+            <Stack align="center" justify="center" className="py-20 text-center">
+                <Box className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                     <Search className="h-8 w-8 text-muted-foreground" />
-                </div>
+                </Box>
                 <h3 className="text-lg font-semibold">No transactions found</h3>
                 <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-2">
-                    Try adjusting your filters or search query to find what you're looking for.
+                    Try adjusting your filters or search query to find what you&apos;re looking for.
                 </p>
                 <Button variant="link" onClick={onClearFilters} className="mt-4">
                     Clear all filters
                 </Button>
-            </div>
+            </Stack>
         );
     }
 
     return (
-        <div className="px-4 md:px-6 pb-6 max-w-full">
+        <Box className="px-4 md:px-6 pb-6 max-w-full">
             {/* Loading Skeletons (Initial Only) */}
             {isLoading && !hasData && (
-                <div className="space-y-4">
+                <Stack gap={4}>
                     {Array.from({ length: 8 }).map((_, i) => (
                         <TransactionSkeleton key={i} />
                     ))}
-                </div>
+                </Stack>
             )}
 
             {hasData && (
-                <div className="space-y-6 mt-4">
+                <Stack gap={6} className="mt-4">
                     {Object.entries(groupedTransactions).map(([date, list]) => (
-                        <div key={date}>
+                        <Box key={date}>
                             {/* Date Header */}
-                            <div className="sticky top-0 z-10 py-2 bg-background/95 backdrop-blur-sm flex items-center justify-between border-b border-border/40 mb-3">
+                            <Group
+                                className="sticky top-0 z-10 py-2 bg-background/95 backdrop-blur-sm border-b border-border/40 mb-3"
+                                justify="between"
+                                align="center"
+                            >
                                 <h3 className="text-sm font-semibold text-primary">
                                     {getDateLabel(date)}
                                 </h3>
                                 <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
                                     {formatCurrency(list.reduce((sum, t) => sum + (t.type === 'expense' ? -t.amount : t.amount), 0))}
                                 </span>
-                            </div>
+                            </Group>
 
                             {/* Transactions */}
-                            <div className="space-y-2">
+                            <Stack gap={2}>
                                 {list.map((transaction) => (
                                     <TransactionItem
                                         key={transaction.id}
@@ -113,20 +120,21 @@ export function TransactionList({
                                         formatCurrency={formatCurrency}
                                         onToggleSelection={onToggleSelection}
                                         onEdit={onEdit}
+                                        onDelete={onDelete}
                                     />
                                 ))}
-                            </div>
-                        </div>
+                            </Stack>
+                        </Box>
                     ))}
-                </div>
+                </Stack>
             )}
 
             {/* Load More Trigger */}
-            <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
+            <Box ref={loadMoreRef} className="h-20 flex items-center justify-center">
                 {isLoading && hasData && (
                     <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 )}
-            </div>
-        </div>
+            </Box>
+        </Box>
     );
 }

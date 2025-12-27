@@ -4,7 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { CategoryIcon } from '@/components/features/categories';
-import { Badge } from '@/components/ui/badge'; // Optional, if needed
+import { Stack, Group, Box } from '@/components/ui/layout';
 
 interface BudgetCategoryItemProps {
     item: any; // Type strictly if possible
@@ -13,16 +13,16 @@ interface BudgetCategoryItemProps {
 
 export const BudgetCategoryItem = React.memo(function BudgetCategoryItem({ item, formatCurrency }: BudgetCategoryItemProps) {
     return (
-        <div className="bg-white dark:bg-card p-4 rounded-3xl border shadow-sm">
-            <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
+        <Stack className="bg-white dark:bg-card p-4 rounded-3xl border shadow-sm" gap={3}>
+            <Group justify="between" align="start">
+                <Group align="center" gap={3}>
                     {item.category && (
-                        <div className="relative">
-                            <div className="absolute inset-0 rounded-full opacity-20" style={{ backgroundColor: item.category.color }} />
+                        <Box className="relative">
+                            <Box className="absolute inset-0 rounded-full opacity-20" style={{ backgroundColor: item.category.color }} />
                             <CategoryIcon icon={item.category.icon} color={item.category.color} size="md" className="relative z-10" />
-                        </div>
+                        </Box>
                     )}
-                    <div>
+                    <Stack gap={1}>
                         <h4 className="font-semibold text-sm">{item.category?.name}</h4>
                         <p className="text-xs text-muted-foreground">
                             {item.percentage >= 100
@@ -30,17 +30,17 @@ export const BudgetCategoryItem = React.memo(function BudgetCategoryItem({ item,
                                 : <span>{formatCurrency(item.remaining)} left</span>
                             }
                         </p>
-                    </div>
-                </div>
-                <div className="text-right">
+                    </Stack>
+                </Group>
+                <Stack align="end" gap={1}>
                     <p className={cn("font-bold text-sm", item.percentage >= 100 && "text-destructive")}>
                         {formatCurrency(item.spent)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                         of {formatCurrency(item.amount)}
                     </p>
-                </div>
-            </div>
+                </Stack>
+            </Group>
             <Progress
                 value={Math.min(item.percentage, 100)}
                 className={cn("h-2 rounded-full", {
@@ -49,6 +49,6 @@ export const BudgetCategoryItem = React.memo(function BudgetCategoryItem({ item,
                     "[&>div]:bg-destructive": item.percentage >= 100,
                 })}
             />
-        </div>
+        </Stack>
     );
 });

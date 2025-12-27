@@ -20,6 +20,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { Group, Box } from '@/components/ui/layout';
 import { BudgetForm } from './budget-form';
 import { BudgetWithSpending } from '@/types';
 
@@ -102,9 +103,9 @@ export function CreateBudgetDialog({
                         <DialogTitle>{currentBudget ? 'Edit' : 'Create'} Budget</DialogTitle>
                         <DialogDescription>Plan your spending for {format(selectedDate, 'MMMM')}</DialogDescription>
                     </DialogHeader>
-                    <div className="flex-1 overflow-y-auto px-1">
+                    <Box className="flex-1 overflow-y-auto px-1">
                         {FormContent}
-                    </div>
+                    </Box>
                     <DialogFooter className="gap-2 sm:gap-0 pt-4">
                         <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
                         <Button onClick={handleSave} disabled={isSaving}>
@@ -124,7 +125,7 @@ export function CreateBudgetDialog({
                 className="flex flex-col rounded-t-[2rem] p-0 h-[92vh] max-h-[92vh]"
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
-                <div className="flex-1 overflow-y-auto p-6 pb-0">
+                <Box className="flex-1 overflow-y-auto p-6 pb-0">
                     <SheetHeader className="text-left mb-6 px-1">
                         <SheetTitle className="text-xl">{currentBudget ? 'Edit' : 'Create'} Budget</SheetTitle>
                         <SheetDescription>Plan your spending for {format(selectedDate, 'MMMM')}</SheetDescription>
@@ -133,12 +134,12 @@ export function CreateBudgetDialog({
                     {FormContent}
 
                     {/* Spacer for sticky footer coverage */}
-                    <div className="h-12" />
-                </div>
+                    <Box className="h-12" />
+                </Box>
 
                 {/* Sticky Footer */}
-                <div className="p-6 pt-2 bg-background border-t">
-                    <div className="flex flex-row gap-3">
+                <Box className="p-6 pt-2 bg-background border-t">
+                    <Group align="center" gap={3}>
                         <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 rounded-2xl h-14 text-base font-medium">
                             Cancel
                         </Button>
@@ -146,8 +147,8 @@ export function CreateBudgetDialog({
                             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Save
                         </Button>
-                    </div>
-                </div>
+                    </Group>
+                </Box>
             </SheetContent>
         </Sheet>
     );
