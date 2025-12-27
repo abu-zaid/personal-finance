@@ -16,7 +16,7 @@ import {
     useUpdateBudgetMutation
 } from '@/lib/features/api/apiSlice';
 import { getMonthString } from '@/lib/utils';
-import { BudgetWithAllocations } from '@/types';
+import { BudgetWithSpending } from '@/types';
 
 export function useBudgetsView() {
     const { user } = useAuth();
@@ -80,14 +80,18 @@ export function useBudgetsView() {
         const joinedAllocations = budgetAllocations.map(alloc => {
             const category = categories.find(c => c.id === alloc.category_id);
             const spent = spendingByCategory[alloc.category_id] || 0;
+            const remaining = alloc.amount - spent;
+            const percentageUsed = alloc.amount > 0 ? (spent / alloc.amount) * 100 : 0;
 
             return {
                 id: alloc.id,
                 categoryId: alloc.category_id,
                 amount: alloc.amount,
                 spent,
-                remaining: alloc.amount - spent,
-                percentage: alloc.amount > 0 ? (spent / alloc.amount) * 100 : 0,
+                remaining,
+                percentage: percentageUsed,
+                percentageUsed,
+                isOverBudget: spent > alloc.amount,
                 category: category ? {
                     id: category.id,
                     name: category.name,
@@ -105,12 +109,16 @@ export function useBudgetsView() {
 
 
     // Data for UI
-    const currentBudget: BudgetWithAllocations | null = currentBudgetRaw ? {
+    const currentBudget: BudgetWithSpending | null = currentBudgetRaw ? {
         id: currentBudgetRaw.id,
+        userId: currentBudgetRaw.user_id,
         month: currentBudgetRaw.month,
         totalAmount: currentBudgetRaw.total_amount,
-        spent: totalMonthSpent,
-        allocations: allocationsWithSpending
+        totalSpent: totalMonthSpent,
+        totalRemaining: currentBudgetRaw.total_amount - totalMonthSpent,
+        allocations: allocationsWithSpending,
+        createdAt: new Date(currentBudgetRaw.created_at || Date.now()),
+        updatedAt: new Date(currentBudgetRaw.updated_at || Date.now())
     } : null;
 
     // -- Computed Stats --
