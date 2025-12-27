@@ -39,7 +39,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  console.log('[MIDDLEWARE]', request.nextUrl.pathname, 'User:', !!user);
+
 
   // Protected routes - redirect to login if not authenticated
   const protectedPaths = ['/dashboard', '/transactions', '/budgets', '/insights', '/settings', '/recurring', '/goals'];
@@ -54,10 +54,10 @@ export async function updateSession(request: NextRequest) {
   const hasSessionCookie = request.cookies.has('sb-access-token') ||
     request.cookies.has('sb-refresh-token');
 
-  console.log('[MIDDLEWARE] Protected:', isProtectedPath, 'Demo:', isDemo, 'HasCookies:', hasSessionCookie);
+
 
   if (isProtectedPath && !user && !isDemo && !hasSessionCookie) {
-    console.log('[MIDDLEWARE] Redirecting to login');
+
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
