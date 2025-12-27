@@ -23,20 +23,20 @@ import {
 } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { BRAND_GRADIENT } from '@/lib/constants';
-import { TransactionSort } from '@/types';
+import { TransactionSort, TransactionFilters, Category } from '@/types';
+import { Box, Stack, Group, Grid } from '@/components/ui/layout';
 
 interface TransactionsToolbarProps {
     search: string;
     onSearchChange: (value: string) => void;
-    filters: any; // Type strictly if possible
-    onFilterChange: (filters: any) => void;
+    filters: TransactionFilters;
+    onFilterChange: (filters: Partial<TransactionFilters>) => void;
     onClearFilters: () => void;
     sortConfig: TransactionSort;
     onSortChange: (sort: TransactionSort) => void;
     isBatchMode: boolean;
     onToggleBatchMode: () => void;
-    categories: any[];
+    categories: Category[];
     activeFilterCount: number;
 }
 
@@ -54,10 +54,10 @@ export function TransactionsToolbar({
     activeFilterCount
 }: TransactionsToolbarProps) {
     return (
-        <div className="space-y-4">
+        <Stack gap={4}>
             {/* Main Toolbar */}
-            <div className="px-4 md:px-6 flex items-center gap-2">
-                <div className="relative flex-1">
+            <Group className="px-4 md:px-6" align="center" gap={2}>
+                <Box className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search transactions..."
@@ -65,7 +65,7 @@ export function TransactionsToolbar({
                         onChange={(e) => onSearchChange(e.target.value)}
                         className="pl-9"
                     />
-                </div>
+                </Box>
 
                 <Sheet>
                     <SheetTrigger asChild>
@@ -85,10 +85,10 @@ export function TransactionsToolbar({
                             <SheetDescription>Refine your transaction list</SheetDescription>
                         </SheetHeader>
 
-                        <div className="flex-1 overflow-y-auto px-6 py-6">
-                            <div className="space-y-6">
+                        <Box className="flex-1 overflow-y-auto px-6 py-6">
+                            <Stack gap={6}>
                                 {/* Type Filter */}
-                                <div className="space-y-3">
+                                <Stack gap={3}>
                                     <label className="text-sm font-medium">Type</label>
                                     <Tabs
                                         value={filters.type || 'all'}
@@ -100,12 +100,12 @@ export function TransactionsToolbar({
                                             <TabsTrigger value="income">Income</TabsTrigger>
                                         </TabsList>
                                     </Tabs>
-                                </div>
+                                </Stack>
 
                                 {/* Sort */}
-                                <div className="space-y-3">
+                                <Stack gap={3}>
                                     <label className="text-sm font-medium">Sort By</label>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <Grid cols={2} gap={3}>
                                         <Button
                                             variant={sortConfig.field === 'date' ? 'default' : 'outline'}
                                             size="sm"
@@ -128,13 +128,13 @@ export function TransactionsToolbar({
                                         >
                                             Amount {sortConfig.field === 'amount' && (sortConfig.order === 'asc' ? '↑' : '↓')}
                                         </Button>
-                                    </div>
-                                </div>
+                                    </Grid>
+                                </Stack>
 
                                 {/* Date Range */}
-                                <div className="space-y-3">
+                                <Stack gap={3}>
                                     <label className="text-sm font-medium">Date Range</label>
-                                    <div className="flex flex-wrap gap-2">
+                                    <Group gap={2} wrap="wrap">
                                         <Button
                                             variant={!filters.startDate ? 'secondary' : 'outline'}
                                             size="sm"
@@ -168,9 +168,9 @@ export function TransactionsToolbar({
                                         >
                                             Last 30 Days
                                         </Button>
-                                    </div>
+                                    </Group>
                                     {filters.startDate && (
-                                        <div className="flex items-center gap-2 text-sm text-primary bg-primary/10 px-3 py-2 rounded-md">
+                                        <Group align="center" gap={2} className="text-sm text-primary bg-primary/10 px-3 py-2 rounded-md">
                                             <CalendarIcon className="h-4 w-4" />
                                             <span>
                                                 {format(new Date(filters.startDate), 'MMM d')} - {filters.endDate ? format(new Date(filters.endDate), 'MMM d, yyyy') : 'Now'}
@@ -183,14 +183,14 @@ export function TransactionsToolbar({
                                             >
                                                 <X className="h-3 w-3" />
                                             </Button>
-                                        </div>
+                                        </Group>
                                     )}
-                                </div>
+                                </Stack>
 
                                 {/* Categories */}
-                                <div className="space-y-3">
+                                <Stack gap={3}>
                                     <label className="text-sm font-medium">Categories</label>
-                                    <div className="flex flex-wrap gap-2">
+                                    <Group gap={2} wrap="wrap">
                                         {categories.map(cat => {
                                             const isSelected = (filters.categoryIds || []).includes(cat.id);
                                             return (
@@ -215,10 +215,10 @@ export function TransactionsToolbar({
                                                 </Badge>
                                             );
                                         })}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                                    </Group>
+                                </Stack>
+                            </Stack>
+                        </Box>
 
                         <SheetFooter className="px-6 py-4 border-t flex-none mt-0 gap-3 sm:gap-4">
                             <Button variant="outline" onClick={onClearFilters} className="flex-1 h-11 sm:h-10">
@@ -241,16 +241,16 @@ export function TransactionsToolbar({
                 >
                     {isBatchMode ? 'Done' : 'Select'}
                 </Button>
-            </div>
+            </Group>
 
             {/* Quick Category Filters - Sticky */}
-            <div className="sticky top-0 z-20 overflow-x-hidden">
+            <Box className="sticky top-0 z-20 overflow-x-hidden">
                 {/* visual layer */}
-                <div className="bg-background/95 backdrop-blur-sm border-b border-border/40">
+                <Box className="bg-background/95 backdrop-blur-sm border-b border-border/40">
                     {/* scroll layer */}
-                    <div className="overflow-x-auto overflow-y-hidden scrollbar-hide">
+                    <Box className="overflow-x-auto overflow-y-hidden scrollbar-hide">
                         {/* content layer */}
-                        <div className="flex w-fit items-center gap-2 py-3 px-4 md:px-6 whitespace-nowrap">
+                        <Group className="w-fit py-3 px-4 md:px-6 whitespace-nowrap" align="center" gap={2}>
                             <Button
                                 variant={(filters.categoryIds || []).length === 0 ? "default" : "outline"}
                                 size="sm"
@@ -283,7 +283,7 @@ export function TransactionsToolbar({
                                                 : {}
                                         }
                                     >
-                                        <div
+                                        <Box
                                             className="w-2 h-2 rounded-full flex-shrink-0"
                                             style={{ backgroundColor: isSelected ? "#000" : cat.color }}
                                         />
@@ -291,13 +291,10 @@ export function TransactionsToolbar({
                                     </Button>
                                 );
                             })}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-
-        </div>
+                        </Group>
+                    </Box>
+                </Box>
+            </Box>
+        </Stack>
     );
 }

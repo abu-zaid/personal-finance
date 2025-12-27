@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { PageTransition } from '@/components/animations';
 import { TransactionModal } from '@/components/features/transactions';
 import { TransactionWithCategory } from '@/types';
+import { Stack } from '@/components/ui/layout';
 
 import { useTransactionsView } from '@/hooks/use-transactions-view';
 import { TransactionsHeader } from '@/components/features/transactions/transactions-header';
@@ -33,10 +34,9 @@ export default function TransactionsPage() {
   };
 
   return (
-    <PageTransition className="flex flex-col h-full w-full overflow-hidden bg-background">
+    <PageTransition className="h-full w-full bg-background">
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden pb-[100px] md:pb-6">
-
+      <Stack className="h-full overflow-y-auto overflow-x-hidden pb-24 md:pb-6" gap={0}>
         {/* Header */}
         <TransactionsHeader
           isLoading={view.isInitialLoading}
@@ -72,8 +72,9 @@ export default function TransactionsPage() {
           isBatchMode={view.isBatchMode}
           onToggleSelection={view.onToggleSelection}
           onEdit={handleEdit}
+          onDelete={view.onDelete}
         />
-      </div>
+      </Stack>
 
       {/* Floating Batch Actions */}
       <BatchActions

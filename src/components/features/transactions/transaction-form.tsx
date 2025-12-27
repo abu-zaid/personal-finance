@@ -1,28 +1,28 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+
+import { useCallback, useEffect } from 'react';
+import { useAuth } from '@/context/auth-context';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { format, subDays, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useAppDispatch } from '@/lib/hooks';
-import { createTransaction, updateTransaction } from '@/lib/features/transactions/transactionsSlice';
-import { selectCategories } from '@/lib/features/categories/categoriesSlice';
-import { useAppSelector } from '@/lib/hooks';
+import { useAddTransactionMutation, useUpdateTransactionMutation, useGetCategoriesQuery } from '@/lib/features/api/apiSlice';
 import { useCurrency } from '@/hooks/use-currency';
 import { useHaptics } from '@/hooks/use-haptics';
-import { transactionSchema, TransactionFormData } from '@/lib/validations';
+import { transactionSchema, TransactionFormData } from '@/lib/validations'; // Assuming this exists and fits
 import { cn } from '@/lib/utils';
 import { CategoryIcon } from '@/components/features/categories/category-icon';
 import { TransactionWithCategory } from '@/types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Box, Stack, Group, Grid } from '@/components/ui/layout';
 
 interface TransactionFormProps {
     transaction?: TransactionWithCategory | null;
@@ -35,17 +35,21 @@ interface TransactionFormProps {
 export function TransactionForm({
     transaction,
     onSuccess,
-    onCancel,
+    onCancel: _onCancel,
     variant = 'mobile',
     className
 }: TransactionFormProps) {
-    const categories = useAppSelector(selectCategories);
-    const dispatch = useAppDispatch();
+    // Queries & Mutations
+    const { data: categories = [] } = useGetCategoriesQuery();
+    const [addTransaction, { isLoading: isAdding }] = useAddTransactionMutation();
+    const [updateTransaction, { isLoading: isUpdating }] = useUpdateTransactionMutation();
+
     const { symbol } = useCurrency();
     const haptics = useHaptics();
 
     const isEditMode = !!transaction;
     const isDesktop = variant === 'desktop';
+    const isSubmitting = isAdding || isUpdating;
 
     const {
         register,
@@ -53,7 +57,7 @@ export function TransactionForm({
         setValue,
         watch,
         reset,
-        formState: { errors, isSubmitting },
+        formState: { errors },
     } = useForm<TransactionFormData>({
         resolver: zodResolver(transactionSchema),
         defaultValues: {
@@ -87,29 +91,40 @@ export function TransactionForm({
         }
     }, [transaction, reset]);
 
+    const { user } = useAuth(); // Import useAuth
+    // ...
     const onSubmit = useCallback(async (data: TransactionFormData) => {
+        if (!user) {
+            toast.error("You must be logged in");
+            return;
+        }
         try {
+            // Map form data to DB schema
             const payload = {
-                ...data,
-                date: data.date
+                amount: data.amount,
+                type: data.type,
+                date: data.date.toISOString(),
+                notes: data.notes,
+                category_id: data.categoryId,
+                user_id: user.id // Add user_id
             };
+            // ...
 
             if (isEditMode && transaction) {
-                await dispatch(updateTransaction({ id: transaction.id, input: payload })).unwrap();
+                await updateTransaction({ id: transaction.id, ...payload }).unwrap();
                 haptics.success();
                 toast.success('Transaction updated');
             } else {
-                await dispatch(createTransaction(payload)).unwrap();
+                await addTransaction(payload).unwrap();
                 haptics.success();
                 toast.success('Transaction added');
             }
             onSuccess();
-        } catch (err) {
-            console.error('Transaction submit error:', err);
+        } catch {
             haptics.error();
             toast.error('Failed to save transaction');
         }
-    }, [dispatch, haptics, onSuccess, isEditMode, transaction]);
+    }, [addTransaction, updateTransaction, haptics, onSuccess, isEditMode, transaction, user]);
 
     const setDate = (date: Date) => {
         setValue('date', date, { shouldDirty: true });
@@ -118,7 +133,7 @@ export function TransactionForm({
 
     // Shared Form Elements helpers
     const TypeToggle = () => (
-        <div className="bg-muted/50 p-1 rounded-full flex gap-1 relative">
+        <Box className="bg-muted/50 p-1 rounded-full flex gap-1 relative">
             <button
                 type="button"
                 onClick={() => { setValue('type', 'expense'); haptics.light(); }}
@@ -129,11 +144,15 @@ export function TransactionForm({
                 )}
             >
                 {selectedType === 'expense' && (
-                    <motion.div
-                        layoutId="type-toggle-bg"
+                    <Box
+                        asChild
                         className="absolute inset-0 bg-destructive rounded-full shadow-sm"
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    />
+                    >
+                        <motion.div
+                            layoutId="type-toggle-bg"
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        />
+                    </Box>
                 )}
                 <span className="relative z-10">Expense</span>
             </button>
@@ -147,19 +166,23 @@ export function TransactionForm({
                 )}
             >
                 {selectedType === 'income' && (
-                    <motion.div
-                        layoutId="type-toggle-bg"
+                    <Box
+                        asChild
                         className="absolute inset-0 bg-primary rounded-full shadow-sm"
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    />
+                    >
+                        <motion.div
+                            layoutId="type-toggle-bg"
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        />
+                    </Box>
                 )}
                 <span className="relative z-10">Income</span>
             </button>
-        </div>
+        </Box>
     );
 
     const AmountSection = () => (
-        <div className="relative flex items-center justify-center gap-2">
+        <Group align="center" justify="center" gap={2} className="relative">
             <span className={cn(
                 "font-medium text-muted-foreground",
                 isDesktop ? "text-2xl" : "text-3xl"
@@ -181,269 +204,296 @@ export function TransactionForm({
                 )}
                 {...register('amount', { valueAsNumber: true })}
             />
-        </div>
+        </Group>
     );
 
     if (isDesktop) {
         return (
-            <form onSubmit={handleSubmit(onSubmit)} className={cn("space-y-4", className)}>
-                {/* Type Toggle & Amount - Horizontal Layout */}
-                <div className="flex items-center gap-6">
-                    <TypeToggle />
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl font-medium text-muted-foreground">{symbol}</span>
-                            <Input
-                                id="amount"
-                                type="number"
-                                inputMode="decimal"
-                                step="0.01"
-                                placeholder="0.00"
-                                className={cn(
-                                    "flex-1 text-2xl font-bold bg-transparent border-b-2 border-t-0 border-x-0 rounded-none px-2 py-1 focus-visible:ring-0 focus-visible:border-primary",
-                                    "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                    selectedType === 'income' ? "text-primary" : "text-destructive"
-                                )}
-                                {...register('amount', { valueAsNumber: true })}
-                            />
-                        </div>
-                        {errors.amount && (
-                            <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>
-                        )}
-                    </div>
-                </div>
+            <Stack asChild gap={4} className={className}>
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    {/* Type Toggle & Amount - Horizontal Layout */}
+                    <Group align="center" gap={6}>
+                        <TypeToggle />
+                        <Box className="flex-1">
+                            <Group align="center" gap={2}>
+                                <span className="text-xl font-medium text-muted-foreground">{symbol}</span>
+                                <Input
+                                    id="amount"
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    className={cn(
+                                        "flex-1 text-2xl font-bold bg-transparent border-b-2 border-t-0 border-x-0 rounded-none px-2 py-1 focus-visible:ring-0 focus-visible:border-primary",
+                                        "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                        selectedType === 'income' ? "text-primary" : "text-destructive"
+                                    )}
+                                    {...register('amount', { valueAsNumber: true })}
+                                />
+                            </Group>
+                            {errors.amount && (
+                                <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>
+                            )}
+                        </Box>
+                    </Group>
 
-                {/* Category Selection - Compact Grid */}
-                <div className="space-y-2">
-                    <Label className="text-xs font-semibold text-muted-foreground uppercase">Category</Label>
-                    <div className="grid grid-cols-5 gap-2 max-h-[200px] overflow-y-auto overflow-x-hidden pr-2">
-                        {categories.map((category) => {
-                            const isSelected = selectedCategoryId === category.id;
-                            return (
+                    {/* Category Selection */}
+                    <Stack gap={2}>
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase">Category</Label>
+                        <Grid cols={5} gap={2} className="max-h-[200px] overflow-y-auto overflow-x-hidden pr-2">
+                            {categories.map((category) => {
+                                const isSelected = selectedCategoryId === category.id;
+                                return (
+                                    <Stack
+                                        asChild
+                                        key={category.id}
+                                        gap={1}
+                                        align="center"
+                                        className="group cursor-pointer"
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() => { setValue('categoryId', category.id); haptics.selection(); }}
+                                        >
+                                            <Box
+                                                className={cn(
+                                                    "w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-all",
+                                                    isSelected ? "shadow-sm" : "bg-muted hover:bg-muted/80 border-transparent"
+                                                )}
+                                                style={isSelected ? {
+                                                    backgroundColor: `${category.color}15`,
+                                                    borderColor: category.color
+                                                } : undefined}
+                                            >
+                                                <CategoryIcon
+                                                    icon={category.icon}
+                                                    color={isSelected ? category.color : "currentColor"}
+                                                    className={cn("w-5 h-5", isSelected ? "" : "text-muted-foreground")}
+                                                />
+                                            </Box>
+                                            <span className={cn(
+                                                "text-[10px] font-medium truncate max-w-full text-center leading-tight",
+                                                isSelected ? "text-foreground font-semibold" : "text-muted-foreground"
+                                            )}>
+                                                {category.name}
+                                            </span>
+                                        </button>
+                                    </Stack>
+                                );
+                            })}
+                        </Grid>
+                        {errors.categoryId && (
+                            <p className="text-red-500 text-xs">{errors.categoryId.message}</p>
+                        )}
+                    </Stack>
+
+                    {/* Date & Notes */}
+                    <Grid cols={2} gap={4}>
+                        {/* Date Selection */}
+                        <Stack gap={2}>
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase">Date</Label>
+                            <Stack gap={1}>
                                 <button
-                                    key={category.id}
                                     type="button"
-                                    onClick={() => { setValue('categoryId', category.id); haptics.selection(); }}
-                                    className="flex flex-col items-center gap-1.5 group"
+                                    onClick={() => setDate(new Date())}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
+                                        isSameDay(selectedDate, new Date())
+                                            ? "bg-foreground text-background border-foreground"
+                                            : "bg-background border-border text-muted-foreground hover:border-foreground/50"
+                                    )}
                                 >
-                                    <div
-                                        className={cn(
-                                            "w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-all",
-                                            isSelected ? "shadow-sm" : "bg-muted hover:bg-muted/80 border-transparent"
-                                        )}
-                                        style={isSelected ? {
-                                            backgroundColor: `${category.color}15`,
-                                            borderColor: category.color
-                                        } : undefined}
-                                    >
-                                        <CategoryIcon
-                                            icon={category.icon}
-                                            color={isSelected ? category.color : "currentColor"}
-                                            className={cn("w-5 h-5", isSelected ? "" : "text-muted-foreground")}
-                                        />
-                                    </div>
-                                    <span className={cn(
-                                        "text-[10px] font-medium truncate max-w-full text-center leading-tight",
-                                        isSelected ? "text-foreground font-semibold" : "text-muted-foreground"
-                                    )}>
-                                        {category.name}
-                                    </span>
+                                    Today
                                 </button>
-                            );
-                        })}
-                    </div>
-                    {errors.categoryId && (
-                        <p className="text-red-500 text-xs">{errors.categoryId.message}</p>
-                    )}
-                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setDate(subDays(new Date(), 1))}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
+                                        isSameDay(selectedDate, subDays(new Date(), 1))
+                                            ? "bg-foreground text-background border-foreground"
+                                            : "bg-background border-border text-muted-foreground hover:border-foreground/50"
+                                    )}
+                                >
+                                    Yesterday
+                                </button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-md text-xs font-medium border flex items-center justify-center gap-1.5 transition-colors",
+                                                !isSameDay(selectedDate, new Date()) && !isSameDay(selectedDate, subDays(new Date(), 1))
+                                                    ? "bg-foreground text-background border-foreground"
+                                                    : "bg-background border-border text-muted-foreground hover:border-foreground/50"
+                                            )}
+                                        >
+                                            <CalendarIcon className="w-3 h-3" />
+                                            <span>{format(selectedDate, 'MMM d')}</span>
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={selectedDate}
+                                            onSelect={(date) => {
+                                                if (date) {
+                                                    const newDate = new Date(date);
+                                                    const currentTime = selectedDate || new Date();
+                                                    newDate.setHours(currentTime.getHours());
+                                                    newDate.setMinutes(currentTime.getMinutes());
+                                                    newDate.setSeconds(currentTime.getSeconds());
+                                                    setDate(newDate);
+                                                }
+                                            }}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </Stack>
+                        </Stack>
 
-                {/* Date & Notes - 2 Column Layout */}
-                <div className="grid grid-cols-2 gap-4">
-                    {/* Date Selection */}
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-muted-foreground uppercase">Date</Label>
-                        <div className="flex flex-col gap-1.5">
-                            <button
-                                type="button"
-                                onClick={() => setDate(new Date())}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
-                                    isSameDay(selectedDate, new Date())
-                                        ? "bg-foreground text-background border-foreground"
-                                        : "bg-background border-border text-muted-foreground hover:border-foreground/50"
-                                )}
-                            >
-                                Today
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setDate(subDays(new Date(), 1))}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
-                                    isSameDay(selectedDate, subDays(new Date(), 1))
-                                        ? "bg-foreground text-background border-foreground"
-                                        : "bg-background border-border text-muted-foreground hover:border-foreground/50"
-                                )}
-                            >
-                                Yesterday
-                            </button>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <button
-                                        type="button"
-                                        className={cn(
-                                            "px-3 py-1.5 rounded-md text-xs font-medium border flex items-center justify-center gap-1.5 transition-colors",
-                                            !isSameDay(selectedDate, new Date()) && !isSameDay(selectedDate, subDays(new Date(), 1))
-                                                ? "bg-foreground text-background border-foreground"
-                                                : "bg-background border-border text-muted-foreground hover:border-foreground/50"
-                                        )}
-                                    >
-                                        <CalendarIcon className="w-3 h-3" />
-                                        <span>{format(selectedDate, 'MMM d')}</span>
-                                    </button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={selectedDate}
-                                        onSelect={(date) => {
-                                            if (date) {
-                                                const newDate = new Date(date);
-                                                const currentTime = selectedDate || new Date();
-                                                newDate.setHours(currentTime.getHours());
-                                                newDate.setMinutes(currentTime.getMinutes());
-                                                newDate.setSeconds(currentTime.getSeconds());
-                                                setDate(newDate);
-                                            }
-                                        }}
-                                        initialFocus
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    </div>
+                        {/* Notes */}
+                        <Stack gap={2}>
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase">Notes</Label>
+                            <Input
+                                {...register('notes')}
+                                placeholder="Optional note..."
+                                className="h-[88px] resize-none bg-muted/30 border-border text-sm"
+                            />
+                        </Stack>
+                    </Grid>
 
-                    {/* Notes */}
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-muted-foreground uppercase">Notes</Label>
-                        <Input
-                            {...register('notes')}
-                            placeholder="Optional note..."
-                            className="h-[88px] resize-none bg-muted/30 border-border text-sm"
-                        />
-                    </div>
-                </div>
-
-                {/* Submit Button */}
-                <div className="pt-2">
-                    <Button
-                        type="submit"
-                        size="lg"
-                        className={cn(
-                            "w-full h-11 text-sm font-semibold rounded-lg transition-all text-white",
-                            selectedType === 'income'
-                                ? "bg-primary hover:bg-primary/90"
-                                : "bg-destructive hover:bg-destructive/90"
-                        )}
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                            isEditMode ? 'Update Transaction' : 'Save Transaction'
-                        )}
-                    </Button>
-                </div>
-            </form>
+                    {/* Submit Button */}
+                    <Box className="pt-2">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className={cn(
+                                "w-full h-11 text-sm font-semibold rounded-lg transition-all text-white",
+                                selectedType === 'income'
+                                    ? "bg-primary hover:bg-primary/90"
+                                    : "bg-destructive hover:bg-destructive/90"
+                            )}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                isEditMode ? 'Update Transaction' : 'Save Transaction'
+                            )}
+                        </Button>
+                    </Box>
+                </form>
+            </Stack>
         );
     }
 
     // MOBILE LAYOUT
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className={cn("flex flex-col h-full relative", className)}>
-            {/* 1. Value Section (Top) */}
-            <div className="flex-0 flex flex-col items-center justify-center py-8 space-y-6 shrink-0 transition-colors">
-                <TypeToggle />
-                <AmountSection />
-                {errors.amount && (
-                    <p className="text-red-500 text-sm font-medium animate-pulse">{errors.amount.message}</p>
-                )}
-            </div>
+        <Stack asChild className={cn("h-full relative", className)}>
+            <form onSubmit={handleSubmit(onSubmit)}>
+                {/* 1. Value Section (Top) */}
+                <Stack
+                    align="center"
+                    justify="center"
+                    gap={6}
+                    className="flex-0 py-8 shrink-0 transition-colors"
+                >
+                    <TypeToggle />
+                    <AmountSection />
+                    {errors.amount && (
+                        <p className="text-red-500 text-sm font-medium animate-pulse">{errors.amount.message}</p>
+                    )}
+                </Stack>
 
-            {/* 2. Details Section */}
-            <div className="flex-1 bg-card rounded-t-[2rem] px-6 pt-6 pb-6 flex flex-col gap-6 shadow-[0_-1px_10px_rgba(0,0,0,0.05)] border-t border-border/50">
-
-                {/* Category Carousel Mobile */}
-                <div className="space-y-3">
-                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Select Category</Label>
-                    <div className="flex gap-4 overflow-x-auto pb-4 px-4 py-2 snap-x scrollbar-hide">
-                        {categories.map((category) => {
-                            const isSelected = selectedCategoryId === category.id;
-                            return (
-                                <button
-                                    key={category.id}
-                                    type="button"
-                                    onClick={() => { setValue('categoryId', category.id); haptics.selection(); }}
-                                    className="flex flex-col items-center gap-2 group snap-start min-w-[72px]"
-                                >
-                                    <motion.div
-                                        animate={{ scale: isSelected ? 1.1 : 1, borderColor: isSelected ? category.color : 'transparent' }}
-                                        className={cn(
-                                            "w-16 h-16 rounded-full flex items-center justify-center border-2 transition-colors",
-                                            isSelected ? "bg-background" : "bg-muted hover:bg-muted/80 border-transparent"
-                                        )}
-                                        style={isSelected ? { backgroundColor: `${category.color}20` } : undefined}
+                {/* 2. Details Section */}
+                <Stack
+                    gap={6}
+                    className="flex-1 bg-card rounded-t-[2rem] px-6 pt-6 pb-6 shadow-[0_-1px_10px_rgba(0,0,0,0.05)] border-t border-border/50"
+                >
+                    {/* Category Carousel Mobile */}
+                    <Stack gap={3}>
+                        <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Select Category</Label>
+                        <Group gap={4} className="overflow-x-auto pb-4 px-4 py-2 snap-x scrollbar-hide">
+                            {categories.map((category) => {
+                                const isSelected = selectedCategoryId === category.id;
+                                return (
+                                    <Stack
+                                        asChild
+                                        key={category.id}
+                                        align="center"
+                                        gap={2}
+                                        className="group snap-start min-w-[72px]"
                                     >
-                                        <CategoryIcon icon={category.icon} color={isSelected ? category.color : "currentColor"} className={cn("w-7 h-7", isSelected ? "" : "text-muted-foreground")} />
-                                    </motion.div>
-                                    <span className={cn("text-xs font-medium truncate max-w-[72px] transition-colors", isSelected ? "text-foreground font-semibold" : "text-muted-foreground")}>{category.name}</span>
-                                </button>
-                            );
-                        })}
-                        {categories.length === 0 && (<div className="text-sm text-muted-foreground italic py-4">No categories found.</div>)}
-                    </div>
-                </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setValue('categoryId', category.id); haptics.selection(); }}
+                                        >
+                                            <Box
+                                                asChild
+                                                className={cn(
+                                                    "w-16 h-16 rounded-full flex items-center justify-center border-2 transition-colors",
+                                                    isSelected ? "bg-background" : "bg-muted hover:bg-muted/80 border-transparent"
+                                                )}
+                                                style={isSelected ? { backgroundColor: `${category.color}20` } : undefined}
+                                            >
+                                                <motion.div
+                                                    animate={{ scale: isSelected ? 1.1 : 1, borderColor: isSelected ? category.color : 'transparent' }}
+                                                >
+                                                    <CategoryIcon icon={category.icon} color={isSelected ? category.color : "currentColor"} className={cn("w-7 h-7", isSelected ? "" : "text-muted-foreground")} />
+                                                </motion.div>
+                                            </Box>
+                                            <span className={cn("text-xs font-medium truncate max-w-[72px] transition-colors", isSelected ? "text-foreground font-semibold" : "text-muted-foreground")}>{category.name}</span>
+                                        </button>
+                                    </Stack>
+                                );
+                            })}
+                            {categories.length === 0 && (<Box className="text-sm text-muted-foreground italic py-4">No categories found.</Box>)}
+                        </Group>
+                    </Stack>
 
-                {/* Date Chips & Notes Mobile */}
-                <div className="space-y-6">
-                    <div className="flex flex-col gap-3">
-                        <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Date & Time</Label>
-                        <div className="flex flex-wrap gap-2">
-                            <button type="button" onClick={() => setDate(new Date())} className={cn("px-4 py-2 rounded-full text-sm font-medium border transition-colors", isSameDay(selectedDate, new Date()) ? "bg-foreground text-background border-foreground" : "bg-background border-border text-muted-foreground hover:border-foreground/50")}>Today</button>
-                            <button type="button" onClick={() => setDate(subDays(new Date(), 1))} className={cn("px-4 py-2 rounded-full text-sm font-medium border transition-colors", isSameDay(selectedDate, subDays(new Date(), 1)) ? "bg-foreground text-background border-foreground" : "bg-background border-border text-muted-foreground hover:border-foreground/50")}>Yesterday</button>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <button type="button" className={cn("px-4 py-2 rounded-full text-sm font-medium border flex items-center gap-2 transition-colors", !isSameDay(selectedDate, new Date()) && !isSameDay(selectedDate, subDays(new Date(), 1)) ? "bg-foreground text-background border-foreground" : "bg-background border-border text-muted-foreground hover:border-foreground/50")}>
-                                        <CalendarIcon className="w-4 h-4" /> <span>{format(selectedDate, 'MMM d')}</span>
-                                    </button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setDate(date)} initialFocus />
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    </div>
+                    {/* Date Chips & Notes Mobile */}
+                    <Stack gap={6}>
+                        <Stack gap={3}>
+                            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Date & Time</Label>
+                            <Group wrap="wrap" gap={2}>
+                                <button type="button" onClick={() => setDate(new Date())} className={cn("px-4 py-2 rounded-full text-sm font-medium border transition-colors", isSameDay(selectedDate, new Date()) ? "bg-foreground text-background border-foreground" : "bg-background border-border text-muted-foreground hover:border-foreground/50")}>Today</button>
+                                <button type="button" onClick={() => setDate(subDays(new Date(), 1))} className={cn("px-4 py-2 rounded-full text-sm font-medium border transition-colors", isSameDay(selectedDate, subDays(new Date(), 1)) ? "bg-foreground text-background border-foreground" : "bg-background border-border text-muted-foreground hover:border-foreground/50")}>Yesterday</button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button type="button" className={cn("px-4 py-2 rounded-full text-sm font-medium border flex items-center gap-2 transition-colors", !isSameDay(selectedDate, new Date()) && !isSameDay(selectedDate, subDays(new Date(), 1)) ? "bg-foreground text-background border-foreground" : "bg-background border-border text-muted-foreground hover:border-foreground/50")}>
+                                            <CalendarIcon className="w-4 h-4" /> <span>{format(selectedDate, 'MMM d')}</span>
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setDate(date)} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
+                            </Group>
+                        </Stack>
 
-                    <div className="space-y-3">
-                        <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Notes</Label>
-                        <Input {...register('notes')} placeholder="Add a note... (optional)" className="bg-muted/30 border-transparent focus:bg-background h-12 rounded-xl" />
-                    </div>
-                </div>
-            </div>
+                        <Stack gap={3}>
+                            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Notes</Label>
+                            <Input {...register('notes')} placeholder="Add a note... (optional)" className="bg-muted/30 border-transparent focus:bg-background h-12 rounded-xl" />
+                        </Stack>
+                    </Stack>
+                </Stack>
 
-            {/* Sticky Footer Action Mobile */}
-            <div className="fixed bottom-0 inset-x-0 p-4 pointer-events-none">
-                <div className="pointer-events-auto max-w-md mx-auto">
-                    <Button
-                        type="submit"
-                        size="lg"
-                        className={cn("w-full h-14 text-lg font-bold rounded-[2rem] shadow-lg transition-all text-white", selectedType === 'income' ? "bg-primary hover:bg-primary/90 shadow-primary/25" : "bg-destructive hover:bg-destructive/90 shadow-destructive/25")}
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : (isEditMode ? 'Update Transaction' : 'Save Transaction')}
-                    </Button>
-                </div>
-            </div>
-        </form>
+                {/* Sticky Footer Action Mobile */}
+                <Box className="fixed bottom-0 inset-x-0 p-4 pointer-events-none">
+                    <Box className="pointer-events-auto max-w-md mx-auto">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className={cn("w-full h-14 text-lg font-bold rounded-[2rem] shadow-lg transition-all text-white", selectedType === 'income' ? "bg-primary hover:bg-primary/90 shadow-primary/25" : "bg-destructive hover:bg-destructive/90 shadow-destructive/25")}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : (isEditMode ? 'Update Transaction' : 'Save Transaction')}
+                        </Button>
+                    </Box>
+                </Box>
+            </form>
+        </Stack>
     );
 }

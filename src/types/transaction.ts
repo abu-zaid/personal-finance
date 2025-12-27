@@ -39,8 +39,8 @@ export interface UpdateTransactionInput {
 }
 
 export interface TransactionFilters {
-  startDate?: Date;
-  endDate?: Date;
+  startDate?: string | Date;
+  endDate?: string | Date;
   categoryIds?: string[]; // Changed from categoryId to support multiple categories
   type?: 'all' | 'income' | 'expense'; // Added type filter
   minAmount?: number;

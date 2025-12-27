@@ -12,6 +12,7 @@ import { BudgetList } from '@/components/features/budgets/budget-list';
 import { CreateBudgetDialog } from '@/components/features/budgets/create-budget-dialog';
 import { BudgetSkeleton, CardSkeleton } from '@/components/skeletons/skeleton-loaders';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Stack, Grid, Box } from '@/components/ui/layout';
 
 export default function BudgetsPage() {
   const {
@@ -39,7 +40,7 @@ export default function BudgetsPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-4 p-4 pb-32 md:p-6 lg:p-8 max-w-4xl mx-auto">
+      <Stack className="p-4 pb-32 md:p-6 lg:p-8 max-w-4xl mx-auto" gap={4}>
         {/* Header */}
         <BudgetsHeader
           isEditing={!!currentBudget}
@@ -55,24 +56,24 @@ export default function BudgetsPage() {
         />
 
         {isLoading ? (
-          <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+          <Stack className="animate-in fade-in zoom-in-95 duration-300" gap={4}>
             {/* Hero Card Skeleton */}
             <CardSkeleton />
 
             {/* Stats Grid Skeleton */}
-            <div className="grid grid-cols-2 gap-3">
+            <Grid cols={2} gap={3}>
               <Skeleton className="h-32 w-full rounded-3xl" />
               <Skeleton className="h-32 w-full rounded-3xl" />
-            </div>
+            </Grid>
 
             {/* Category List Skeleton */}
-            <div className="space-y-3">
+            <Stack gap={3}>
               <Skeleton className="h-5 w-40" />
               {Array.from({ length: 4 }).map((_, i) => (
                 <BudgetSkeleton key={i} />
               ))}
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         ) : currentBudget ? (
           <>
             {/* Hero Card */}
@@ -101,16 +102,16 @@ export default function BudgetsPage() {
             />
           </>
         ) : (
-          <div className="py-12">
+          <Box className="py-12">
             <EmptyState
               icon={<Wallet className="h-12 w-12 text-muted-foreground" />}
               title="No budget set"
               description={`Create a budget for ${formatCurrency(0).replace(/[0-9.,]/g, '')} to start tracking.`}
               action={{ label: "Create Budget", onClick: () => setDialogOpen(true) }}
             />
-          </div>
+          </Box>
         )}
-      </div>
+      </Stack>
 
       {/* Create/Edit Budget Dialog */}
       <CreateBudgetDialog

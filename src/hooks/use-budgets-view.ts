@@ -1,30 +1,25 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { format, addMonths, subMonths, getMonth, getYear } from 'date-fns';
 import { toast } from 'sonner';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 
-import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useAuth } from '@/context/auth-context';
 import { useCurrency } from '@/hooks/use-currency';
 import {
-    fetchBudgetWithSpending,
-    createBudget,
-    updateBudget,
-    selectCurrentBudget,
-    selectBudgetsStatus
-} from '@/lib/features/budgets/budgetsSlice';
-import { selectCategories } from '@/lib/features/categories/categoriesSlice';
-import { BudgetAllocation } from '@/types';
+    useGetBudgetsQuery,
+    useGetBudgetAllocationsQuery,
+    useGetTransactionsQuery,
+    useGetCategoriesQuery,
+    useAddBudgetMutation,
+    useUpdateBudgetMutation
+} from '@/lib/features/api/apiSlice';
 import { getMonthString } from '@/lib/utils';
-import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { BudgetWithAllocations } from '@/types';
 
 export function useBudgetsView() {
-    const dispatch = useAppDispatch();
     const { user } = useAuth();
-    const categories = useAppSelector(selectCategories);
-    const currentBudget = useAppSelector(selectCurrentBudget);
-    const status = useAppSelector(selectBudgetsStatus);
     const { formatCurrency, symbol } = useCurrency();
 
     // -- State --
@@ -32,40 +27,97 @@ export function useBudgetsView() {
     const [dialogOpen, setDialogOpen] = useState(false);
 
     // Derived Month String
-    const currentMonth = useMemo(() => getMonthString(selectedDate), [selectedDate]);
+    const currentMonthStr = useMemo(() => getMonthString(selectedDate), [selectedDate]);
     const isCurrentMonth = useMemo(() => {
         const now = new Date();
         return getMonth(selectedDate) === getMonth(now) && getYear(selectedDate) === getYear(now);
     }, [selectedDate]);
 
-    // -- Effects --
-    useEffect(() => {
-        if (user?.id) {
-            dispatch(fetchBudgetWithSpending(currentMonth));
-        }
-    }, [dispatch, currentMonth, user?.id]);
+    // -- API Queries --
+    const { data: budgets = [], isLoading: isLoadingBudgets } = useGetBudgetsQuery();
+    const { data: allocations = [], isLoading: isLoadingAllocations } = useGetBudgetAllocationsQuery();
+    const { data: transactions = [], isLoading: isLoadingTransactions } = useGetTransactionsQuery();
+    const { data: categories = [], isLoading: isLoadingCategories } = useGetCategoriesQuery();
+
+    const [addBudget] = useAddBudgetMutation();
+    const [updateBudget] = useUpdateBudgetMutation();
+
+    const isLoading = isLoadingBudgets || isLoadingAllocations || isLoadingTransactions || isLoadingCategories;
+
+    // -- Data JOIN & Processing --
+
+    // 1. Find Budget for Selected Month
+    const currentBudgetRaw = useMemo(() => {
+        return budgets.find(b => b.month === currentMonthStr) || null;
+    }, [budgets, currentMonthStr]);
+
+    // 2. Spending Calculations
+    const { totalMonthSpent, allocationsWithSpending } = useMemo(() => {
+        if (!currentBudgetRaw) return { totalMonthSpent: 0, allocationsWithSpending: [] };
+
+        // Filter transactions for this month
+        const monthTransactions = transactions.filter(t => {
+            const d = new Date(t.date);
+            // Simple string prefix check for YYYY-MM match on ISO date
+            // or safer date-fns check
+            return getMonthString(d) === currentMonthStr && t.type === 'expense';
+        });
+
+        // Calculate total spent
+        const totalSpent = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+        // Calculate spending per category
+        const spendingByCategory: Record<string, number> = {};
+        monthTransactions.forEach(t => {
+            if (t.category_id) {
+                spendingByCategory[t.category_id] = (spendingByCategory[t.category_id] || 0) + t.amount;
+            }
+        });
+
+        // Join Allocations with Category & Spending
+        const budgetAllocations = allocations.filter(a => a.budget_id === currentBudgetRaw.id);
+
+        const joinedAllocations = budgetAllocations.map(alloc => {
+            const category = categories.find(c => c.id === alloc.category_id);
+            const spent = spendingByCategory[alloc.category_id] || 0;
+
+            return {
+                id: alloc.id,
+                categoryId: alloc.category_id,
+                amount: alloc.amount,
+                spent,
+                remaining: alloc.amount - spent,
+                percentage: alloc.amount > 0 ? (spent / alloc.amount) * 100 : 0,
+                category: category ? {
+                    id: category.id,
+                    name: category.name,
+                    icon: category.icon,
+                    color: category.color
+                } : undefined
+            };
+        }).sort((a, b) => b.percentage - a.percentage);
+
+        return {
+            totalMonthSpent: totalSpent,
+            allocationsWithSpending: joinedAllocations
+        };
+    }, [currentBudgetRaw, allocations, transactions, categories, currentMonthStr]);
+
+
+    // Data for UI
+    const currentBudget: BudgetWithAllocations | null = currentBudgetRaw ? {
+        id: currentBudgetRaw.id,
+        month: currentBudgetRaw.month,
+        totalAmount: currentBudgetRaw.total_amount,
+        spent: totalMonthSpent,
+        allocations: allocationsWithSpending
+    } : null;
 
     // -- Computed Stats --
-    const isLoading = status === 'loading';
-    const totalMonthSpent = currentBudget?.totalSpent || 0;
     const overallRemaining = currentBudget ? currentBudget.totalAmount - totalMonthSpent : 0;
     const overallPercentage = currentBudget?.totalAmount
         ? (totalMonthSpent / currentBudget.totalAmount) * 100
         : 0;
-
-    // Budget Allocations with Category Info
-    const allocationsWithSpending = useMemo(() => {
-        if (!currentBudget) return [];
-
-        return currentBudget.allocations.map(allocation => {
-            const category = categories.find(c => c.id === allocation.categoryId);
-            return {
-                ...allocation,
-                category,
-                percentage: allocation.amount > 0 ? (allocation.spent / allocation.amount) * 100 : 0
-            };
-        }).sort((a, b) => b.percentage - a.percentage);
-    }, [currentBudget, categories]);
 
     const categoriesOverBudget = allocationsWithSpending.filter(a => a.percentage >= 100).length;
     const categoriesOnTrack = allocationsWithSpending.filter(a => a.percentage < 75).length;
@@ -81,54 +133,63 @@ export function useBudgetsView() {
     const handlePrevMonth = useCallback(() => setSelectedDate(prev => subMonths(prev, 1)), []);
     const handleNextMonth = useCallback(() => setSelectedDate(prev => addMonths(prev, 1)), []);
 
-    const handleSaveBudget = async (totalBudget: number, allocations: Record<string, number>) => {
+    const handleSaveBudget = async (totalBudget: number, allocationsMap: Record<string, number>) => {
         if (totalBudget <= 0) {
             toast.error('Please enter a total budget amount');
             return;
         }
+        if (!user) return;
 
         try {
-            const budgetAllocations: BudgetAllocation[] = Object.entries(allocations)
+            // Prepare Allocations Array
+            const allocationsList = Object.entries(allocationsMap)
                 .filter(([, amount]) => amount > 0)
-                .map(([categoryId, amount]) => ({ categoryId, amount }));
+                .map(([categoryId, amount]) => ({
+                    category_id: categoryId,
+                    amount,
+                    user_id: user.id
+                }));
 
-            // Optimistic update logic handled in Slice (partially)
-            if (currentBudget) {
-                await dispatch(updateBudget({
-                    id: currentBudget.id,
-                    input: {
-                        totalAmount: totalBudget,
-                        allocations: budgetAllocations,
-                    }
-                })).unwrap();
+            if (currentBudgetRaw) {
+                await updateBudget({
+                    id: currentBudgetRaw.id,
+                    budget: { total_amount: totalBudget },
+                    allocations: allocationsList
+                }).unwrap();
                 toast.success('Budget updated');
             } else {
-                await dispatch(createBudget({
-                    month: currentMonth,
-                    totalAmount: totalBudget,
-                    allocations: budgetAllocations,
-                })).unwrap();
+                await addBudget({
+                    budget: {
+                        month: currentMonthStr,
+                        total_amount: totalBudget,
+                        user_id: user.id
+                    },
+                    allocations: allocationsList
+                }).unwrap();
                 toast.success('Budget created');
             }
-
             setDialogOpen(false);
-            // Re-fetch to ensure spending triggers update if needed (although slice handles optimistic)
-            dispatch(fetchBudgetWithSpending(currentMonth));
         } catch (error) {
             console.error(error);
             toast.error('Failed to save budget');
-            throw error; // Let component handle loading state if needed
         }
     };
 
     return {
         // Data
         currentBudget,
-        categories,
+        // Map raw categories to simple format if needed for dialog
+        categories: categories.map(c => ({
+            id: c.id,
+            name: c.name,
+            icon: c.icon,
+            color: c.color,
+            isDefault: c.is_default
+        })),
         allocationsWithSpending,
-        status,
+        status: isLoading ? 'loading' : 'succeeded',
         isLoading,
-        currentMonth,
+        currentMonth: currentMonthStr,
         isCurrentMonth,
         selectedDate,
         symbol,

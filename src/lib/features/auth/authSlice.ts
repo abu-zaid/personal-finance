@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction, createSelector } from '@r
 import { User, UserPreferences, Currency, DateFormat, Theme } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 import { DEMO_USER } from '@/lib/demo-data';
+import { syncManager } from '@/lib/sync/sync-manager';
 
 // Helper to define Serializable User for Redux
 interface SerializableUser extends Omit<User, 'createdAt' | 'updatedAt' | 'preferences'> {
@@ -80,6 +81,9 @@ export const initializeAuth = createAsyncThunk(
                 console.error('Failed to fetch initial preferences:', error);
                 // Fallback to defaults is already in place
             }
+
+            // Trigger background sync
+            syncManager.pullChanges().catch(console.error);
 
             return { isConfigured: true, user, isDemo: false };
         }

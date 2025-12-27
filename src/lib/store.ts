@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './features/auth/authSlice';
+import { apiSlice } from './features/api/apiSlice';
 // Slices will be imported here as they are created
 import transactionsReducer from './features/transactions/transactionsSlice';
 import categoriesReducer from './features/categories/categoriesSlice';
@@ -10,6 +11,7 @@ import insightsReducer from './features/insights/insightsSlice';
 export const makeStore = () => {
     return configureStore({
         reducer: {
+            [apiSlice.reducerPath]: apiSlice.reducer,
             auth: authReducer,
             transactions: transactionsReducer,
             categories: categoriesReducer,
@@ -17,6 +19,8 @@ export const makeStore = () => {
             recurring: recurringReducer,
             insights: insightsReducer,
         },
+        middleware: (getDefaultMiddleware) =>
+            getDefaultMiddleware().concat(apiSlice.middleware),
     });
 };
 

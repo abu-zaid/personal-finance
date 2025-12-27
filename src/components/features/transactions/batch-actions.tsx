@@ -6,6 +6,7 @@ import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Group } from '@/components/ui/layout';
 
 interface BatchActionsProps {
     isVisible: boolean;
@@ -26,16 +27,16 @@ export function BatchActions({ isVisible, selectedCount, onClearSelection, onDel
                 >
                     <Card className="bg-popover text-popover-foreground border-border shadow-floating">
                         <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
+                            <Group align="center" justify="between">
+                                <Group align="center" gap={3}>
                                     <Badge variant="secondary">
                                         {selectedCount} selected
                                     </Badge>
                                     <p className="text-sm font-medium opacity-90 hidden sm:block">
                                         Select more or choose an action
                                     </p>
-                                </div>
-                                <div className="flex items-center gap-2">
+                                </Group>
+                                <Group align="center" gap={2}>
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -52,8 +53,8 @@ export function BatchActions({ isVisible, selectedCount, onClearSelection, onDel
                                         <Trash2 className="w-4 h-4" />
                                         Delete
                                     </Button>
-                                </div>
-                            </div>
+                                </Group>
+                            </Group>
                         </CardContent>
                     </Card>
                 </motion.div>

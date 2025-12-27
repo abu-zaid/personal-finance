@@ -4,6 +4,7 @@ import { StaggerContainer, StaggerItem } from '@/components/animations';
 import { BudgetCategoryItem } from './budget-category-item';
 import { EmptyState } from '@/components/shared';
 import { Sparkles } from 'lucide-react';
+import { Stack, Box } from '@/components/ui/layout';
 
 interface BudgetListProps {
     allocations: any[]; // define stricter type
@@ -24,13 +25,15 @@ export function BudgetList({ allocations, formatCurrency, onAddAllocation }: Bud
     }
 
     return (
-        <StaggerContainer className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground pl-1">Category Breakdown</h3>
-            {allocations.map((item) => (
-                <StaggerItem key={item.categoryId}>
-                    <BudgetCategoryItem item={item} formatCurrency={formatCurrency} />
-                </StaggerItem>
-            ))}
-        </StaggerContainer>
+        <Stack gap={3}>
+            <Box className="text-sm font-semibold text-muted-foreground pl-1">Category Breakdown</Box>
+            <StaggerContainer className="space-y-3">
+                {allocations.map((item) => (
+                    <StaggerItem key={item.categoryId}>
+                        <BudgetCategoryItem item={item} formatCurrency={formatCurrency} />
+                    </StaggerItem>
+                ))}
+            </StaggerContainer>
+        </Stack>
     );
 }

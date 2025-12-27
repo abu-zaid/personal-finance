@@ -5,7 +5,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { format, addMonths, subMonths } from "date-fns"
 
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+
+import { Group, Box } from "@/components/ui/layout"
 
 interface MonthPickerProps {
     currentDate: Date
@@ -17,11 +18,11 @@ interface MonthPickerProps {
 export function MonthPicker({
     currentDate,
     onDateChange,
-    align = "start",
+    align: _align = "start",
     className
 }: MonthPickerProps) {
     return (
-        <div className={cn("flex items-center gap-1", className)}>
+        <Group align="center" gap={1} className={className}>
             <Button
                 variant="outline"
                 size="icon"
@@ -31,9 +32,9 @@ export function MonthPicker({
                 <ChevronLeft className="h-4 w-4" />
                 <span className="sr-only">Previous month</span>
             </Button>
-            <div className="font-medium text-sm min-w-[100px] text-center tabular-nums">
+            <Box className="font-medium text-sm min-w-[100px] text-center tabular-nums">
                 {format(currentDate, "MMMM yyyy")}
-            </div>
+            </Box>
             <Button
                 variant="outline"
                 size="icon"
@@ -43,6 +44,6 @@ export function MonthPicker({
                 <ChevronRight className="h-4 w-4" />
                 <span className="sr-only">Next month</span>
             </Button>
-        </div>
+        </Group>
     )
 }

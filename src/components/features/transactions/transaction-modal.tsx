@@ -3,20 +3,17 @@
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
-  SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { TransactionForm } from './transaction-form';
 import { TransactionWithCategory } from '@/types';
+import { Box, Stack } from '@/components/ui/layout';
 
 interface TransactionModalProps {
   open: boolean;
@@ -69,18 +66,18 @@ export function TransactionModal({
         <SheetTitle className="sr-only">
           {isEditMode ? 'Edit Transaction' : 'Add Transaction'}
         </SheetTitle>
-        <div className="flex items-center justify-center pt-3 pb-2 shrink-0">
-          <div className="w-12 h-1.5 bg-border rounded-full" />
-        </div>
+        <Stack align="center" justify="center" className="pt-3 pb-2 shrink-0">
+          <Box className="w-12 h-1.5 bg-border rounded-full" />
+        </Stack>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <Box className="flex-1 overflow-y-auto overflow-x-hidden">
           <TransactionForm
             transaction={transaction}
             onSuccess={handleClose}
             onCancel={handleClose}
             className="h-full"
           />
-        </div>
+        </Box>
       </SheetContent>
     </Sheet>
   );

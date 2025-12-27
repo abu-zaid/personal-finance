@@ -1,57 +1,92 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { useState, useMemo, useCallback } from 'react';
+import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { toast } from 'sonner';
 
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useAuth } from '@/context/auth-context';
 import { useDebounce } from './use-debounce';
 import {
-    fetchTransactions,
-    deleteTransaction,
-    fetchFilteredStats,
-    selectTransactions,
-    selectTransactionStatus,
-    selectTransactionError,
-    selectTransactionStats,
     setFilters
 } from '@/lib/features/transactions/transactionsSlice';
-import { selectCategories } from '@/lib/features/categories/categoriesSlice';
-import { TransactionSort, TransactionWithCategory } from '@/types';
+import { useGetTransactionsQuery, useDeleteTransactionMutation, useGetCategoriesQuery } from '@/lib/features/api/apiSlice';
+import { TransactionSort, TransactionWithCategory, TransactionFilters } from '@/types';
 
 export function useTransactionsView() {
     const dispatch = useAppDispatch();
-    const { user } = useAuth();
+    const { user } = useAuth(); // kept for potential user-check logic if needed
 
-    // Redux Selectors
-    const transactions = useAppSelector(selectTransactions);
-    const status = useAppSelector(selectTransactionStatus);
-    const error = useAppSelector(selectTransactionError);
-    const categories = useAppSelector(selectCategories);
-    const { hasMore, filters: ReduxFilters, totalCount } = useAppSelector((state) => state.transactions);
-    const filteredStats = useAppSelector(selectTransactionStats);
+    // API Query
+    const { data: rawTransactions = [], isLoading: isQueryLoading } = useGetTransactionsQuery();
+    const { data: rawCategories = [] } = useGetCategoriesQuery();
+    const [deleteTransaction] = useDeleteTransactionMutation();
+
+    // Redux Selectors (Filters & Categories still useful from Redux or local state)
+    const ReduxFilters = useAppSelector((state) => state.transactions.filters);
 
     // Initial Loading State
-    const isLoading = status === 'loading';
-    const isInitialLoading = isLoading && transactions.length === 0;
+    const isInitialLoading = isQueryLoading && rawTransactions.length === 0;
 
-    // Stats from filtered data (all transactions, not just paginated)
-    const stats = useMemo(() => ({
-        income: filteredStats.income,
-        expense: filteredStats.expense,
-        net: filteredStats.income - filteredStats.expense
-    }), [filteredStats]);
+    // Join Transactions with Categories
+    const allTransactions: TransactionWithCategory[] = useMemo(() => {
+        return rawTransactions.map(t => {
+            const category = rawCategories.find(c => c.id === t.category_id) || {
+                id: 'unknown',
+                name: 'Unknown',
+                icon: 'help-circle',
+                color: '#cccccc',
+                type: 'expense' as const,
+                user_id: 'unknown'
+            };
+
+            return {
+                id: t.id,
+                userId: t.user_id,
+                amount: t.amount,
+                type: t.type,
+                date: new Date(t.date),
+                notes: t.notes || undefined,
+                categoryId: t.category_id,
+                category: {
+                    id: category.id,
+                    name: category.name,
+                    icon: category.icon,
+                    color: category.color,
+                },
+                createdAt: new Date(t.created_at || new Date()),
+                updatedAt: new Date(t.updated_at || new Date()),
+            } as TransactionWithCategory;
+        });
+    }, [rawTransactions, rawCategories]);
+
+    // Map Categories to Domain Type
+    const categories = useMemo(() => {
+        return rawCategories.map(c => ({
+            id: c.id,
+            userId: c.user_id,
+            name: c.name,
+            icon: c.icon,
+            color: c.color,
+            isDefault: c.is_default,
+            order: c.sort_order,
+            createdAt: c.created_at ? new Date(c.created_at) : new Date(),
+            updatedAt: c.updated_at ? new Date(c.updated_at) : new Date(),
+        }));
+    }, [rawCategories]);
+
 
     // Local UI State
     const [search, setSearch] = useState(ReduxFilters.search || '');
     const debouncedSearch = useDebounce(search, 500);
     const [sortConfig, setSortConfig] = useState<TransactionSort>({ field: 'date', order: 'desc' });
+    const [page, setPage] = useState(1); // Client-side pagination
+    const ITEMS_PER_PAGE = 20;
 
     const [isBatchMode, setIsBatchMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-    // Active Filters Calculation (memoized)
+    // Active Filters Calculation
     const activeFilterCount = useMemo(() => {
         return [
             ReduxFilters.startDate || ReduxFilters.endDate,
@@ -60,80 +95,127 @@ export function useTransactionsView() {
         ].filter(Boolean).length;
     }, [ReduxFilters]);
 
+    // --- Data Processing (Client-Side) ---
 
-    // --- Effects ---
+    // 1. Filter
+    const filteredTransactions = useMemo(() => {
+        let result = [...allTransactions];
+        const searchTerm = (debouncedSearch || '').toLowerCase();
 
-    // Consolidated initialization effect
-    useEffect(() => {
-        if (!user?.id) return;
-
-        // Set default filters if not set
-        if (!ReduxFilters.startDate && !ReduxFilters.endDate) {
-            const now = new Date();
-            dispatch(setFilters({
-                ...ReduxFilters,
-                startDate: startOfMonth(now).toISOString(),
-                endDate: endOfMonth(now).toISOString()
+        // Date Filter
+        if (ReduxFilters.startDate && ReduxFilters.endDate) {
+            result = result.filter(t => isWithinInterval(t.date, { // t.date is now Date
+                start: new Date(ReduxFilters.startDate!),
+                end: new Date(ReduxFilters.endDate!)
             }));
         }
 
-        // Fetch only if we don't have data
-        if (transactions.length === 0 && status === 'idle') {
-            dispatch(fetchTransactions({ page: 0 }));
+        // Type Filter
+        if (ReduxFilters.type && ReduxFilters.type !== 'all') {
+            result = result.filter(t => t.type === ReduxFilters.type);
         }
-    }, [user?.id, dispatch]); // Only run on mount or user change
 
-    // Fetch filtered stats when filters change
-    useEffect(() => {
-        if (!user?.id) return;
-        dispatch(fetchFilteredStats());
-    }, [dispatch, ReduxFilters, user?.id]);
-
-    // Handle search changes
-    useEffect(() => {
-        const currentSearch = ReduxFilters.search || '';
-        const newSearch = debouncedSearch || '';
-
-        if (newSearch !== currentSearch) {
-            dispatch(setFilters({ ...ReduxFilters, search: newSearch }));
+        // Category Filter
+        if (ReduxFilters.categoryIds && ReduxFilters.categoryIds.length > 0) {
+            result = result.filter(t => ReduxFilters.categoryIds?.includes(t.categoryId));
         }
-    }, [debouncedSearch, dispatch, ReduxFilters]);
 
-    // Fetch transactions when filters change
-    useEffect(() => {
-        if (!user?.id) return;
-        if (transactions.length === 0 && status === 'idle') return; // Skip if initial load
+        // Search Filter
+        if (searchTerm) {
+            result = result.filter(t =>
+                (t.notes && t.notes.toLowerCase().includes(searchTerm)) ||
+                (t.category?.name && t.category.name.toLowerCase().includes(searchTerm))
+            );
+        }
 
-        dispatch(fetchTransactions({ page: 0 }));
-    }, [ReduxFilters, dispatch, user?.id]);
+        return result;
+    }, [allTransactions, ReduxFilters, debouncedSearch]);
 
+    // 2. Sort
+    const sortedTransactions = useMemo(() => {
+        const sorted = [...filteredTransactions];
+        sorted.sort((a, b) => {
+            let comparison = 0;
+            switch (sortConfig.field) {
+                case 'date':
+                    comparison = a.date.getTime() - b.date.getTime();
+                    break;
+                case 'amount':
+                    comparison = a.amount - b.amount;
+                    break;
+                case 'category':
+                    comparison = a.category.name.localeCompare(b.category.name);
+                    break;
+            }
+            return sortConfig.order === 'asc' ? comparison : -comparison;
+        });
+        return sorted;
+    }, [filteredTransactions, sortConfig]);
+
+    // 3. Stats Calculation (from filtered data)
+    const stats = useMemo(() => {
+        const income = filteredTransactions
+            .filter(t => t.type === 'income')
+            .reduce((acc, t) => acc + t.amount, 0);
+        const expense = filteredTransactions
+            .filter(t => t.type === 'expense')
+            .reduce((acc, t) => acc + t.amount, 0);
+
+        return {
+            income,
+            expense,
+            net: income - expense
+        };
+    }, [filteredTransactions]);
+
+    // 4. Pagination
+    const paginatedTransactions = useMemo(() => {
+        return sortedTransactions.slice(0, page * ITEMS_PER_PAGE);
+    }, [sortedTransactions, page]);
+
+    const hasMore = paginatedTransactions.length < sortedTransactions.length;
+
+    // 5. Group By Date
+    const groupedTransactions = useMemo(() => {
+        const groups: Record<string, TransactionWithCategory[]> = {};
+        paginatedTransactions.forEach(t => {
+            const dateKey = format(t.date, 'yyyy-MM-dd');
+            if (!groups[dateKey]) groups[dateKey] = [];
+            groups[dateKey].push(t);
+        });
+        return groups;
+    }, [paginatedTransactions]);
 
     // --- Handlers ---
 
     const handleLoadMore = useCallback(() => {
-        if (hasMore && !isLoading) {
-            const nextPage = Math.ceil(transactions.length / 20);
-            dispatch(fetchTransactions({ page: nextPage, append: true }));
+        if (hasMore) {
+            setPage(p => p + 1);
         }
-    }, [hasMore, isLoading, transactions.length, dispatch]);
+    }, [hasMore]);
 
-    const handleFilterChange = useCallback((updates: any) => {
-        const newFilters = { ...ReduxFilters, ...updates };
+    const handleFilterChange = useCallback((updates: Partial<TransactionFilters>) => {
+        // Ensure strictly string | undefined for Redux compatibility
+        const safeUpdates: any = { ...updates };
+        if (updates.startDate instanceof Date) safeUpdates.startDate = updates.startDate.toISOString();
+        if (updates.endDate instanceof Date) safeUpdates.endDate = updates.endDate.toISOString();
+
+        const newFilters = { ...ReduxFilters, ...safeUpdates };
         dispatch(setFilters(newFilters));
-        // fetchTransactions will be triggered by the filter change effect
-        // No need to call it here to avoid duplicate calls
+        setPage(1);
     }, [ReduxFilters, dispatch]);
 
     const handleClearFilters = useCallback(() => {
-        setSearch(''); // Clear local search too
-        // Reset to Default (This Month) instead of All Time
+        setSearch('');
         const now = new Date();
         dispatch(setFilters({
             startDate: startOfMonth(now).toISOString(),
-            endDate: endOfMonth(now).toISOString()
+            endDate: endOfMonth(now).toISOString(),
+            type: 'all',
+            categoryIds: []
         }));
         setSortConfig({ field: 'date', order: 'desc' });
-        // fetchTransactions will be triggered by the filter change effect
+        setPage(1);
     }, [dispatch]);
 
     const handleToggleSelection = useCallback((id: string) => {
@@ -151,61 +233,31 @@ export function useTransactionsView() {
         setIsBatchMode(false);
 
         try {
-            await Promise.all(ids.map(id => dispatch(deleteTransaction(id)).unwrap()));
+            await Promise.all(ids.map(id => deleteTransaction(id).unwrap()));
             toast.success(`Deleted ${ids.length} transactions`);
-            // Stats will be recalculated automatically from updated transactions
-            // No need to call fetchFilteredStats
         } catch (err) {
             toast.error("Some transactions failed to delete");
+            console.error(err);
         }
     };
 
-
-    // --- Computing Views ---
-
-    // 1. Client-side Sort
-    const filteredTransactions = useMemo(() => {
-        let result = [...transactions];
-
-        // Ensure consistent sorting
-        result.sort((a, b) => {
-            let comparison = 0;
-            switch (sortConfig.field) {
-                case 'date':
-                    comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
-                    break;
-                case 'amount':
-                    comparison = a.amount - b.amount;
-                    break;
-                case 'category':
-                    comparison = a.category.name.localeCompare(b.category.name);
-                    break;
-            }
-            return sortConfig.order === 'asc' ? comparison : -comparison;
-        });
-
-        return result;
-    }, [transactions, sortConfig]);
-
-    // 2. Group By Date
-    const groupedTransactions = useMemo(() => {
-        const groups: Record<string, TransactionWithCategory[]> = {};
-        filteredTransactions.forEach(t => {
-            const dateKey = format(new Date(t.date), 'yyyy-MM-dd');
-            if (!groups[dateKey]) groups[dateKey] = [];
-            groups[dateKey].push(t);
-        });
-        return groups;
-    }, [filteredTransactions]);
-
+    // Explicit Delete Handler
+    const handleDelete = async (id: string) => {
+        try {
+            await deleteTransaction(id).unwrap();
+            toast.success("Transaction deleted");
+        } catch (err) {
+            toast.error("Failed to delete transaction");
+        }
+    };
 
     return {
         // Data
-        transactions: filteredTransactions,
+        transactions: paginatedTransactions,
         groupedTransactions,
         stats,
         categories,
-        isLoading,
+        isLoading: isQueryLoading,
         isInitialLoading,
         hasMore,
 
@@ -218,7 +270,7 @@ export function useTransactionsView() {
         selectedIds,
 
         // Actions
-        setSearch,
+        setSearch: (s: string) => { setSearch(s); dispatch(setFilters({ ...ReduxFilters, search: s })); },
         setSortConfig,
         setIsBatchMode,
         setSelectedIds,
@@ -228,6 +280,7 @@ export function useTransactionsView() {
         onFilterChange: handleFilterChange,
         onClearFilters: handleClearFilters,
         onToggleSelection: handleToggleSelection,
-        onBatchDelete: handleBatchDelete
+        onBatchDelete: handleBatchDelete,
+        onDelete: handleDelete
     };
 }

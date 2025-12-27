@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AnimatedNumber } from '@/components/animations';
-import { BRAND_GRADIENT } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
+import { Box, Stack, Group, Grid } from '@/components/ui/layout';
 
 interface TransactionsHeaderProps {
     isLoading: boolean;
@@ -25,22 +25,22 @@ export function TransactionsHeader({ isLoading, stats, onAddTransaction }: Trans
 
     if (isLoading) {
         return (
-            <div className="px-4 md:px-6 py-4 space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1">
+            <Stack gap={4} className="px-4 md:px-6 py-4">
+                <Group justify="between" align="center" gap={4}>
+                    <Box className="min-w-0 flex-1">
                         <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Transactions</h1>
-                    </div>
-                    <div className="flex items-center gap-2">
+                    </Box>
+                    <Group align="center" gap={2}>
                         <Button variant="outline" size="sm" className="hidden md:flex h-9 rounded-full border-border/60" disabled>
                             <p className="mr-2">Export</p>
                         </Button>
                         <Button size="sm" className="h-9 w-9 p-0 rounded-full" disabled>
                             <Plus className="h-5 w-5" />
                         </Button>
-                    </div>
-                </div>
+                    </Group>
+                </Group>
 
-                <div className="grid grid-cols-3 gap-2 md:gap-4">
+                <Grid cols={3} gap={2} className="md:gap-4">
                     {[1, 2, 3].map((i) => (
                         <Card key={i} className="shadow-none border-border/40 bg-card/50">
                             <CardContent className="p-4 space-y-2">
@@ -49,18 +49,18 @@ export function TransactionsHeader({ isLoading, stats, onAddTransaction }: Trans
                             </CardContent>
                         </Card>
                     ))}
-                </div>
-            </div>
+                </Grid>
+            </Stack>
         );
     }
 
     return (
-        <div className="px-4 md:px-6 py-4 space-y-4">
-            <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0 flex-1">
+        <Stack gap={4} className="px-4 md:px-6 py-4">
+            <Group justify="between" align="center" gap={4}>
+                <Box className="min-w-0 flex-1">
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Transactions</h1>
-                </div>
-                <div className="flex items-center gap-2">
+                </Box>
+                <Group align="center" gap={2}>
                     <Button variant="outline" size="sm" className="hidden md:flex h-9 rounded-full border-border/60">
                         <p className="mr-2">Export</p>
                     </Button>
@@ -71,18 +71,18 @@ export function TransactionsHeader({ isLoading, stats, onAddTransaction }: Trans
                     >
                         <Plus className="h-5 w-5" strokeWidth={3} />
                     </Button>
-                </div>
-            </div>
+                </Group>
+            </Group>
 
-            <div className="grid grid-cols-3 gap-2 md:gap-4 max-w-full min-w-0">
+            <Grid cols={3} gap={2} className="md:gap-4 max-w-full min-w-0">
                 <Card className="border-border/40 min-w-0">
                     <CardContent className="p-3 md:p-4">
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+                        <Group align="center" gap={2} className="mb-1">
+                            <Box className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center">
                                 <TrendingUp className="h-4 w-4 text-green-500" />
-                            </div>
+                            </Box>
                             <span className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Income</span>
-                        </div>
+                        </Group>
                         <p className="text-sm md:text-xl font-bold text-green-500 tabular-nums truncate">
                             {symbol}<AnimatedNumber value={stats.income} />
                         </p>
@@ -91,12 +91,12 @@ export function TransactionsHeader({ isLoading, stats, onAddTransaction }: Trans
 
                 <Card className="border-border/40 min-w-0">
                     <CardContent className="p-3 md:p-4">
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                        <Group align="center" gap={2} className="mb-1">
+                            <Box className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
                                 <TrendingDown className="h-4 w-4 text-red-500" />
-                            </div>
+                            </Box>
                             <span className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Expense</span>
-                        </div>
+                        </Group>
                         <p className="text-sm md:text-xl font-bold text-red-500 tabular-nums truncate">
                             {symbol}<AnimatedNumber value={stats.expense} />
                         </p>
@@ -105,12 +105,12 @@ export function TransactionsHeader({ isLoading, stats, onAddTransaction }: Trans
 
                 <Card className="border-border/40 min-w-0">
                     <CardContent className="p-3 md:p-4">
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Group align="center" gap={2} className="mb-1">
+                            <Box className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                                 <DollarSign className="h-4 w-4 text-primary" />
-                            </div>
+                            </Box>
                             <span className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Net</span>
-                        </div>
+                        </Group>
                         <p className={cn(
                             "text-sm md:text-xl font-bold tabular-nums truncate",
                             stats.net >= 0 ? "text-green-500" : "text-red-500"
@@ -119,7 +119,7 @@ export function TransactionsHeader({ isLoading, stats, onAddTransaction }: Trans
                         </p>
                     </CardContent>
                 </Card>
-            </div>
-        </div>
+            </Grid>
+        </Stack>
     );
 }
