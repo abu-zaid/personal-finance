@@ -41,15 +41,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (isLoading || (isAuthenticated && !preferencesLoaded)) {
+    if (isLoading) {
       timer = setTimeout(() => setLongLoading(true), 4000);
     }
     return () => clearTimeout(timer);
-  }, [isLoading, isAuthenticated, preferencesLoaded]);
+  }, [isLoading]);
 
-  // Show loading state while auth is loading OR preferences are loading
-  // This prevents flash of wrong currency symbol
-  if (isLoading || (isAuthenticated && !preferencesLoaded)) {
+  // Show loading state while auth is loading
+  if (isLoading) {
     return (
       <div className="bg-background flex h-screen overflow-hidden">
         <aside className="bg-sidebar border-sidebar-border hidden h-full w-64 border-r lg:block">

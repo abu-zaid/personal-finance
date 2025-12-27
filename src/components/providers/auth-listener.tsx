@@ -37,6 +37,18 @@ export default function AuthListener() {
     // However, initializeAuth returns the state.
 
     useEffect(() => {
+        // Service Worker "Killer" - Force unregister any existing SWs
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (const registration of registrations) {
+                    console.log('Unregistering Service Worker:', registration);
+                    registration.unregister();
+                }
+            });
+        }
+    }, []);
+
+    useEffect(() => {
         if (!supabase) {
             console.error('Supabase client failed to initialize');
             dispatch(setUser(null));
