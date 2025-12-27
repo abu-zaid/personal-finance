@@ -45,6 +45,15 @@ This document tracks the progress of UI/UX improvements for the personal finance
 - [x] Performance optimizations (memoization, GPU acceleration)
 - [x] Preserved menu sheet functionality
 
+### Mobile Header
+- [x] Cleaner, minimal design
+- [x] Better spacing and alignment
+- [x] Consistent styling with bottom nav
+- [x] User avatar with hover effect
+- [x] Hidden on desktop (side nav provides context)
+- [x] Glassmorphism design
+- [x] Sticky positioning
+
 ### Technical Improvements
 - [x] Fixed RTK Query integration for budgets
 - [x] Updated `use-budgets-view` hook
@@ -54,18 +63,6 @@ This document tracks the progress of UI/UX improvements for the personal finance
 ---
 
 ## 🚧 In Progress
-
-### Navigation & Layout
-
-#### Mobile Header
-- [ ] Cleaner, minimal design
-- [ ] Better spacing and alignment
-- [ ] Consistent styling with bottom nav
-- [ ] Add user avatar/profile button
-
----
-
-## 📝 Planned Features
 
 ### Transaction Features
 
