@@ -56,8 +56,8 @@ This document tracks the progress of UI/UX improvements for the personal finance
 
 ### Loading States
 - [x] Dashboard skeleton screens
-- [ ] Transaction list skeletons
-- [ ] Budget page skeletons
+- [x] Transaction list skeletons
+- [x] Budget page skeletons
 
 ### Technical Improvements
 - [x] Fixed RTK Query integration for budgets
