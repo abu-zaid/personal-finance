@@ -27,6 +27,24 @@ This document tracks the progress of UI/UX improvements for the personal finance
 - [x] Performance optimizations (memoization, GPU acceleration)
 - [x] Preserved menu sheet functionality
 
+### Side Navigation (Desktop)
+- [x] Modern sidebar design with glassmorphism
+- [x] Collapsible menu functionality (256px ↔ 80px)
+- [x] Active state indicators with animations
+- [x] User profile section at bottom
+- [x] Smooth expand/collapse transitions (300ms)
+- [x] Keyboard shortcuts support (Ctrl+B)
+- [x] State persistence in localStorage
+- [x] Native tooltips when collapsed
+
+### Bottom Navigation
+- [x] Complete redesign with glassmorphism
+- [x] Icon-only layout (removed text labels)
+- [x] Smooth spring animations for active states
+- [x] Haptic feedback on mobile
+- [x] Performance optimizations (memoization, GPU acceleration)
+- [x] Preserved menu sheet functionality
+
 ### Technical Improvements
 - [x] Fixed RTK Query integration for budgets
 - [x] Updated `use-budgets-view` hook
@@ -38,14 +56,6 @@ This document tracks the progress of UI/UX improvements for the personal finance
 ## 🚧 In Progress
 
 ### Navigation & Layout
-
-#### Side Navigation (Desktop)
-- [ ] Modern sidebar design with glassmorphism
-- [ ] Collapsible menu functionality
-- [ ] Active state indicators with animations
-- [ ] User profile section at top
-- [ ] Smooth expand/collapse transitions
-- [ ] Keyboard shortcuts support
 
 #### Mobile Header
 - [ ] Cleaner, minimal design
