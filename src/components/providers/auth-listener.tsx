@@ -63,11 +63,8 @@ export default function AuthListener() {
                 const result = await dispatch(initializeAuth()).unwrap();
 
                 if (mounted && result.user) {
-                    // Fetch data for both Real and Demo users
-                    // Demo mode slices will handle serving mock data
-                    dispatch(fetchCategories());
-                    dispatch(fetchTransactions({ page: 0 }));
-                    // Add other initial fetches here if needed (budgets, etc)
+                    // Only handle auth state here. 
+                    // Data fetching is handled by individual pages/components.
                 }
             } catch (error) {
                 console.error('Auth initialization failed:', error);
@@ -90,8 +87,7 @@ export default function AuthListener() {
                 await dispatch(fetchUserPreferences(session.user.id)).unwrap(); // Ensure prefs loaded
 
                 if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-                    dispatch(fetchCategories());
-                    dispatch(fetchTransactions({ page: 0 }));
+                    // Data fetch will be triggered by DashboardPage mounting
                 }
             } else if (!isDemo) {
                 // Only clear user if NOT in demo mode
