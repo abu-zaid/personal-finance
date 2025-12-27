@@ -69,7 +69,7 @@ export default function DashboardPage() {
                     new Promise(resolve => setTimeout(resolve, 300))
                 ]);
             } catch (err) {
-
+                console.error('Dashboard Load Error:', err);
             } finally {
                 setIsDashboardLoading(false);
             }
