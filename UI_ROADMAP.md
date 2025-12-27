@@ -54,6 +54,11 @@ This document tracks the progress of UI/UX improvements for the personal finance
 - [x] Glassmorphism design
 - [x] Sticky positioning
 
+### Loading States
+- [x] Dashboard skeleton screens
+- [ ] Transaction list skeletons
+- [ ] Budget page skeletons
+
 ### Technical Improvements
 - [x] Fixed RTK Query integration for budgets
 - [x] Updated `use-budgets-view` hook
