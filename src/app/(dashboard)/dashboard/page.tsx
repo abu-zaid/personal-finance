@@ -1,6 +1,8 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getDashboardData } from '@/lib/api/dashboard';
 import { DashboardClient } from '@/components/dashboard/dashboard-client';
+import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton';
 
 export default async function DashboardPage() {
     const data = await getDashboardData();
@@ -9,5 +11,9 @@ export default async function DashboardPage() {
         redirect('/login');
     }
 
-    return <DashboardClient data={data} />;
+    return (
+        <Suspense fallback={<DashboardSkeleton />}>
+            <DashboardClient data={data} />
+        </Suspense>
+    );
 }
