@@ -36,9 +36,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // Show loading state while auth is loading OR preferences are loading
-  // This prevents flash of wrong currency symbol
-  if (isLoading || (isAuthenticated && !preferencesLoaded)) {
+  // Timeout safety for infinite loading
+  const [longLoading, setLongLoading] = useState(false);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isLoading) {
+      timer = setTimeout(() => setLongLoading(true), 4000);
+    }
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  // Show loading state while auth is loading
+  if (isLoading) {
     return (
       <div className="bg-background flex h-screen overflow-hidden">
         <aside className="bg-sidebar border-sidebar-border hidden h-full w-64 border-r lg:block">
@@ -54,8 +64,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="bg-muted h-10 w-10 animate-pulse rounded-full" />
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-4 pb-[100px] md:pb-6 lg:p-6">
-            <DashboardSkeleton />
+          <main className="flex-1 overflow-auto p-4 pb-[100px] md:pb-6 lg:p-6 flex flex-col items-center justify-center">
+            {longLoading ? (
+              <div className="text-center space-y-4">
+                <p className="text-muted-foreground">Taking longer than expected...</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium transition-colors hover:bg-primary/90"
+                >
+                  Reload Application
+                </button>
+              </div>
+            ) : (
+              <DashboardSkeleton />
+            )}
           </main>
         </div>
       </div>

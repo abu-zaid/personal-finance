@@ -37,6 +37,18 @@ export default function AuthListener() {
     // However, initializeAuth returns the state.
 
     useEffect(() => {
+        // Service Worker "Killer" - Force unregister any existing SWs
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (const registration of registrations) {
+                    console.log('Unregistering Service Worker:', registration);
+                    registration.unregister();
+                }
+            });
+        }
+    }, []);
+
+    useEffect(() => {
         if (!supabase) {
             console.error('Supabase client failed to initialize');
             dispatch(setUser(null));
@@ -53,7 +65,6 @@ export default function AuthListener() {
                 if (mounted && result.user) {
                     // Fetch data for both Real and Demo users
                     // Demo mode slices will handle serving mock data
-                    await dispatch(fetchUserPreferences(result.user.id));
                     dispatch(fetchCategories());
                     dispatch(fetchTransactions({ page: 0 }));
                     // Add other initial fetches here if needed (budgets, etc)

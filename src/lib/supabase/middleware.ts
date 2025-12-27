@@ -56,8 +56,7 @@ export async function updateSession(request: NextRequest) {
 
 
 
-  if (isProtectedPath && !user && !isDemo && !hasSessionCookie) {
-
+  if (isProtectedPath && !user && !isDemo) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

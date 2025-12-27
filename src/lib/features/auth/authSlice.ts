@@ -41,8 +41,6 @@ const initialState: AuthState = {
 export const initializeAuth = createAsyncThunk(
     'auth/initialize',
     async (_, { dispatch }) => {
-
-
         // Check for Demo Mode cookie first (client-side check purely for state sync)
         const isDemo = document.cookie.includes('demo_mode=true');
 
@@ -70,8 +68,20 @@ export const initializeAuth = createAsyncThunk(
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user) {
+            const user = mapSupabaseUserToSerializable(session.user);
 
-            return { isConfigured: true, user: mapSupabaseUserToSerializable(session.user), isDemo: false };
+            // Fetch preferences immediately to avoid loading states
+            try {
+                const prefs = await fetchPreferencesFromSupabase(supabase, user.id);
+                if (prefs) {
+                    user.preferences = prefs;
+                }
+            } catch (error) {
+                console.error('Failed to fetch initial preferences:', error);
+                // Fallback to defaults is already in place
+            }
+
+            return { isConfigured: true, user, isDemo: false };
         }
 
 
@@ -105,27 +115,35 @@ export const fetchUserPreferences = createAsyncThunk(
         const supabase = createClient();
         if (!supabase) throw new Error('Supabase not configured');
 
-        const { data, error } = await supabase
-            .from('user_preferences')
-            .select('*')
-            .eq('user_id', userId)
-            .single();
+        const prefs = await fetchPreferencesFromSupabase(supabase, userId);
+        if (prefs) return prefs;
 
-        if (error && error.code !== 'PGRST116') { // Ignore not found error
-            throw error;
-        }
-
-        if (data) {
-            return {
-                currency: data.currency as Currency,
-                dateFormat: data.date_format as DateFormat,
-                theme: data.theme as Theme,
-                firstDayOfWeek: data.first_day_of_week as 0 | 1,
-            };
-        }
         return defaultPreferences;
     }
 );
+
+// Helper function to fetch preferences
+async function fetchPreferencesFromSupabase(supabase: any, userId: string): Promise<UserPreferences | null> {
+    const { data, error } = await supabase
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+    if (error && error.code !== 'PGRST116') { // Ignore not found error
+        throw error;
+    }
+
+    if (data) {
+        return {
+            currency: data.currency as Currency,
+            dateFormat: data.date_format as DateFormat,
+            theme: data.theme as Theme,
+            firstDayOfWeek: data.first_day_of_week as 0 | 1,
+        };
+    }
+    return null;
+}
 
 export const updatePreferences = createAsyncThunk(
     'auth/updatePreferences',
@@ -258,6 +276,8 @@ const authSlice = createSlice({
                     state.user = action.payload.user as SerializableUser;
                     state.isAuthenticated = true;
                     state.isDemo = action.payload.isDemo;
+                    // preferencesLoaded is true because we fetched them in initializeAuth (or they are defaults)
+                    state.preferencesLoaded = true;
                 }
                 state.isLoading = false;
             })
@@ -277,7 +297,7 @@ const authSlice = createSlice({
             })
             // Fetch Preferences
             .addCase(fetchUserPreferences.pending, (state) => {
-                state.preferencesLoaded = false;
+                // Do not reset preferencesLoaded to false here to avoid locking UI on refetch
             })
             .addCase(fetchUserPreferences.fulfilled, (state, action) => {
                 if (state.user) {
