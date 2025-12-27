@@ -48,9 +48,15 @@ export function useSettingsView() {
     }, [setTheme, haptics]);
 
     const handleCurrencyChange = useCallback((value: string) => {
+        console.log('Currency change triggered:', value);
         haptics.selection();
-        updatePreferences({ currency: value as Currency });
-        toast.success(`Currency changed to ${value}`);
+        try {
+            updatePreferences({ currency: value as Currency });
+            toast.success(`Currency changed to ${value}`);
+        } catch (error) {
+            console.error('Failed to update currency:', error);
+            toast.error('Failed to update currency');
+        }
     }, [updatePreferences, haptics]);
 
     const handleToggleHaptics = useCallback((value: boolean) => {

@@ -114,7 +114,7 @@ export function SpendingChart({ dailyData, symbol, days = 7 }: SpendingChartProp
                                                 : isAboveAvg && day.amount > 0
                                                     ? "bg-red-500 hover:bg-red-600 shadow-red-500/20"
                                                     : day.amount > 0
-                                                        ? "bg-primary/50 hover:bg-primary/70 shadow-primary/10"
+                                                        ? "bg-green-500 hover:bg-green-600 shadow-green-500/20"
                                                         : "bg-border hover:bg-border/80"
                                         )}
                                         style={{
@@ -140,11 +140,11 @@ export function SpendingChart({ dailyData, symbol, days = 7 }: SpendingChartProp
                         </Group>
                         <Group align="center" gap={1}>
                             <Box className="h-3 w-3 rounded bg-red-500" />
-                            <span>Above Average</span>
+                            <span>Above Average (High Spending)</span>
                         </Group>
                         <Group align="center" gap={1}>
-                            <Box className="h-3 w-3 rounded bg-primary/50" />
-                            <span>Below Average</span>
+                            <Box className="h-3 w-3 rounded bg-green-500" />
+                            <span>Below Average (Good!)</span>
                         </Group>
                     </Group>
                 </Stack>

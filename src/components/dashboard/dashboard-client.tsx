@@ -11,6 +11,7 @@ import { BudgetOverviewCard } from '@/components/dashboard/budget-overview-card'
 import { RecentActivityFeed } from '@/components/dashboard/recent-activity-feed';
 import { useAppDispatch } from '@/lib/hooks';
 import { openTransactionModal } from '@/lib/features/transactions/transactionsSlice';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface DashboardClientProps {
     data: {
@@ -26,6 +27,7 @@ interface DashboardClientProps {
 
 export function DashboardClient({ data }: DashboardClientProps) {
     const dispatch = useAppDispatch();
+    const { symbol } = useCurrency();
     const {
         monthlyIncome,
         monthlyExpense,
@@ -35,7 +37,6 @@ export function DashboardClient({ data }: DashboardClientProps) {
         categories
     } = data;
 
-    const symbol = '₹'; // Get from user preferences
     const totalBalance = monthlyIncome - monthlyExpense;
 
     // Calculate daily spending data for chart
