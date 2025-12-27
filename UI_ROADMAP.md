@@ -71,13 +71,13 @@ This document tracks the progress of UI/UX improvements for the personal finance
 
 ### Transaction Features
 
-#### Transaction Modal Redesign
-- [ ] Modern form layout with better spacing
-- [ ] Enhanced category selector (grid view with icons)
-- [ ] Improved amount input (larger, clearer)
-- [ ] Better date/time picker
+#### Transaction Modal Enhancements
+- [x] Quick amount buttons (50, 100, 200, 500, 1000, 2000)
+- [x] Auto-focus amount input on open
+- [x] Error message display for validation
+- [ ] Enhanced category selector (grid view improvements)
+- [ ] Improved date/time picker
 - [ ] Add recurring transaction option
-- [ ] Form validation with clear error messages
 - [ ] Success animations
 
 #### Transaction List Improvements
