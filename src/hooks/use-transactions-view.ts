@@ -12,9 +12,9 @@ import {
     deleteTransaction,
     fetchFilteredStats,
     selectTransactions,
-    selectTransactionsStatus,
-    selectTransactionsError,
-    selectFilteredStats,
+    selectTransactionStatus,
+    selectTransactionError,
+    selectTransactionStats,
     setFilters
 } from '@/lib/features/transactions/transactionsSlice';
 import { selectCategories } from '@/lib/features/categories/categoriesSlice';
@@ -26,11 +26,11 @@ export function useTransactionsView() {
 
     // Redux Selectors
     const transactions = useAppSelector(selectTransactions);
-    const status = useAppSelector(selectTransactionsStatus);
-    const error = useAppSelector(selectTransactionsError);
+    const status = useAppSelector(selectTransactionStatus);
+    const error = useAppSelector(selectTransactionError);
     const categories = useAppSelector(selectCategories);
     const { hasMore, filters: ReduxFilters, totalCount } = useAppSelector((state) => state.transactions);
-    const filteredStats = useAppSelector(selectFilteredStats);
+    const filteredStats = useAppSelector(selectTransactionStats);
 
     // Initial Loading State
     const isLoading = status === 'loading';

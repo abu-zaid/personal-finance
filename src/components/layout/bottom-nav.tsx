@@ -19,7 +19,7 @@ import {
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 
 // Navigation configuration
 const NAV_ITEMS = [
@@ -55,20 +55,22 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
 
   // Prefetch routes for instant navigation
   useEffect(() => {
-    // Prefetch main nav routes immediately for instant navigation
-    ['/dashboard', '/transactions', '/budgets'].forEach(path => {
-      router.prefetch(path);
+    // Prefetch main nav items
+    NAV_ITEMS.forEach(item => {
+      if (item.href) router.prefetch(item.href);
     });
 
-    // Prefetch menu routes after short delay
+    // Prefetch menu items with a slight delay to prioritize main content
     const timer = setTimeout(() => {
       MENU_ITEMS.forEach(item => {
         router.prefetch(item.href);
       });
-    }, 1000); // Reduced from 2000ms
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [router]);
+
+
 
   // Determine active tab
   const activeId = useMemo(() => {
@@ -129,6 +131,7 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
                   <SheetTrigger asChild key={item.id}>
                     <button
                       className="relative"
+                      suppressHydrationWarning
                     >
                       <div
                         className={cn(
@@ -190,6 +193,7 @@ export const BottomNav = memo(function BottomNav({ onAddExpense }: BottomNavProp
         </nav>
 
         <SheetContent side="bottom" className="rounded-t-[2rem] p-6 pb-12 bg-background border-border text-foreground">
+          <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           <div className="flex items-center justify-center mb-6">
             <div className="w-12 h-1.5 bg-muted rounded-full" />
           </div>

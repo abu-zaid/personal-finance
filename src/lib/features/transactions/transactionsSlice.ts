@@ -4,11 +4,16 @@ import {
     TransactionWithCategory,
     TransactionFilters,
     CreateTransactionInput,
-    UpdateTransactionInput
+    UpdateTransactionInput,
+    TransactionSort
 } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 import { fetchBudgetWithSpending } from '@/lib/features/budgets/budgetsSlice';
 import { toast } from 'sonner';
+
+// ... (keep existing interfaces)
+
+
 
 // Helper to define Serializable Transaction for Redux
 interface SerializableTransaction extends Omit<Transaction, 'date' | 'createdAt' | 'updatedAt'> {
@@ -331,6 +336,11 @@ interface TransactionsState {
         expense: number;
     };
     lastModified: number; // Timestamp for cache invalidation
+    sortConfig: TransactionSort;
+    transactionModal: {
+        isOpen: boolean;
+        editingTransaction: SerializableTransactionWithCategory | null;
+    };
 }
 
 const initialState: TransactionsState = {
@@ -340,6 +350,7 @@ const initialState: TransactionsState = {
     error: null,
     hasMore: true,
     filters: initialFilters,
+    sortConfig: { field: 'date', order: 'desc' },
     aggregates: {
         monthlyExpenses: {},
         monthlyIncome: {},
@@ -348,6 +359,10 @@ const initialState: TransactionsState = {
     },
     filteredStats: { income: 0, expense: 0 },
     lastModified: 0,
+    transactionModal: {
+        isOpen: false,
+        editingTransaction: null,
+    },
 };
 
 export const updateTransaction = createAsyncThunk(
@@ -678,7 +693,7 @@ export const fetchTransactionsForExport = createAsyncThunk(
     }
 );
 
-// Slice
+// ... existing slice ...
 const transactionsSlice = createSlice({
     name: 'transactions',
     initialState,
@@ -688,6 +703,35 @@ const transactionsSlice = createSlice({
         },
         clearFilters: (state) => {
             state.filters = initialFilters;
+        },
+        setSortConfig: (state, action: PayloadAction<TransactionSort>) => {
+            state.sortConfig = action.payload;
+        },
+        openTransactionModal: (state, action: PayloadAction<SerializableTransactionWithCategory | undefined>) => {
+            state.transactionModal.isOpen = true;
+            state.transactionModal.editingTransaction = action.payload || null;
+        },
+        closeTransactionModal: (state) => {
+            state.transactionModal.isOpen = false;
+            state.transactionModal.editingTransaction = null;
+        },
+        setTransactions: (state, action: PayloadAction<any[]>) => {
+            // Simple replacement for hydration
+            state.items = action.payload.map(t => ({
+                id: t.id,
+                userId: t.userId,
+                amount: t.amount,
+                type: t.type,
+                categoryId: t.categoryId,
+                date: t.date?.toString() || new Date().toISOString(),
+                notes: t.notes,
+                createdAt: t.createdAt?.toString() || new Date().toISOString(),
+                updatedAt: t.updatedAt?.toString() || new Date().toISOString(),
+            }));
+            state.status = 'succeeded';
+        },
+        resetTransactions: (state) => {
+            return initialState;
         },
         // Optimistic helpers could be added here if not using Thunks full lifecycle
     },
@@ -783,33 +827,34 @@ const transactionsSlice = createSlice({
     },
 });
 
-export const { setFilters, clearFilters } = transactionsSlice.actions;
+// Actions
+export const {
+    setFilters,
+    clearFilters,
+    setSortConfig,
+    setTransactions,
+    resetTransactions,
+    openTransactionModal,
+    closeTransactionModal
+} = transactionsSlice.actions;
 
 // Selectors
-export const selectTransactions = (state: any): TransactionWithCategory[] => {
-    return state.transactions.items.map((item: SerializableTransactionWithCategory) => {
-        // Handle date parsing (fix for 5:30 AM issue on date-only strings)
-        let dateObj = new Date(item.date);
-        if (typeof item.date === 'string' && item.date.length === 10) {
-            // If it's a date-only string (YYYY-MM-DD), parse as local midnight
-            // Appending T00:00:00 makes new Date() treat it as local
-            dateObj = new Date(`${item.date}T00:00:00`);
-        }
+export const selectTransactions = (state: any) => state.transactions.items;
+export const selectTransactionStatus = (state: any) => state.transactions.status;
+export const selectTransactionError = (state: any) => state.transactions.error;
+export const selectTransactionStats = (state: any) => state.transactions.filteredStats;
+export const selectTransactionFilters = (state: any) => state.transactions.filters; // Kept this as it was not explicitly removed by the instruction's provided code.
 
-        return {
-            ...item,
-            date: dateObj,
-            createdAt: new Date(item.createdAt),
-            updatedAt: new Date(item.updatedAt),
-        };
-    });
-};
-export const selectTransactionsStatus = (state: any) => state.transactions.status;
-export const selectTransactionsError = (state: any) => state.transactions.error;
+// Pagination selectors
+export const selectTransactionCount = (state: any) => state.transactions.totalCount;
+export const selectHasMoreTransactions = (state: any) => state.transactions.hasMore;
+export const selectTransactionAggregates = (state: any) => state.transactions.aggregates;
+// These were missing or named differently, adding alias for compatibility with existing code
 export const selectMonthlyAggregates = (state: any) => state.transactions.aggregates;
 export const selectDailyStats = (state: any) => state.transactions.aggregates.dailyStats;
-export const selectFilteredStats = (state: any) => state.transactions.filteredStats;
-export const selectLastModified = (state: any) => state.transactions.lastModified;
+
+// Modal selectors
+export const selectTransactionModal = (state: any) => state.transactions.transactionModal;
 
 // Memoized selectors for better performance
 

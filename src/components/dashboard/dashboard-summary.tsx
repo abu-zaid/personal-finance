@@ -1,3 +1,5 @@
+'use client';
+
 import { motion } from 'framer-motion';
 import { ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react';
 

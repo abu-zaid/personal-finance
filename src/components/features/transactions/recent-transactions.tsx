@@ -19,8 +19,8 @@ export function RecentTransactions() {
     const { symbol, formatCurrency } = useCurrency();
 
     const recentTransactions = useMemo(() => {
-        return transactions
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        return [...transactions]
+            .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 5);
     }, [transactions]);
 
