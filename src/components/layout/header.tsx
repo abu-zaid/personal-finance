@@ -1,27 +1,16 @@
 'use client';
 
-import Link from 'next/link';
-import { LogOut, Settings, User, Wallet } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
+import { User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/auth-context';
-import { APP_NAME } from '@/lib/constants';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   title?: string;
 }
 
 export function Header({ title }: HeaderProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const getInitials = (name: string) => {
     return name
@@ -34,30 +23,30 @@ export function Header({ title }: HeaderProps) {
 
   return (
     <header
-      className="z-40 flex h-16 flex-shrink-0 items-center justify-between px-4 lg:px-6 bg-white/90 dark:bg-[#101010]/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-white/[0.06]"
+      className={cn(
+        "sticky top-0 z-40 flex h-16 items-center justify-between px-4",
+        "bg-background/80 backdrop-blur-xl",
+        "border-b border-border/50",
+        "md:hidden" // Hide on desktop (side nav provides context)
+      )}
     >
-      <div className="flex items-center gap-3">
-        {/* Mobile Logo */}
-        <div className="flex items-center gap-2.5 lg:hidden">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden shadow-sm">
-            <img src="/icon.svg" alt="Logo" className="h-full w-full object-cover" />
-          </div>
-          <span className="text-base font-semibold tracking-tight">{APP_NAME}</span>
-        </div>
-        {/* Desktop Title */}
-        {title && <h1 className="hidden text-xl font-semibold tracking-tight lg:block">{title}</h1>}
-      </div>
+      {/* Page Title */}
+      <h1 className="text-xl font-bold tracking-tight">
+        {title || 'Dashboard'}
+      </h1>
 
-      <div className="flex items-center gap-1.5">
-        <Button variant="ghost" className="relative h-10 w-10 rounded-xl p-0 hover:bg-transparent cursor-default">
-          <Avatar className="h-9 w-9 border-2 border-white/10">
-            <AvatarImage src="/avatar.png" alt={user?.name || 'User'} />
-            <AvatarFallback className="bg-white/[0.06] text-foreground text-sm">
-              {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
-            </AvatarFallback>
-          </Avatar>
-        </Button>
-      </div>
+      {/* User Avatar */}
+      <button
+        className="flex items-center justify-center h-10 w-10 rounded-full hover:bg-accent/50 transition-colors"
+        aria-label="User profile"
+      >
+        <Avatar className="h-9 w-9 border-2 border-primary/20">
+          <AvatarImage src="/avatar.png" alt={user?.name || 'User'} />
+          <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+            {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
+          </AvatarFallback>
+        </Avatar>
+      </button>
     </header>
   );
 }
