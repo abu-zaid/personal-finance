@@ -52,29 +52,31 @@ export default function DashboardPage() {
     // Fetch monthly totals and budget
     useEffect(() => {
         const loadDashboardData = async () => {
+            if (!user) return;
+
             setIsDashboardLoading(true);
             try {
                 // Optimized: fetchBudgetWithSpending already populates monthlyExpenses in Redux
                 // so we don't need a separate call for expense aggregates
                 await Promise.all([
-                    dispatch(fetchBudgetWithSpending(currentMonth)).unwrap(),
-                    dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' })).unwrap(),
+                    dispatch(fetchBudgetWithSpending(currentMonth)),
+                    dispatch(fetchMonthlyAggregates({ month: currentMonth, type: 'income' })),
                     // Removed redundant expense aggregate call - budget fetch handles this
-                    dispatch(fetchDailyTransactionStats(currentMonth)).unwrap(),
+                    dispatch(fetchDailyTransactionStats(currentMonth)),
                     // Also fetch initial transactions
-                    dispatch(fetchTransactions({ page: 0, pageSize: 20 })).unwrap(),
+                    dispatch(fetchTransactions({ page: 0, pageSize: 20 })),
                     // Short timeout to prevent layout jumping if data loads too fast (~300ms min)
                     new Promise(resolve => setTimeout(resolve, 300))
                 ]);
             } catch (err) {
-                console.error('Failed to load dashboard data:', err);
+
             } finally {
                 setIsDashboardLoading(false);
             }
         };
 
         loadDashboardData();
-    }, [dispatch, currentMonth, lastModified]);
+    }, [dispatch, currentMonth, lastModified, user ? user.id : null]);
 
     // Calculate today's spending
     const todaySpending = useMemo(() => {
@@ -205,8 +207,18 @@ export default function DashboardPage() {
         });
     }, [dailyStatsMap, currentMonth]);
 
+    const isAuthLoading = useAppSelector(state => state.auth.isLoading);
+
+
+
     // Loading State
-    if (!user || isDashboardLoading) {
+    // Show skeleton if:
+    // 1. Auth is initializing (isAuthLoading)
+    // 2. Dashboard data is loading (isDashboardLoading)
+    // 3. User is present (implying we are just waiting for data)
+    // If !user AND !isAuthLoading, we render nothing (or let middleware redirect)
+    if (isAuthLoading || (user && isDashboardLoading)) {
+
         return (
             <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">
                 <div className="max-w-md lg:max-w-7xl mx-auto px-4 lg:px-8 space-y-6 lg:space-y-8">
@@ -215,6 +227,13 @@ export default function DashboardPage() {
             </div>
         );
     }
+
+    if (!user) {
+
+        return null; // Prevent rendering if not authenticated
+    }
+
+
 
     return (
         <div className="min-h-screen bg-neutral-50/50 dark:bg-background pb-24 lg:pb-8">

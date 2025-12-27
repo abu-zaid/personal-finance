@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import { User, UserPreferences, Currency, DateFormat, Theme } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 import { DEMO_USER } from '@/lib/demo-data';
@@ -41,24 +41,40 @@ const initialState: AuthState = {
 export const initializeAuth = createAsyncThunk(
     'auth/initialize',
     async (_, { dispatch }) => {
+
+
         // Check for Demo Mode cookie first (client-side check purely for state sync)
         const isDemo = document.cookie.includes('demo_mode=true');
+
+
         if (isDemo) {
             const serializableDemoUser: SerializableUser = {
                 ...DEMO_USER,
                 createdAt: DEMO_USER.createdAt.toISOString(),
                 updatedAt: DEMO_USER.updatedAt.toISOString(),
             };
+
             return { isConfigured: true, user: serializableDemoUser, isDemo: true };
         }
 
         const supabase = createClient();
-        if (!supabase) return { isConfigured: false, user: null, isDemo: false };
+
+
+        if (!supabase) {
+
+            return { isConfigured: false, user: null, isDemo: false };
+        }
+
+
 
         const { data: { session } } = await supabase.auth.getSession();
+
         if (session?.user) {
+
             return { isConfigured: true, user: mapSupabaseUserToSerializable(session.user), isDemo: false };
         }
+
+
         return { isConfigured: true, user: null, isDemo: false };
     }
 );
@@ -245,6 +261,13 @@ const authSlice = createSlice({
                 }
                 state.isLoading = false;
             })
+            .addCase(initializeAuth.rejected, (state, action) => {
+                // Even on error, mark as configured and stop loading
+                state.isConfigured = true;
+                state.isLoading = false;
+                state.error = action.error.message || 'Auth initialization failed';
+                console.error('Auth initialization failed:', action.error);
+            })
             // Enter Demo Mode
             .addCase(enterDemoMode.fulfilled, (state, action) => {
                 state.isDemo = true;
@@ -294,16 +317,18 @@ export const { setUser, setLoading } = authSlice.actions;
 
 // Selectors
 export const selectAuth = (state: any) => state.auth;
-export const selectUser = (state: any) => {
-    const user = state.auth.user;
-    if (!user) return null;
-    // Convert strings back to Dates for component consumption
-    return {
-        ...user,
-        createdAt: new Date(user.createdAt),
-        updatedAt: new Date(user.updatedAt),
-    } as User;
-};
+export const selectUser = createSelector(
+    [(state: any) => state.auth.user],
+    (user: SerializableUser | null) => {
+        if (!user) return null;
+        // Convert strings back to Dates for component consumption
+        return {
+            ...user,
+            createdAt: new Date(user.createdAt),
+            updatedAt: new Date(user.updatedAt),
+        } as User;
+    }
+);
 export const selectIsAuthenticated = (state: any): boolean => state.auth.isAuthenticated;
 export const selectIsDemo = (state: any): boolean => state.auth.isDemo;
 export const selectPreferencesLoaded = (state: any): boolean => state.auth.preferencesLoaded;

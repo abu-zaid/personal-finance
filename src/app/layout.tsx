@@ -19,9 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
 });
 
-import { PwaInstallPrompt } from '@/components/pwa/install-prompt';
-import { ServiceWorkerRegistration } from '@/components/pwa/service-worker-registration';
-import { UpdatePrompt } from '@/components/pwa/update-prompt';
+
 
 export const metadata: Metadata = {
   title: {
@@ -29,7 +27,7 @@ export const metadata: Metadata = {
     template: `%s | ${APP_NAME}`,
   },
   description: APP_DESCRIPTION,
-  manifest: '/manifest.json',
+
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -66,13 +64,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <StoreProvider>
-            <ServiceWorkerRegistration />
-            <UpdatePrompt />
             <AuthListener />
             <AuthProvider>
               {children}
             </AuthProvider>
-            <PwaInstallPrompt />
             <Toaster position="top-right" richColors />
           </StoreProvider>
         </ThemeProvider>
