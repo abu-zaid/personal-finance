@@ -17,7 +17,13 @@ interface TransactionItemProps {
     formatCurrency: (amount: number) => string;
 }
 
+import { openTransactionModal } from '@/lib/features/transactions/transactionsSlice';
+import { useAppDispatch } from '@/lib/hooks';
+
+// ...
+
 function TransactionItem({ transaction, category, index, formatCurrency }: TransactionItemProps) {
+    const dispatch = useAppDispatch();
     const isExpense = transaction.type === 'expense';
     const amountClass = isExpense ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-500';
     const amountPrefix = isExpense ? '-' : '+';
@@ -33,7 +39,8 @@ function TransactionItem({ transaction, category, index, formatCurrency }: Trans
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.25, delay: index * 0.04, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="group relative flex items-center justify-between py-3 px-2 -mx-2 gap-3 rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+            className="group relative flex items-center justify-between py-3 px-2 -mx-2 gap-3 rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-white/[0.03] cursor-pointer"
+            onClick={() => dispatch(openTransactionModal({ ...transaction, category: category || undefined } as any))}
         >
             <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div
@@ -123,7 +130,7 @@ export function RecentTransactions({
                                         <TransactionItem
                                             key={transaction.id}
                                             transaction={transaction}
-                                            category={getCategoryById(transaction.categoryId)}
+                                            category={(transaction as any).category || getCategoryById(transaction.categoryId)}
                                             index={groupIndex * 5 + index} // Approx delay stagger
                                             formatCurrency={formatCurrency}
                                         />

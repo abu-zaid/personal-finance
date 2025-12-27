@@ -169,7 +169,24 @@ export const deleteCategory = createAsyncThunk(
 const categoriesSlice = createSlice({
     name: 'categories',
     initialState,
-    reducers: {},
+    reducers: {
+        setCategories: (state, action: PayloadAction<any[]>) => {
+            // We assume payload is already compatible or we map it
+            state.items = action.payload.map(c => ({
+                id: c.id,
+                userId: c.userId,
+                name: c.name,
+                icon: c.icon,
+                color: c.color,
+                isDefault: c.isDefault,
+                order: c.order,
+                createdAt: c.createdAt.toString(),
+                updatedAt: c.updatedAt.toString(),
+            }));
+            state.status = 'succeeded';
+            state.error = null;
+        }
+    },
     extraReducers: (builder) => {
         builder
             // Fetch
@@ -212,5 +229,7 @@ export const selectCategories = (state: any): Category[] => {
 };
 export const selectCategoriesStatus = (state: any) => state.categories.status;
 export const selectCategoriesError = (state: any) => state.categories.error;
+
+export const { setCategories } = categoriesSlice.actions;
 
 export default categoriesSlice.reducer;

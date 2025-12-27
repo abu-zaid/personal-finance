@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, ReactNode } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { User, UserPreferences } from '@/types';
 import {
@@ -13,6 +13,7 @@ import {
   selectAuth
 } from '@/lib/features/auth/authSlice';
 import { createClient } from '@/lib/supabase/client';
+import { registerServiceWorker } from '@/app/register-sw';
 
 interface AuthContextType {
   user: User | null;
@@ -37,6 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const preferencesLoaded = useAppSelector(selectPreferencesLoaded);
   const { isLoading, isConfigured } = useAppSelector(selectAuth);
+
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   const signInWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     const supabase = createClient();

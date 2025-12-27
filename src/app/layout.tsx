@@ -5,6 +5,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { AuthProvider } from '@/context/auth-context';
 import { Toaster } from '@/components/ui/sonner';
+import PWAInstallPrompt from '@/components/pwa/pwa-install-prompt';
 import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
     default: APP_NAME,
     template: `%s | ${APP_NAME}`,
   },
+  manifest: '/manifest.json',
   description: APP_DESCRIPTION,
 
   icons: {
@@ -67,6 +69,7 @@ export default function RootLayout({
             <AuthListener />
             <AuthProvider>
               {children}
+              <PWAInstallPrompt />
             </AuthProvider>
             <Toaster position="top-right" richColors />
           </StoreProvider>

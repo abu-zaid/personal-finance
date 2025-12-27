@@ -35,7 +35,7 @@ export default function TransactionsPage() {
   return (
     <PageTransition className="flex flex-col h-full w-full overflow-hidden bg-background">
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pb-[100px] md:pb-6">
 
         {/* Header */}
         <TransactionsHeader
