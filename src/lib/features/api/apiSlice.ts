@@ -15,8 +15,16 @@ export const apiSlice = createApi({
         getTransactions: builder.query<Transaction[], void>({
             queryFn: async () => {
                 try {
-                    const data = await db.transactions.orderBy('date').reverse().toArray();
-                    return { data };
+                    const transactions = await db.transactions.orderBy('date').reverse().toArray();
+                    const categories = await db.categories.toArray();
+
+                    // Join category data
+                    const transactionsWithCategories = transactions.map(tx => ({
+                        ...tx,
+                        category: categories.find(c => c.id === tx.category_id)
+                    }));
+
+                    return { data: transactionsWithCategories as Transaction[] };
                 } catch (error) {
                     return { error };
                 }
