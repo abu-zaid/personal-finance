@@ -152,9 +152,12 @@ async function fetchPreferencesFromSupabase(supabase: any, userId: string): Prom
 export const updatePreferences = createAsyncThunk(
     'auth/updatePreferences',
     async (preferences: Partial<UserPreferences>, { getState }) => {
+        console.log('updatePreferences thunk called with:', preferences);
         const state = getState() as any;
         const user = state.auth.user;
         const isDemo = state.auth.isDemo;
+
+        console.log('User:', user?.id, 'isDemo:', isDemo);
 
         if (!user) throw new Error('Cannot update preferences');
 
@@ -162,11 +165,20 @@ export const updatePreferences = createAsyncThunk(
         const updatedPreferences = { ...currentPreferences, ...preferences };
 
         if (isDemo) {
+            console.log('Demo mode - skipping API call');
             return updatedPreferences;
         }
 
         const supabase = createClient();
         if (!supabase) throw new Error('Supabase not configured');
+
+        console.log('Upserting preferences to Supabase:', {
+            user_id: user.id,
+            currency: updatedPreferences.currency,
+            date_format: updatedPreferences.dateFormat,
+            theme: updatedPreferences.theme,
+            first_day_of_week: updatedPreferences.firstDayOfWeek,
+        });
 
         const { error } = await supabase
             .from('user_preferences')
@@ -180,7 +192,12 @@ export const updatePreferences = createAsyncThunk(
                 onConflict: 'user_id',
             });
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase error:', error);
+            throw error;
+        }
+
+        console.log('Preferences updated successfully');
         return updatedPreferences;
     }
 );
