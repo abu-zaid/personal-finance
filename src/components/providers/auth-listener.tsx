@@ -53,7 +53,6 @@ export default function AuthListener() {
                 if (mounted && result.user) {
                     // Fetch data for both Real and Demo users
                     // Demo mode slices will handle serving mock data
-                    await dispatch(fetchUserPreferences(result.user.id));
                     dispatch(fetchCategories());
                     dispatch(fetchTransactions({ page: 0 }));
                     // Add other initial fetches here if needed (budgets, etc)
